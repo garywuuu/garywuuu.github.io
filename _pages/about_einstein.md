@@ -1,5 +1,6 @@
-Write your biography here. Tell the world about yourself. Link to your favorite [subreddit](http://reddit.com). You can put a picture in, too. The code is already in, just name your picture `prof_pic.jpg` and put it in the `img/` folder.
+I'm a Senior at Harvard pursuing a concurrent bachelor's and master's degree in Computer Science. This past year I co-founded a stealth LLMOps startup (raised from Pear VC and Unusual Ventures) and was an Associate Product Manager Intern at Salesforce working on Multi-Modal Workflows & Agents. Previously, I was at Signum Capital doing Technical Crypto Research and interned at Teradata and Alpaca Markets, working on LLMOps and Algorithmic Trading respectively. 
 
-Put your address / P.O. box / other info right below your picture. You can also disable any these elements by editing `profile` property of the YAML header of your `_pages/about.md`. Edit `_bibliography/papers.bib` and Jekyll will render your [publications page](/al-folio/publications/) automatically.
+Outside of school, I'm an avid tennis player, foodie, and sci-fi movie enjoyer.
 
+You can reach me at 
 Link to your social media connections, too. This theme is set up to use [Font Awesome icons](https://fontawesome.com/) and [Academicons](https://jpswalsh.github.io/academicons/), like the ones below. Add your Facebook, Twitter, LinkedIn, Google Scholar, or just disable all of them.
