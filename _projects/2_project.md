@@ -4,7 +4,7 @@ title: Reddit Sentiment Analysis Trading Strategy
 description: Unlike traditional finance, the world of crypto is heavily directed by the community. Thus, by gaining a better quantitative understanding of how communities feel about crypto and the crypto markets, algo traders can gain an edge over other traders. In this trading algo, we will use a sentiment analysis strategy to analyze the ethereum subreddit’s headlines to make more informed trades.
 img: assets/img/proj2.png
 importance: 1
-category: work
+category: Alpaca
 related_publications: true
 ---
 

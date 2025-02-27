@@ -4,7 +4,7 @@ title: Triangular Arbitrage with Coin Pair Trading
 description: Introducing a triangular arbitrage strategy using BTC/USD, ETH/USD, and the new BTC/ETH coin pair to attempt to profit from potential differences between price conversions.
 img: assets/img/proj1.png
 importance: 1
-category: work
+category: Alpaca
 related_publications: true
 ---
 
