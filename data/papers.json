@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Benchmarking Explainability of ImageNet Classification Against Data Suboptimality",
+    "venue": "CS 2822R: ML Interpretability",
+    "year": 2024,
+    "summary": "We explore interpretable machine learning techniques to help stakeholders understand ML models and their decision-making processes. This work focuses on capturing the underlying reasoning of black box methods through various interpretability approaches.",
+    "pdf": "assets/papers/CS 2822R Final Project.pdf",
+    "links": []
+  },
+  {
+    "title": "Stable Compute Marketplace Problem with Multi-dimensional Preference Ordering",
+    "venue": "CS 236r: Advanced Topics in Econ/CS",
+    "year": 2024,
+    "summary": "We address the challenge of creating stable compute marketplaces for machine learning, where users can rent computational resources for training large models. Our work implements pricing and matching algorithms that handle multi-dimensional preference reporting in practice.",
+    "pdf": "assets/papers/CS 236r Final Project.pdf",
+    "links": []
+  },
+  {
+    "title": "Incentive-Aligned Agent Selection Strategy for Federated Learning",
+    "venue": "CS 243: Advanced Networking for ML Systems",
+    "year": 2023,
+    "summary": "We present PRIMES, a novel incentive-aligned approach for federated learning that addresses the misreporting and free-riding problem. By selecting clients based on next-step loss and paying them based on global performance, we incentivize truthful reporting and high-quality contributions.",
+    "pdf": "assets/papers/CS 243 Final Project.pdf",
+    "links": []
+  },
+  {
+    "title": "Homomorphic Encryption for Neural Network Deployment",
+    "venue": "CS 254: Advanced Topics in Security",
+    "year": 2025,
+    "summary": "We implement a homomorphic encryption-based neural network using polynomial activation approximation to enable secure inference on encrypted data. We compare the security posture against standard unencrypted networks, focusing on membership inference, model extraction, and gradient-based input recovery attacks.",
+    "pdf": "assets/papers/CS 254 Final Project.pdf",
+    "links": []
+  },
+  {
+    "title": "Achieving Fairness in the Multi-Round Online Gaming Context",
+    "venue": "CS 226: Algorithmic Fairness",
+    "year": 2024,
+    "summary": "We investigate how fairness breaks down in online learning settings with strategic gaming, where agents may modify their reported features for favorable outcomes. We introduce algorithmic changes to ensure fairness across multiple metrics, accounting for different cost functions between advantaged and disadvantaged agents.",
+    "pdf": "assets/papers/CS 226 Final Project.pdf",
+    "links": []
+  },
+  {
+    "title": "Metric-Based LLM-Router Using KMeans Clustering",
+    "venue": "Neuro 240: Biological & Artificial Intelligence",
+    "year": 2024,
+    "summary": "We explore the feasibility of Large Language Model routers that can intelligently recommend the best LLM for a given task. Using KMeans clustering on prompts, we build a model to predict which LLM will provide the best response.",
+    "pdf": "assets/papers/Neuro 240 Final Project.pdf",
+    "links": []
+  }
+]

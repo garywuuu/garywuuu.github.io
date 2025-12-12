@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Personal website: research, experience, and links." />
+    <meta name="author" content="Gary Wu" />
+    <title>Gary Wu</title>
+
+    <!-- OpenGraph (optional but nice for sharing) -->
+    <meta property="og:title" content="Gary Wu" />
+    <meta property="og:description" content="Research, experience, and what I'm up to." />
+    <meta property="og:type" content="website" />
+    <!-- Set to your deployed URL (optional) -->
+    <!-- <meta property="og:url" content="https://yourusername.github.io/your-repo/" /> -->
+
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="assets/images/favicon.ico" />
+  </head>
+
+  <body>
+    <a class="skipLink" href="#content">Skip to content</a>
+
+    <header class="siteHeader">
+      <div class="container">
+        <div class="headerRow">
+          <div>
+            <h1 class="siteTitle">Gary Wu</h1>
+            <p class="siteSubtitle"></p>
+          </div>
+
+          <nav class="nav" aria-label="Primary">
+            <a href="#about">About</a>
+            <a href="#research">Research</a>
+            <a href="#experience">Experience</a>
+            <a href="#contact">Contact</a>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <main id="content" class="container">
+      <section id="about" class="section">
+        <div class="aboutGrid">
+          <h2 class="aboutHeading">About</h2>
+          <div class="aboutProse">
+            <div class="prose">
+              <p>
+                I'm currently an Associate Product Manager (APM) at Salesforce spearheading RL Environments and building out the Data Agent Platform at Agentforce Tableau. 
+            </p>
+            <p>
+                I received my Bachelor's and Master's degrees in Computer Science concurrently from Harvard University through the AB/SM program, focusing on ML Fairness and Distributed Systems and learning from <a href="https://www.seas.harvard.edu/person/jim-waldo" target="_blank" rel="noopener noreferrer">Jim Waldo</a>, <a href="https://people.seas.harvard.edu/~chong/" target="_blank" rel="noopener noreferrer">Stephen Chong</a>, <a href="https://yiling.seas.harvard.edu/" target="_blank" rel="noopener noreferrer">Yiling Chen</a>, and <a href="https://dwork.seas.harvard.edu/detailed-biography-and-curriculum-vitae" target="_blank" rel="noopener noreferrer">Cynthia Dwork</a>.
+            </p>
+
+            <p>
+                Previously, I co-founded an LLMOps startup building custom LLM Evals and raised from Pear VC and Unusual Ventures. 
+            </p>
+
+            <p>
+                Outside of work, I play tennis, eat spicy Sichuan food, and DJ.
+              </p>
+            </div>
+          </div>
+          <figure class="aboutPhoto">
+            <!-- Put your photo at assets/images/profile.jpg (or change this path). -->
+            <img src="assets/images/profile.jpg" alt="Photo of Gary Wu" loading="lazy" />
+          </figure>
+        </div>
+      </section>
+
+      <section id="research" class="section">
+        <div class="sectionHeader">
+          <h2>Research</h2>
+          <p class="muted">Graduate-level coursework and research projects.</p>
+        </div>
+        <div id="researchStatus" class="status" aria-live="polite"></div>
+        <div id="researchList" class="stack"></div>
+      </section>
+
+      <section id="experience" class="section">
+        <div class="sectionHeader">
+          <h2>Experience</h2>
+        </div>
+        <div id="experienceStatus" class="status" aria-live="polite"></div>
+        <div id="experienceList" class="stack"></div>
+      </section>
+
+      <section id="contact" class="section">
+        <h2>Contact</h2>
+        <div class="prose">
+          <ul class="inlineList">
+            <li><a href="https://github.com/garywuuu" target="_blank" rel="noreferrer">GitHub</a></li>
+            <li><a href="https://www.linkedin.com/in/garywu2025" target="_blank" rel="noreferrer">LinkedIn</a></li>
+            <li><a href="https://twitter.com/garywu_eth" target="_blank" rel="noreferrer">Twitter</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <noscript>
+        <div class="status">
+          This site uses a tiny script to render Research/Experience. Enable JavaScript to view those sections.
+        </div>
+      </noscript>
+    </main>
+
+    <footer class="siteFooter">
+      <div class="container">
+        <div class="footerRow">
+          <span>&copy; <span id="year"></span> Gary Wu</span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
+

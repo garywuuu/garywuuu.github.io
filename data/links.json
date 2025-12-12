@@ -1,0 +1,16 @@
+{
+  "_comment": "Map of linkId -> {url, title, description(optional), image(optional)}. Images are local paths under assets/images/.",
+  "project_demo": {
+    "url": "https://example.com",
+    "title": "Project Demo",
+    "description": "Short blurb for a project/demo link card.",
+    "image": "assets/images/project-preview.jpg"
+  },
+  "lab_page": {
+    "url": "https://example.com",
+    "title": "Lab / Group Page",
+    "description": "Short blurb for a lab page or publication page.",
+    "image": "assets/images/research-preview.jpg"
+  }
+}
+

@@ -1,0 +1,70 @@
+[
+  {
+    "_comment": "Fields: title, org, location(optional), start(YYYY-MM), end(YYYY-MM or null), bullets[], technologies[], links[] (ids from links.json).",
+    "title": "Associate Product Manager",
+    "org": "Salesforce",
+    "location": "",
+    "start": "2024-09",
+    "end": null,
+    "bullets": [
+      "1 of 12 APM's in 2025 cohort. Pitched and leading RL Environments. PM Lead for Agentforce Tableau, building the agentic data analysis platform."
+    ],
+    "technologies": [],
+    "links": []
+  },
+  {
+    "title": "Associate Product Manager Intern",
+    "org": "Salesforce",
+    "location": "Remote",
+    "start": "2024-05",
+    "end": "2024-08",
+    "bullets": [
+      "Owned multi-modal prompt engineering integration from 0-1: led customer calls, wrote requirements, drove stakeholder alignment. Convinced execs to increase project priority and shipped API MVP, unlocking Agentforce's Service Agent.",
+      "Doubly operated as TPM, spearheading API design and partnered with multiple engineering teams.",
+      "Collaborated with Sales/AE teams to build and pitch customized demos for client C-suite audience in $XXm ACV AI deals."
+    ],
+    "technologies": [],
+    "links": []
+  },
+  {
+    "title": "Co-Founder & Head of Product",
+    "org": "Verita",
+    "location": "Remote",
+    "start": "2023-12",
+    "end": "2024-05",
+    "bullets": [
+      "Founded LLM Evals startup with Harvard classmates – powering businesses to test and improve their fine-tuned LLM's.",
+      "Engineered MVP, conducted user/competitive research and led product growth.",
+      "Raised funding from Pear VC and Unusual Ventures and participated in Unusual Academy."
+    ],
+    "technologies": [],
+    "links": []
+  },
+  {
+    "title": "Product Manager Intern",
+    "org": "Teradata",
+    "location": "Remote",
+    "start": "2023-05",
+    "end": "2023-08",
+    "bullets": [
+      "Collaborated with Engineering to design a migration system from PySpark to Teradata's ML python package, enabling users to port over existing jobs, enabling and increasing onboarding efficiency.",
+      "Engineered end-to-end machine learning (XGBoost) product demo within the Teradata MLOps platform, from data preparation and model training to automating deployment & evaluation."
+    ],
+    "technologies": ["Python", "XGBoost", "MLOps", "PySpark"],
+    "links": []
+  },
+  {
+    "title": "Software Engineering Intern",
+    "org": "Alpaca Markets",
+    "location": "Remote",
+    "start": "2022-05",
+    "end": "2022-08",
+    "bullets": [
+      "Engineered a Slack App using Python, PostgreSQL, and Flask, integrating multiple API's, OAuth 2.0, and backend logic, allowing users to submit trades using Slack commands, such that \"/buy AAPL 10\" would buy the user 10 shares of Apple.",
+      "Wrote 3 technical articles of algorithmic trading strategies, reaching 1000's of customers.",
+      "Created feature requirements and managed end-to-end development of the above projects."
+    ],
+    "technologies": ["Python", "PostgreSQL", "Flask", "OAuth 2.0"],
+    "links": []
+  }
+]
