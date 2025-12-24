@@ -185,18 +185,98 @@
     if (!links.length || !sections.length) return;
 
     const byHash = new Map(links.map((a) => [a.getAttribute("href"), a]));
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0))[0];
-        if (!visible) return;
-        const id = `#${visible.target.id}`;
-        for (const a of links) a.removeAttribute("aria-current");
-        byHash.get(id)?.setAttribute("aria-current", "true");
-      },
-      { rootMargin: "-20% 0px -70% 0px", threshold: [0.1, 0.2, 0.4] }
-    );
+    let isProgrammaticScroll = false;
+    let programmaticScrollTimeout = null;
+    const headerOffset = 110; // keep in sync with CSS scroll-margin-top
 
-    for (const s of sections) obs.observe(s);
+    function setActiveLink(href) {
+      for (const a of links) a.removeAttribute("aria-current");
+      const target = byHash.get(href);
+      if (target) target.setAttribute("aria-current", "true");
+    }
+
+    // Choose the last section whose top is above the header-adjusted scroll position.
+    function updateActiveFromScroll() {
+      // While we're animating a click-driven scroll, don't override the chosen tab.
+      if (isProgrammaticScroll) return;
+
+      const scrollPos = window.scrollY + headerOffset + 1;
+
+      // If we're very close to the top, force About.
+      if (window.scrollY < 40) {
+        setActiveLink("#about");
+        return;
+      }
+
+      let activeSection = sections[0];
+      for (const section of sections) {
+        if (scrollPos >= section.offsetTop) {
+          activeSection = section;
+        }
+      }
+
+      // If we're very close to the bottom, force the last section (Contact).
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+        activeSection = sections[sections.length - 1];
+      }
+
+      if (activeSection) {
+        setActiveLink(`#${activeSection.id}`);
+      }
+    }
+
+    // Initial state
+    updateActiveFromScroll();
+
+    // Scroll listener (throttled with rAF)
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateActiveFromScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    });
+
+    // Recalculate on resize (in case layout shifts)
+    window.addEventListener("resize", updateActiveFromScroll);
+
+    // Handle click events on navigation links
+    for (const link of links) {
+      link.addEventListener("click", (e) => {
+        const href = link.getAttribute("href");
+        if (!href || !href.startsWith("#")) return;
+
+        e.preventDefault();
+        const targetId = href.slice(1);
+        const targetSection = document.getElementById(targetId);
+        if (!targetSection) return;
+
+        // Update active immediately
+        setActiveLink(href);
+
+        // Temporarily lock the active tab while we smooth scroll,
+        // so the underline jumps straight to the clicked section.
+        isProgrammaticScroll = true;
+        if (programmaticScrollTimeout) clearTimeout(programmaticScrollTimeout);
+
+        const elementPosition = targetSection.offsetTop;
+        const offsetPosition = elementPosition - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth",
+        });
+
+        // After the scroll animation, unlock and sync from scroll position once.
+        programmaticScrollTimeout = setTimeout(() => {
+          isProgrammaticScroll = false;
+          updateActiveFromScroll();
+        }, 450);
+      });
+    }
   }
 
   function matchPhotoToProse() {
