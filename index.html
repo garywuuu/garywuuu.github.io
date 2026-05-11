@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Personal website: research, experience, and links." />
+    <meta name="robots" content="index, follow" />
     <!-- Updated: 2025 -->
     <meta name="author" content="Gary Wu" />
     <title>Gary Wu</title>
@@ -12,11 +13,14 @@
     <!-- OpenGraph (optional but nice for sharing) -->
     <meta property="og:title" content="Gary Wu" />
     <meta property="og:description" content="Research, experience, and what I'm up to." />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content="profile" />
     <meta property="og:url" content="https://gary-wu.com/" />
     <meta property="og:site_name" content="Gary Wu" />
     <meta property="og:image" content="https://gary-wu.com/assets/images/profile.jpg" />
     <meta property="og:image:alt" content="Gary Wu portrait" />
+    <meta property="profile:first_name" content="Gary" />
+    <meta property="profile:last_name" content="Wu" />
+    <meta property="profile:username" content="garywuuu" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Gary Wu" />
     <meta name="twitter:description" content="Research, experience, and what I'm up to." />
@@ -28,33 +32,85 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "Person",
-        "@id": "https://gary-wu.com/#gary-wu",
-        "name": "Gary Wu",
-        "url": "https://gary-wu.com/",
-        "image": "https://gary-wu.com/assets/images/profile.jpg",
-        "mainEntityOfPage": "https://gary-wu.com/",
-        "description": "Gary Wu is a founder and AI product builder with experience in LLM evaluations, Agentforce, machine learning fairness, and distributed systems.",
-        "jobTitle": "Founder and AI product builder",
-        "alumniOf": [
+        "@graph": [
           {
-            "@type": "CollegeOrUniversity",
-            "name": "Harvard University"
+            "@type": "WebSite",
+            "@id": "https://gary-wu.com/#website",
+            "url": "https://gary-wu.com/",
+            "name": "Gary Wu",
+            "alternateName": "Gary Wu personal website",
+            "publisher": {
+              "@id": "https://gary-wu.com/#gary-wu"
+            }
+          },
+          {
+            "@type": "ProfilePage",
+            "@id": "https://gary-wu.com/#profile",
+            "url": "https://gary-wu.com/",
+            "name": "Gary Wu",
+            "headline": "Gary Wu - founder and AI product builder in San Francisco",
+            "dateModified": "2026-05-11",
+            "isPartOf": {
+              "@id": "https://gary-wu.com/#website"
+            },
+            "mainEntity": {
+              "@id": "https://gary-wu.com/#gary-wu"
+            }
+          },
+          {
+            "@type": "Person",
+            "@id": "https://gary-wu.com/#gary-wu",
+            "name": "Gary Wu",
+            "givenName": "Gary",
+            "familyName": "Wu",
+            "alternateName": "garywuuu",
+            "url": "https://gary-wu.com/",
+            "image": "https://gary-wu.com/assets/images/profile.jpg",
+            "mainEntityOfPage": {
+              "@id": "https://gary-wu.com/#profile"
+            },
+            "description": "Gary Wu is an SF-based founder and AI product builder with experience in LLM evaluations, Agentforce, machine learning fairness, and distributed systems.",
+            "disambiguatingDescription": "Gary Wu, also known online as garywuuu, is a founder and AI product builder based in San Francisco.",
+            "jobTitle": "Founder and AI product builder",
+            "homeLocation": {
+              "@type": "Place",
+              "name": "San Francisco, California"
+            },
+            "alumniOf": [
+              {
+                "@type": "CollegeOrUniversity",
+                "name": "Harvard University"
+              }
+            ],
+            "affiliation": [
+              {
+                "@type": "Organization",
+                "name": "Salesforce"
+              },
+              {
+                "@type": "Organization",
+                "name": "Verita"
+              },
+              {
+                "@type": "CollegeOrUniversity",
+                "name": "Harvard University"
+              }
+            ],
+            "sameAs": [
+              "https://github.com/garywuuu",
+              "https://www.linkedin.com/in/garywu2025",
+              "https://twitter.com/garywu_eth"
+            ],
+            "knowsAbout": [
+              "AI product management",
+              "LLM evaluations",
+              "Agentic data analysis",
+              "Machine learning fairness",
+              "Distributed systems",
+              "Federated learning",
+              "Homomorphic encryption"
+            ]
           }
-        ],
-        "sameAs": [
-          "https://github.com/garywuuu",
-          "https://www.linkedin.com/in/garywu2025",
-          "https://twitter.com/garywu_eth"
-        ],
-        "knowsAbout": [
-          "AI product management",
-          "LLM evaluations",
-          "Agentic data analysis",
-          "Machine learning fairness",
-          "Distributed systems",
-          "Federated learning",
-          "Homomorphic encryption"
         ]
       }
     </script>
@@ -91,7 +147,7 @@
           <div class="aboutProse">
             <div class="prose">
               <p>
-                I'm Gary Wu, and I'm currently building a new company.
+                Hey! I'm currently living in SF and building a new company.
             </p>
             <p>
                 Before this, I was an Associate Product Manager at Salesforce, where I spearheaded RL Environments and was Product Lead for Agentforce Tableau's agentic data analysis platform.
