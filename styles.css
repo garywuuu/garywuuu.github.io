@@ -193,6 +193,9 @@ code {
   border-radius: var(--radius);
   color: var(--muted);
 }
+.status:empty {
+  display: none;
+}
 
 .stack {
   display: grid;
@@ -426,4 +429,3 @@ code {
     color: var(--muted);
   }
 }
-
