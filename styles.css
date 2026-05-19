@@ -8,6 +8,8 @@
 
 html {
   color-scheme: light;
+  scroll-behavior: smooth;
+  scroll-padding-top: 110px;
 }
 
 :root {
@@ -411,6 +413,12 @@ code {
   gap: 12px;
   flex-wrap: wrap;
   font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 @media print {

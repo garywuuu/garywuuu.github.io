@@ -188,6 +188,7 @@
     let isProgrammaticScroll = false;
     let programmaticScrollTimeout = null;
     const headerOffset = 110; // keep in sync with CSS scroll-margin-top
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function setActiveLink(href) {
       for (const a of links) a.removeAttribute("aria-current");
@@ -262,19 +263,16 @@
         isProgrammaticScroll = true;
         if (programmaticScrollTimeout) clearTimeout(programmaticScrollTimeout);
 
-        const elementPosition = targetSection.offsetTop;
-        const offsetPosition = elementPosition - headerOffset;
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: "smooth",
+        targetSection.scrollIntoView({
+          behavior: prefersReducedMotion ? "auto" : "smooth",
+          block: "start",
         });
 
         // After the scroll animation, unlock and sync from scroll position once.
         programmaticScrollTimeout = setTimeout(() => {
           isProgrammaticScroll = false;
           updateActiveFromScroll();
-        }, 450);
+        }, prefersReducedMotion ? 0 : 650);
       });
     }
   }
@@ -324,4 +322,3 @@
 
   document.addEventListener("DOMContentLoaded", main);
 })();
-
