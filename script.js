@@ -98,14 +98,14 @@
           { class: "cardMeta" },
           [
             p.venue ? el("span", { text: p.venue }) : el("span"),
-            p.venue && p.year ? el("span", { text: " • " }) : el("span"),
+            p.venue && p.year ? el("span", { text: " - " }) : el("span"),
             p.year ? el("span", { text: String(p.year) }) : el("span"),
           ].filter((n) => n.textContent !== "")
         ),
       ]);
 
       const actions = el("div", { class: "row" }, [
-        el("a", { class: "pill", href: p.pdf, target: "_blank", rel: "noreferrer", text: "View PDF" }),
+        el("a", { class: "pill pdfLink", href: p.pdf, text: "View PDF" }),
         el("a", { class: "pill", href: p.pdf, download: safeFileName(p.pdf), text: "Download" }),
       ]);
 
@@ -165,7 +165,7 @@
     for (const e of sorted) {
       // Title and org
       const titleText = e.title || "Role";
-      const metaText = e.org ? ` • ${e.org}` : "";
+      const metaText = e.org ? ` - ${e.org}` : "";
       const children = [el("h3", { text: `${titleText}${metaText}` })];
 
       // Bullets as a single paragraph
@@ -277,13 +277,109 @@
     }
   }
 
-  function matchPhotoToProse() {
-    const prose = document.querySelector(".aboutProse");
-    const photo = document.querySelector(".aboutPhoto");
-    if (prose && photo) {
-      const proseHeight = prose.offsetHeight;
-      photo.style.height = proseHeight + "px";
+  function setupLiveCounter() {
+    const node = document.getElementById("liveCounter");
+    if (!node) return;
+
+    const start = Date.UTC(2026, 1, 1, 0, 0, 0);
+    const yearMs = 365.2425 * 24 * 60 * 60 * 1000;
+
+    function tick() {
+      const elapsedYears = Math.max(0, (Date.now() - start) / yearMs);
+      const whole = Math.floor(elapsedYears).toString().padStart(2, "0");
+      const fraction = String(elapsedYears.toFixed(20)).split(".")[1] || "00000000000000000000";
+      node.textContent = `${whole}.${fraction}`;
     }
+
+    tick();
+    window.setInterval(tick, 90);
+  }
+
+  function setupOsClock() {
+    const node = document.getElementById("osClock");
+    if (!node) return;
+
+    function tick() {
+      node.textContent = new Intl.DateTimeFormat("en", {
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(new Date());
+    }
+
+    tick();
+    window.setInterval(tick, 30 * 1000);
+  }
+
+  function setupGaryOsOverlay() {
+    const overlay = document.getElementById("garyos");
+    if (!overlay) return;
+
+    function sync() {
+      const isOpen = window.location.hash === "#garyos";
+      overlay.classList.toggle("isOpen", isOpen);
+      document.body.classList.toggle("osOpen", isOpen);
+      overlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+      if ("inert" in overlay) overlay.inert = !isOpen;
+    }
+
+    sync();
+    window.addEventListener("hashchange", sync);
+  }
+
+  function setupPdfViewer() {
+    const viewer = document.getElementById("pdfViewer");
+    const frame = document.getElementById("pdfFrame");
+    const title = document.getElementById("pdfTitle");
+    const download = document.getElementById("pdfDownload");
+    const close = document.getElementById("pdfClose");
+    if (!viewer || !frame || !title || !download || !close) return;
+
+    let lastFocus = null;
+
+    function openPdf(link) {
+      const href = link.getAttribute("href");
+      if (!href) return;
+
+      lastFocus = document.activeElement;
+      const label = safeFileName(href).replace(/\.pdf$/i, "") || "PDF";
+      title.textContent = label;
+      download.href = href;
+      download.setAttribute("download", safeFileName(href));
+      frame.src = `${href}#view=FitH`;
+      viewer.classList.add("isOpen");
+      viewer.setAttribute("aria-hidden", "false");
+      if ("inert" in viewer) viewer.inert = false;
+      document.body.classList.add("pdfOpen");
+      close.focus();
+    }
+
+    function closePdf() {
+      viewer.classList.remove("isOpen");
+      viewer.setAttribute("aria-hidden", "true");
+      if ("inert" in viewer) viewer.inert = true;
+      document.body.classList.remove("pdfOpen");
+      frame.removeAttribute("src");
+      if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+    }
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest("a.pdfLink");
+      if (!link) return;
+      event.preventDefault();
+      openPdf(link);
+    });
+
+    if ("inert" in viewer) viewer.inert = true;
+
+    close.addEventListener("click", closePdf);
+    viewer.addEventListener("click", (event) => {
+      if (event.target === viewer) closePdf();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && viewer.classList.contains("isOpen")) closePdf();
+    });
   }
 
   async function main() {
@@ -291,6 +387,10 @@
     if (year) year.textContent = String(new Date().getFullYear());
 
     setupActiveNav();
+    setupLiveCounter();
+    setupOsClock();
+    setupGaryOsOverlay();
+    setupPdfViewer();
 
     setStatus("researchStatus", "Loading research…");
     setStatus("experienceStatus", "Loading experience…");
@@ -315,9 +415,6 @@
       setStatus("experienceStatus", "Failed to load data. Check the JSON files under data/.");
     }
 
-    // Match photo height after a short delay to ensure content is rendered
-    setTimeout(matchPhotoToProse, 50);
-    window.addEventListener("resize", matchPhotoToProse);
   }
 
   document.addEventListener("DOMContentLoaded", main);

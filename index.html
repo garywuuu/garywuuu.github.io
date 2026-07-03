@@ -79,7 +79,7 @@
             "worksFor": {
               "@type": "Organization",
               "name": "Instaplay",
-              "url": "https://www.instaplay.dev/",
+              "url": "https://www.instaplay.ai/",
               "description": "AI for multiplayer games"
             },
             "alumniOf": [
@@ -92,7 +92,7 @@
               {
                 "@type": "Organization",
                 "name": "Instaplay",
-                "url": "https://www.instaplay.dev/"
+                "url": "https://www.instaplay.ai/"
               },
               {
                 "@type": "Organization",
@@ -133,169 +133,219 @@
 
   <body>
     <a class="skipLink" href="#content">Skip to content</a>
+    <div class="pageCurl" aria-hidden="true"></div>
 
-    <header class="siteHeader">
-      <div class="container">
-        <div class="headerRow">
-          <div>
-            <h1 class="siteTitle">Gary Wu</h1>
-            <p class="siteSubtitle"></p>
+    <main id="content">
+      <section id="about" class="hero section" aria-label="About Gary Wu">
+        <div class="shell heroShell">
+          <h1 class="heroTitle">
+            Gary is building
+            <a href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer">Instaplay</a>.
+          </h1>
+
+          <div class="statusBlock" aria-live="polite">
+            <p><span id="liveCounter">00.00000000000000000000</span> ETB</p>
+            <p>Currently in San Francisco, making AI for multiplayer games.</p>
           </div>
 
-          <nav class="nav" aria-label="Primary">
-            <a href="#about">About</a>
-            <a href="#research">Research</a>
-            <a href="#experience">Experience</a>
-            <a href="#contact">Contact</a>
-          </nav>
-        </div>
-      </div>
-    </header>
+          <div class="heroFooter" aria-label="Site links">
+            <div class="linkColumn">
+              <p class="columnLabel">OPEN</p>
+              <ul class="plainList">
+                <li><a href="#about-copy">About</a></li>
+                <li><a href="#research">Research</a></li>
+                <li><a href="#experience">Experience</a></li>
+                <li><a href="assets/gary_wu_resume_startups.docx" download>Resume</a></li>
+                <li><a class="osTrigger" href="#garyos">Explore garyOS</a></li>
+              </ul>
+            </div>
 
-    <main id="content" class="container">
-      <section id="about" class="section">
-        <div class="aboutGrid">
-          <h2 class="aboutHeading">About</h2>
-          <div class="aboutProse">
-            <div class="prose">
-              <p>
-                Hey! I'm currently living in SF and building <a href="https://www.instaplay.dev/" target="_blank" rel="noopener noreferrer">Instaplay</a>, AI for multiplayer games.
-            </p>
-            <p>
-                Before this, I was an Associate Product Manager at Salesforce, where I spearheaded RL Environments and was Product Lead for Agentforce Tableau's agentic data analysis platform.
-            </p>
-            <p>
-                I received my Bachelor's and Master's degrees in Computer Science concurrently from Harvard University through the AB/SM program, focusing on ML Fairness and Distributed Systems and learning from <a href="https://www.seas.harvard.edu/person/jim-waldo" target="_blank" rel="noopener noreferrer">Jim Waldo</a>, <a href="https://people.seas.harvard.edu/~chong/" target="_blank" rel="noopener noreferrer">Stephen Chong</a>, <a href="https://yiling.seas.harvard.edu/" target="_blank" rel="noopener noreferrer">Yiling Chen</a>, and <a href="https://dwork.seas.harvard.edu/detailed-biography-and-curriculum-vitae" target="_blank" rel="noopener noreferrer">Cynthia Dwork</a>.
-            </p>
-
-            <p>
-                Previously, I co-founded an LLMOps startup building custom LLM Evals and raised from Pear VC and Unusual Ventures.
-            </p>
-
-            <p>
-                Outside of work, I play tennis, eat spicy Sichuan food, and DJ.
-              </p>
+            <div class="linkColumn">
+              <p class="columnLabel">PAST WORK</p>
+              <ul class="plainList">
+                <li><a href="#experience">Salesforce</a></li>
+                <li><a href="#experience">Verita</a></li>
+                <li><a href="#experience">Teradata</a></li>
+                <li><a href="#experience">Alpaca</a></li>
+              </ul>
             </div>
           </div>
-          <figure class="aboutPhoto">
-            <!-- Put your photo at assets/images/profile.jpg (or change this path). -->
-            <img src="assets/images/profile.jpg" alt="Gary Wu portrait" width="1182" height="1333" decoding="async" fetchpriority="high" />
-          </figure>
+
+          <div class="heroFooter heroFooterSecondary" aria-label="Contact links">
+            <div class="linkColumn">
+              <p class="columnLabel">CONTACT</p>
+              <ul class="plainList hList">
+                <li><a href="https://github.com/garywuuu" target="_blank" rel="me noreferrer">GITHUB</a></li>
+                <li><a href="https://www.linkedin.com/in/garywu2025" target="_blank" rel="me noreferrer">LINKEDIN</a></li>
+                <li><a href="https://twitter.com/garywu_eth" target="_blank" rel="me noreferrer">X</a></li>
+              </ul>
+            </div>
+
+            <figure class="portraitMark">
+              <img src="assets/images/profile.jpg" alt="Gary Wu portrait" width="1182" height="1333" decoding="async" fetchpriority="high" />
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section id="garyos" class="osSection section" aria-label="garyOS preview">
+        <a class="osClose" href="#about" aria-label="Close garyOS">×</a>
+        <div class="osMenuBar">
+          <div class="osMenuLeft">
+            <span class="osApple" aria-hidden="true">◆</span>
+            <strong>garyOS</strong>
+            <span>Finder</span>
+            <span>Build</span>
+            <span>Ship</span>
+            <span>Play</span>
+          </div>
+          <div class="osMenuRight">
+            <span>SF</span>
+            <span id="osClock">12:47 PM</span>
+          </div>
+        </div>
+
+        <div class="osDesktop">
+          <div class="osWindow osWindowMain">
+            <div class="osWindowBar">
+              <span class="osDot red"></span>
+              <span class="osDot yellow"></span>
+              <span class="osDot green"></span>
+              <span class="osWindowTitle">gary://home</span>
+            </div>
+            <div class="osWindowBody">
+              <p class="terminalLine">last login: san francisco</p>
+              <h2>GaryOS</h2>
+              <p>
+                A tiny desktop for the things I am building, studying, and playing with.
+              </p>
+              <div class="osCommandGrid">
+                <a href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer">open instaplay</a>
+                <a href="#research">read research</a>
+                <a href="#experience">view work</a>
+                <a href="assets/gary_wu_resume_startups.docx" download>download resume</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="osSticky osStickyTop">
+            <p>NOW</p>
+            <span>building AI for multiplayer games</span>
+          </div>
+
+          <div class="osSticky osStickyBottom">
+            <p>QUEUE</p>
+            <span>agents, evals, fairness, distributed systems</span>
+          </div>
+
+          <div class="desktopIcons" aria-label="garyOS shortcuts">
+            <a href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer">
+              <span class="desktopIcon">IP</span>
+              <span>Instaplay</span>
+            </a>
+            <a href="#research">
+              <span class="desktopIcon">PDF</span>
+              <span>Papers</span>
+            </a>
+            <a href="#contact">
+              <span class="desktopIcon">@</span>
+              <span>Contact</span>
+            </a>
+          </div>
+
+          <nav class="osDock" aria-label="garyOS dock">
+            <a href="#about-copy" aria-label="About">G</a>
+            <a href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer" aria-label="Instaplay">I</a>
+            <a href="#research" aria-label="Research">R</a>
+            <a href="#experience" aria-label="Experience">W</a>
+            <a href="#contact" aria-label="Contact">@</a>
+          </nav>
+        </div>
+      </section>
+
+      <section id="about-copy" class="section">
+        <div class="shell sectionGrid">
+          <p class="sectionKicker">ABOUT</p>
+          <div class="prose">
+            <p>
+              Hey! I'm currently living in SF and building <a href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer">Instaplay</a>, AI for multiplayer games.
+            </p>
+            <p>
+              Before this, I was an Associate Product Manager at Salesforce, where I spearheaded RL Environments and was Product Lead for Agentforce Tableau's agentic data analysis platform.
+            </p>
+            <p>
+              I received my Bachelor's and Master's degrees in Computer Science concurrently from Harvard University through the AB/SM program, focusing on ML Fairness and Distributed Systems and learning from <a href="https://www.seas.harvard.edu/person/jim-waldo" target="_blank" rel="noopener noreferrer">Jim Waldo</a>, <a href="https://people.seas.harvard.edu/~chong/" target="_blank" rel="noopener noreferrer">Stephen Chong</a>, <a href="https://yiling.seas.harvard.edu/" target="_blank" rel="noopener noreferrer">Yiling Chen</a>, and <a href="https://dwork.seas.harvard.edu/detailed-biography-and-curriculum-vitae" target="_blank" rel="noopener noreferrer">Cynthia Dwork</a>.
+            </p>
+            <p>
+              Previously, I co-founded an LLMOps startup building custom LLM Evals and raised from Pear VC and Unusual Ventures.
+            </p>
+            <p>
+              Outside of work, I play tennis, eat spicy Sichuan food, and DJ.
+            </p>
+          </div>
         </div>
       </section>
 
       <section id="research" class="section">
-        <div class="sectionHeader">
-          <h2>Research</h2>
-          <p class="muted">Graduate-level coursework and research projects.</p>
-        </div>
-        <div id="researchStatus" class="status" aria-live="polite"></div>
-        <div id="researchList" class="stack">
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Benchmarking Explainability of ImageNet Classification Against Data Suboptimality</h3>
-              <div class="cardMeta"><span>CS 2822R: ML Interpretability</span><span> - </span><span>2024</span></div>
+        <div class="shell sectionGrid">
+          <div class="sectionHeader">
+            <p class="sectionKicker">RESEARCH</p>
+            <p class="muted">Graduate-level coursework and research projects.</p>
+          </div>
+          <div>
+            <div id="researchStatus" class="status" aria-live="polite"></div>
+            <div id="researchList" class="stack">
+              <article class="card">
+                <div>
+                  <h3 class="cardTitle">Benchmarking Explainability of ImageNet Classification Against Data Suboptimality</h3>
+                  <div class="cardMeta"><span>CS 2822R: ML Interpretability</span><span> - </span><span>2024</span></div>
+                </div>
+                <p class="cardText">We explore interpretable machine learning techniques to help stakeholders understand ML models and their decision-making processes. This work focuses on capturing the underlying reasoning of black box methods through various interpretability approaches.</p>
+                <div class="row">
+                  <a class="pill pdfLink" href="assets/papers/CS 2822R Final Project.pdf">View PDF</a>
+                  <a class="pill" href="assets/papers/CS 2822R Final Project.pdf" download="CS 2822R Final Project.pdf">Download</a>
+                </div>
+              </article>
+              <article class="card">
+                <div>
+                  <h3 class="cardTitle">Stable Compute Marketplace Problem with Multi-dimensional Preference Ordering</h3>
+                  <div class="cardMeta"><span>CS 236r: Advanced Topics in Econ/CS</span><span> - </span><span>2024</span></div>
+                </div>
+                <p class="cardText">We address the challenge of creating stable compute marketplaces for machine learning, where users can rent computational resources for training large models. Our work implements pricing and matching algorithms that handle multi-dimensional preference reporting in practice.</p>
+                <div class="row">
+                  <a class="pill pdfLink" href="assets/papers/CS 236r Final Project.pdf">View PDF</a>
+                  <a class="pill" href="assets/papers/CS 236r Final Project.pdf" download="CS 236r Final Project.pdf">Download</a>
+                </div>
+              </article>
             </div>
-            <p class="cardText">We explore interpretable machine learning techniques to help stakeholders understand ML models and their decision-making processes. This work focuses on capturing the underlying reasoning of black box methods through various interpretability approaches.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 2822R Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 2822R Final Project.pdf" download="CS 2822R Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Stable Compute Marketplace Problem with Multi-dimensional Preference Ordering</h3>
-              <div class="cardMeta"><span>CS 236r: Advanced Topics in Econ/CS</span><span> - </span><span>2024</span></div>
-            </div>
-            <p class="cardText">We address the challenge of creating stable compute marketplaces for machine learning, where users can rent computational resources for training large models. Our work implements pricing and matching algorithms that handle multi-dimensional preference reporting in practice.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 236r Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 236r Final Project.pdf" download="CS 236r Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Incentive-Aligned Agent Selection Strategy for Federated Learning</h3>
-              <div class="cardMeta"><span>CS 243: Advanced Networking for ML Systems</span><span> - </span><span>2023</span></div>
-            </div>
-            <p class="cardText">We present PRIMES, a novel incentive-aligned approach for federated learning that addresses the misreporting and free-riding problem. By selecting clients based on next-step loss and paying them based on global performance, we incentivize truthful reporting and high-quality contributions.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 243 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 243 Final Project.pdf" download="CS 243 Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Homomorphic Encryption for Neural Network Deployment</h3>
-              <div class="cardMeta"><span>CS 254: Advanced Topics in Security</span><span> - </span><span>2025</span></div>
-            </div>
-            <p class="cardText">We implement a homomorphic encryption-based neural network using polynomial activation approximation to enable secure inference on encrypted data. We compare the security posture against standard unencrypted networks, focusing on membership inference, model extraction, and gradient-based input recovery attacks.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 254 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 254 Final Project.pdf" download="CS 254 Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Achieving Fairness in the Multi-Round Online Gaming Context</h3>
-              <div class="cardMeta"><span>CS 226: Algorithmic Fairness</span><span> - </span><span>2024</span></div>
-            </div>
-            <p class="cardText">We investigate how fairness breaks down in online learning settings with strategic gaming, where agents may modify their reported features for favorable outcomes. We introduce algorithmic changes to ensure fairness across multiple metrics, accounting for different cost functions between advantaged and disadvantaged agents.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 226 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 226 Final Project.pdf" download="CS 226 Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Metric-Based LLM-Router Using KMeans Clustering</h3>
-              <div class="cardMeta"><span>Neuro 240: Biological &amp; Artificial Intelligence</span><span> - </span><span>2024</span></div>
-            </div>
-            <p class="cardText">We explore the feasibility of Large Language Model routers that can intelligently recommend the best LLM for a given task. Using KMeans clustering on prompts, we build a model to predict which LLM will provide the best response.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/Neuro 240 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/Neuro 240 Final Project.pdf" download="Neuro 240 Final Project.pdf">Download</a>
-            </div>
-          </article>
+          </div>
         </div>
       </section>
 
       <section id="experience" class="section">
-        <div class="sectionHeader">
-          <h2>Experience</h2>
-        </div>
-        <div id="experienceStatus" class="status" aria-live="polite"></div>
-        <div id="experienceList" class="stack">
-          <div class="experienceEntry">
-            <h3>Associate Product Manager - Salesforce</h3>
-            <p>1 of 12 APM's in cohort. Pitched and led RL Environments. Product Lead for Agentforce Tableau, building the agentic data analysis platform.</p>
+        <div class="shell sectionGrid">
+          <div class="sectionHeader">
+            <p class="sectionKicker">EXPERIENCE</p>
           </div>
-          <div class="experienceEntry">
-            <h3>Associate Product Manager Intern - Salesforce</h3>
-            <p>Owned multi-modal prompt engineering integration from 0-1: led customer calls, wrote requirements, drove stakeholder alignment. Convinced execs to increase project priority and shipped API MVP, unlocking Agentforce's Service Agent. Doubly operated as TPM, spearheading API design and partnered with multiple engineering teams. Collaborated with Sales/AE teams to build and pitch customized demos for client C-suite audience in $XXm ACV AI deals.</p>
-          </div>
-          <div class="experienceEntry">
-            <h3>Co-Founder &amp; Head of Product - Verita</h3>
-            <p>Founded LLM Evals startup with Harvard classmates - powering businesses to test and improve their fine-tuned LLM's. Engineered MVP, conducted user/competitive research and led product growth. Raised funding from Pear VC and Unusual Ventures and participated in Unusual Academy.</p>
-          </div>
-          <div class="experienceEntry">
-            <h3>Product Manager Intern - Teradata</h3>
-            <p>Collaborated with Engineering to design a migration system from PySpark to Teradata's ML python package, enabling users to port over existing jobs, enabling and increasing onboarding efficiency. Engineered end-to-end machine learning (XGBoost) product demo within the Teradata MLOps platform, from data preparation and model training to automating deployment &amp; evaluation.</p>
-          </div>
-          <div class="experienceEntry">
-            <h3>Software Engineering Intern - Alpaca Markets</h3>
-            <p>Engineered a Slack App using Python, PostgreSQL, and Flask, integrating multiple API's, OAuth 2.0, and backend logic, allowing users to submit trades using Slack commands, such that &quot;/buy AAPL 10&quot; would buy the user 10 shares of Apple. Wrote 3 technical articles of algorithmic trading strategies, reaching 1000's of customers. Created feature requirements and managed end-to-end development of the above projects.</p>
+          <div>
+            <div id="experienceStatus" class="status" aria-live="polite"></div>
+            <div id="experienceList" class="stack">
+              <div class="experienceEntry">
+                <h3>Associate Product Manager - Salesforce</h3>
+                <p>1 of 12 APM's in cohort. Pitched and led RL Environments. Product Lead for Agentforce Tableau, building the agentic data analysis platform.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <section id="contact" class="section">
-        <h2>Contact</h2>
-        <div class="prose">
-          <ul class="inlineList">
-            <li><a href="https://github.com/garywuuu" target="_blank" rel="me noreferrer">GitHub</a></li>
-            <li><a href="https://www.linkedin.com/in/garywu2025" target="_blank" rel="me noreferrer">LinkedIn</a></li>
-            <li><a href="https://twitter.com/garywu_eth" target="_blank" rel="me noreferrer">Twitter</a></li>
+        <div class="shell sectionGrid">
+          <p class="sectionKicker">CONTACT</p>
+          <ul class="plainList hList contactList">
+            <li><a href="https://github.com/garywuuu" target="_blank" rel="me noreferrer">GITHUB</a></li>
+            <li><a href="https://www.linkedin.com/in/garywu2025" target="_blank" rel="me noreferrer">LINKEDIN</a></li>
+            <li><a href="https://twitter.com/garywu_eth" target="_blank" rel="me noreferrer">X</a></li>
           </ul>
         </div>
       </section>
@@ -307,8 +357,21 @@
       </noscript>
     </main>
 
+    <section id="pdfViewer" class="pdfViewer" aria-hidden="true" aria-label="PDF viewer">
+      <div class="pdfPanel" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
+        <div class="pdfToolbar">
+          <h2 id="pdfTitle">PDF</h2>
+          <div class="pdfToolbarActions">
+            <a id="pdfDownload" class="pill" href="#" download>Download</a>
+            <button id="pdfClose" class="pdfClose" type="button" aria-label="Close PDF">×</button>
+          </div>
+        </div>
+        <iframe id="pdfFrame" title="Selected PDF"></iframe>
+      </div>
+    </section>
+
     <footer class="siteFooter">
-      <div class="container">
+      <div class="shell">
         <div class="footerRow">
           <span>&copy; <span id="year"></span> Gary Wu</span>
         </div>
