@@ -2,6 +2,8 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+  const EXTERNAL_LINK_ATTRS = { target: "_blank", rel: "noreferrer" };
+
   async function fetchJson(path) {
     const res = await fetch(path, { cache: "no-store" });
     if (!res.ok) throw new Error(`${path} -> ${res.status}`);
@@ -54,6 +56,28 @@
     node.style.display = msg ? "block" : "none";
   }
 
+  function externalPill(href, text) {
+    return el("a", { class: "pill", href, ...EXTERNAL_LINK_ATTRS, text });
+  }
+
+  function emptyContainer(id) {
+    const node = document.getElementById(id);
+    if (!node) return null;
+    node.innerHTML = "";
+    return node;
+  }
+
+  function linkCardPlaceholder() {
+    return el("div", { class: "linkCardImg", "aria-hidden": "true" });
+  }
+
+  // Renders a list-backed section, reporting load state through its status node.
+  function renderSection({ statusId, data, emptyMessage, render }) {
+    const items = Array.isArray(data) ? data : [];
+    setStatus(statusId, items.length ? "" : emptyMessage);
+    render(items);
+  }
+
   function renderLinkCard(link) {
     const hasImg = Boolean(link.image);
     const img = hasImg
@@ -62,13 +86,12 @@
           src: link.image,
           alt: link.title ? `${link.title} preview` : "Link preview",
         })
-      : el("div", { class: "linkCardImg", "aria-hidden": "true" });
+      : linkCardPlaceholder();
 
     // If image 404, replace with blank placeholder box
     if (hasImg) {
       img.addEventListener("error", () => {
-        const placeholder = el("div", { class: "linkCardImg", "aria-hidden": "true" });
-        img.replaceWith(placeholder);
+        img.replaceWith(linkCardPlaceholder());
       });
     }
 
@@ -80,15 +103,14 @@
 
     return el(
       "a",
-      { class: "linkCard", href: link.url, target: "_blank", rel: "noreferrer", "aria-label": link.title || "Link" },
+      { class: "linkCard", href: link.url, ...EXTERNAL_LINK_ATTRS, "aria-label": link.title || "Link" },
       [img, right]
     );
   }
 
   function renderPapers(papers) {
-    const list = document.getElementById("researchList");
+    const list = emptyContainer("researchList");
     if (!list) return;
-    list.innerHTML = "";
 
     for (const [idx, p] of papers.entries()) {
       const titleRow = el("div", {}, [
@@ -105,7 +127,7 @@
       ]);
 
       const actions = el("div", { class: "row" }, [
-        el("a", { class: "pill", href: p.pdf, target: "_blank", rel: "noreferrer", text: "View PDF" }),
+        externalPill(p.pdf, "View PDF"),
         el("a", { class: "pill", href: p.pdf, download: safeFileName(p.pdf), text: "Download" }),
       ]);
 
@@ -113,7 +135,7 @@
       if (Array.isArray(p.links)) {
         for (const l of p.links) {
           if (!l || !l.url) continue;
-          actions.append(el("a", { class: "pill", href: l.url, target: "_blank", rel: "noreferrer", text: l.label || hostFromUrl(l.url) }));
+          actions.append(externalPill(l.url, l.label || hostFromUrl(l.url)));
         }
       }
 
@@ -150,10 +172,9 @@
     }
   }
 
-  function renderExperience(exps, linksById) {
-    const list = document.getElementById("experienceList");
+  function renderExperience(exps) {
+    const list = emptyContainer("experienceList");
     if (!list) return;
-    list.innerHTML = "";
 
     const score = (e) => {
       // prefer end date, otherwise start date; higher is more recent
@@ -278,8 +299,8 @@
   }
 
   function matchPhotoToProse() {
-    const prose = document.querySelector(".aboutProse");
-    const photo = document.querySelector(".aboutPhoto");
+    const prose = $(".aboutProse");
+    const photo = $(".aboutPhoto");
     if (prose && photo) {
       const proseHeight = prose.offsetHeight;
       photo.style.height = proseHeight + "px";
@@ -296,23 +317,27 @@
     setStatus("experienceStatus", "Loading experience…");
 
     try {
-      const [papers, exps, links] = await Promise.all([
+      const [papers, exps] = await Promise.all([
         fetchJson("data/papers.json"),
         fetchJson("data/experience.json"),
-        fetchJson("data/links.json").catch(() => ({})),
       ]);
 
-      if (!Array.isArray(papers) || papers.length === 0) setStatus("researchStatus", "No research yet.");
-      else setStatus("researchStatus", "");
-      renderPapers(Array.isArray(papers) ? papers : []);
-
-      if (!Array.isArray(exps) || exps.length === 0) setStatus("experienceStatus", "No experience entries yet.");
-      else setStatus("experienceStatus", "");
-      renderExperience(Array.isArray(exps) ? exps : [], links && typeof links === "object" ? links : {});
+      renderSection({
+        statusId: "researchStatus",
+        data: papers,
+        emptyMessage: "No research yet.",
+        render: renderPapers,
+      });
+      renderSection({
+        statusId: "experienceStatus",
+        data: exps,
+        emptyMessage: "No experience entries yet.",
+        render: renderExperience,
+      });
     } catch (err) {
       console.error(err);
-      setStatus("researchStatus", "Failed to load data. Check the JSON files under data/.");
-      setStatus("experienceStatus", "Failed to load data. Check the JSON files under data/.");
+      const failure = "Failed to load data. Check the JSON files under data/.";
+      for (const id of ["researchStatus", "experienceStatus"]) setStatus(id, failure);
     }
 
     // Match photo height after a short delay to ensure content is rendered

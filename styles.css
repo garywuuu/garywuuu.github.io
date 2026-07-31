@@ -18,9 +18,37 @@ html {
   --muted: rgba(0, 0, 0, 0.65);
   --border: rgba(0, 0, 0, 0.16);
   --borderStrong: rgba(0, 0, 0, 0.28);
+  --fgSoft: rgba(0, 0, 0, 0.86);
   --max: 860px;
   --radius: 10px;
+  --pillRadius: 999px;
   --shadowOffset: 3px;
+}
+
+/* Shared surfaces: everything drawn as a hairline-bordered rounded box. */
+.status,
+.card,
+.aboutPhoto,
+.linkCard,
+.linkCardImg {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Shared pills: small rounded capsules. */
+.pill,
+.tag {
+  border: 1px solid var(--border);
+  border-radius: var(--pillRadius);
+}
+
+/* Shared focus/hover treatment for interactive surfaces. */
+.pill:hover,
+.pill:focus,
+.linkCard:hover,
+.linkCard:focus {
+  border-color: var(--fg);
+  outline: none;
 }
 
 body {
@@ -173,8 +201,6 @@ code {
   grid-row: 2;
   align-self: start;
   height: 100%;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
   overflow: hidden;
   background: #fff;
   display: flex;
@@ -191,8 +217,6 @@ code {
 .status {
   margin: 10px 0 0 0;
   padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   color: var(--muted);
 }
 .status:empty {
@@ -213,8 +237,6 @@ code {
 }
 
 .card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 14px;
   background: var(--bg);
 }
@@ -233,7 +255,7 @@ code {
 }
 .cardText {
   margin: 10px 0 0 0;
-  color: rgba(0, 0, 0, 0.86);
+  color: var(--fgSoft);
   font-size: calc(1em - 2px);
 }
 
@@ -248,16 +270,9 @@ code {
 .pill {
   display: inline-block;
   padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
   font-size: 13px;
   text-decoration: none;
   color: var(--fg);
-}
-.pill:hover,
-.pill:focus {
-  border-color: var(--fg);
-  outline: none;
 }
 
 .details {
@@ -279,7 +294,7 @@ code {
 }
 .experienceEntry p {
   margin: 0 0 8px 0;
-  color: rgba(0, 0, 0, 0.86);
+  color: var(--fgSoft);
 }
 .experienceEntry p:last-child {
   margin-bottom: 0;
@@ -302,8 +317,6 @@ code {
 .tag {
   font-size: 12px;
   padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
   color: var(--muted);
 }
 
@@ -332,10 +345,6 @@ code {
   .linkGrid {
     grid-template-columns: 1fr;
   }
-  #researchList {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, auto);
-  }
 }
 
 @media (max-width: 520px) {
@@ -356,21 +365,12 @@ code {
   grid-template-columns: 72px 1fr;
   gap: 12px;
   padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   color: var(--fg);
   text-decoration: none;
-}
-.linkCard:hover,
-.linkCard:focus {
-  border-color: var(--fg);
-  outline: none;
 }
 .linkCardImg {
   width: 72px;
   height: 72px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
   background: #fff;
   object-fit: cover;
 }
