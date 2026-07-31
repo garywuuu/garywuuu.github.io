@@ -1,0 +1,20 @@
+{
+  "name": "garywuuu.github.io",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A minimalist black and white personal website built with plain HTML, CSS, and JavaScript, designed to be hosted on GitHub Pages.",
+  "main": "script.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
+  }
+}
