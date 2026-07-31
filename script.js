@@ -3,9 +3,18 @@
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
   async function fetchJson(path) {
-    const res = await fetch(path, { cache: "no-store" });
-    if (!res.ok) throw new Error(`${path} -> ${res.status}`);
-    return await res.json();
+    let res;
+    try {
+      res = await fetch(path, { cache: "no-store" });
+    } catch (err) {
+      throw new Error(`Network error while fetching ${path}`, { cause: err });
+    }
+    if (!res.ok) throw new Error(`Failed to fetch ${path}: ${res.status} ${res.statusText}`);
+    try {
+      return await res.json();
+    } catch (err) {
+      throw new Error(`Invalid JSON in ${path}`, { cause: err });
+    }
   }
 
   function el(tag, attrs = {}, children = []) {
@@ -36,8 +45,9 @@
   function hostFromUrl(url) {
     try {
       return new URL(url).hostname.replace(/^www\./, "");
-    } catch {
-      return url;
+    } catch (err) {
+      console.warn(`Could not parse URL: ${url}`, err);
+      return url || "";
     }
   }
 
@@ -286,39 +296,86 @@
     }
   }
 
+  // Renders one data-driven section, keeping load, shape and render failures
+  // isolated so a failure in one section cannot blank out the others.
+  function renderSection({ result, statusId, emptyMessage, errorMessage, render }) {
+    if (result.status === "rejected") {
+      console.error(errorMessage, result.reason);
+      setStatus(statusId, errorMessage);
+      return;
+    }
+
+    const items = result.value;
+    if (!Array.isArray(items)) {
+      console.error(`${errorMessage} Expected an array, received ${typeof items}.`);
+      setStatus(statusId, errorMessage);
+      return;
+    }
+
+    try {
+      render(items);
+    } catch (err) {
+      console.error(errorMessage, err);
+      setStatus(statusId, errorMessage);
+      return;
+    }
+
+    setStatus(statusId, items.length === 0 ? emptyMessage : "");
+  }
+
   async function main() {
     const year = document.getElementById("year");
     if (year) year.textContent = String(new Date().getFullYear());
 
-    setupActiveNav();
+    try {
+      setupActiveNav();
+    } catch (err) {
+      console.error("Navigation setup failed; falling back to default anchor behaviour.", err);
+    }
 
     setStatus("researchStatus", "Loading research…");
     setStatus("experienceStatus", "Loading experience…");
 
-    try {
-      const [papers, exps, links] = await Promise.all([
-        fetchJson("data/papers.json"),
-        fetchJson("data/experience.json"),
-        fetchJson("data/links.json").catch(() => ({})),
-      ]);
+    const [papersResult, expsResult, linksResult] = await Promise.allSettled([
+      fetchJson("data/papers.json"),
+      fetchJson("data/experience.json"),
+      fetchJson("data/links.json"),
+    ]);
 
-      if (!Array.isArray(papers) || papers.length === 0) setStatus("researchStatus", "No research yet.");
-      else setStatus("researchStatus", "");
-      renderPapers(Array.isArray(papers) ? papers : []);
-
-      if (!Array.isArray(exps) || exps.length === 0) setStatus("experienceStatus", "No experience entries yet.");
-      else setStatus("experienceStatus", "");
-      renderExperience(Array.isArray(exps) ? exps : [], links && typeof links === "object" ? links : {});
-    } catch (err) {
-      console.error(err);
-      setStatus("researchStatus", "Failed to load data. Check the JSON files under data/.");
-      setStatus("experienceStatus", "Failed to load data. Check the JSON files under data/.");
+    let links = {};
+    if (linksResult.status === "fulfilled") {
+      if (linksResult.value && typeof linksResult.value === "object") links = linksResult.value;
+      else console.warn("data/links.json did not contain an object; ignoring link previews.");
+    } else {
+      console.warn("Could not load data/links.json; continuing without link previews.", linksResult.reason);
     }
+
+    renderSection({
+      result: papersResult,
+      statusId: "researchStatus",
+      emptyMessage: "No research yet.",
+      errorMessage: "Failed to load research. Check data/papers.json.",
+      render: (papers) => renderPapers(papers),
+    });
+
+    renderSection({
+      result: expsResult,
+      statusId: "experienceStatus",
+      emptyMessage: "No experience entries yet.",
+      errorMessage: "Failed to load experience. Check data/experience.json.",
+      render: (exps) => renderExperience(exps, links),
+    });
 
     // Match photo height after a short delay to ensure content is rendered
     setTimeout(matchPhotoToProse, 50);
     window.addEventListener("resize", matchPhotoToProse);
   }
 
-  document.addEventListener("DOMContentLoaded", main);
+  document.addEventListener("DOMContentLoaded", () => {
+    main().catch((err) => {
+      console.error("Page initialisation failed.", err);
+      setStatus("researchStatus", "Something went wrong loading this page.");
+      setStatus("experienceStatus", "Something went wrong loading this page.");
+    });
+  });
 })();
