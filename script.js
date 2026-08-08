@@ -41,6 +41,22 @@
     }
   }
 
+  // Only allow http(s), mailto and same-origin relative URLs as link targets,
+  // so data-driven hrefs can never become javascript:/data: URIs.
+  function safeUrl(url) {
+    if (typeof url !== "string") return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    let parsed;
+    try {
+      parsed = new URL(trimmed, window.location.href);
+    } catch {
+      return null;
+    }
+    const allowed = ["http:", "https:", "mailto:"];
+    return allowed.includes(parsed.protocol) ? trimmed : null;
+  }
+
   function safeFileName(path) {
     if (!path) return "";
     const seg = path.split("/").filter(Boolean);
@@ -55,6 +71,7 @@
   }
 
   function renderLinkCard(link) {
+    const href = safeUrl(link.url);
     const hasImg = Boolean(link.image);
     const img = hasImg
       ? el("img", {
@@ -80,7 +97,7 @@
 
     return el(
       "a",
-      { class: "linkCard", href: link.url, target: "_blank", rel: "noreferrer", "aria-label": link.title || "Link" },
+      { class: "linkCard", href, target: "_blank", rel: "noopener noreferrer", "aria-label": link.title || "Link" },
       [img, right]
     );
   }
@@ -104,16 +121,18 @@
         ),
       ]);
 
+      const pdfHref = safeUrl(p.pdf);
       const actions = el("div", { class: "row" }, [
-        el("a", { class: "pill", href: p.pdf, target: "_blank", rel: "noreferrer", text: "View PDF" }),
-        el("a", { class: "pill", href: p.pdf, download: safeFileName(p.pdf), text: "Download" }),
+        el("a", { class: "pill", href: pdfHref, target: "_blank", rel: "noopener noreferrer", text: "View PDF" }),
+        el("a", { class: "pill", href: pdfHref, download: safeFileName(p.pdf), text: "Download" }),
       ]);
 
       // Optional extra links
       if (Array.isArray(p.links)) {
         for (const l of p.links) {
-          if (!l || !l.url) continue;
-          actions.append(el("a", { class: "pill", href: l.url, target: "_blank", rel: "noreferrer", text: l.label || hostFromUrl(l.url) }));
+          const linkHref = l && safeUrl(l.url);
+          if (!linkHref) continue;
+          actions.append(el("a", { class: "pill", href: linkHref, target: "_blank", rel: "noopener noreferrer", text: l.label || hostFromUrl(linkHref) }));
         }
       }
 
