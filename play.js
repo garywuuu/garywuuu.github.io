@@ -1371,15 +1371,20 @@ function poseDragon(critter, now, dt, sit) {
   const legs = data.legs || [];
   const knees = data.knees || [];
   const feet = data.feet || [];
-  const hipX = [0.08, 0.08, 0.92, 0.92];
-  const hipZ = [-0.04, 0.04, -0.16, 0.16];
-  const kneeX = [0.18, 0.18, -0.72, -0.72];
-  const footX = [-0.12, -0.12, 0.22, 0.22];
+  const flap = Math.sin(now / 180 + data.heading);
+  const flyHipX = [-1.05 + flap * 0.08, -1.05 + flap * 0.08, -1.28 + flap * 0.06, -1.28 + flap * 0.06];
+  const sitHipX = [0.22, 0.22, 0.98, 0.98];
+  const flyHipZ = [-0.08, 0.08, -0.1, 0.1];
+  const sitHipZ = [-0.06, 0.06, -0.18, 0.18];
+  const flyKneeX = [0.55, 0.55, 0.72, 0.72];
+  const sitKneeX = [0.28, 0.28, -0.78, -0.78];
+  const flyFootX = [0.62, 0.62, 0.78, 0.78];
+  const sitFootX = [-0.28, -0.28, 0.18, 0.18];
   for (const [i, leg] of legs.entries()) {
     if (!leg) continue;
-    easeJoint(leg, (hipX[i] || 0) * sit, 0, (hipZ[i] || 0) * sit, blend);
-    if (knees[i]) easeJoint(knees[i], (kneeX[i] || 0) * sit, 0, 0, blend);
-    if (feet[i]) easeJoint(feet[i], (footX[i] || 0) * sit, 0, 0, blend);
+    easeJoint(leg, THREE.MathUtils.lerp(flyHipX[i], sitHipX[i], sit), 0, THREE.MathUtils.lerp(flyHipZ[i], sitHipZ[i], sit), blend);
+    if (knees[i]) easeJoint(knees[i], THREE.MathUtils.lerp(flyKneeX[i], sitKneeX[i], sit), 0, 0, blend);
+    if (feet[i]) easeJoint(feet[i], THREE.MathUtils.lerp(flyFootX[i], sitFootX[i], sit), 0, 0, blend);
   }
   if (data.head) {
     const lookY = sit ? Math.sin(now / 1100 + data.baseY) * 0.32 + Math.sin(now / 2400 + data.heading) * 0.12 : 0;
