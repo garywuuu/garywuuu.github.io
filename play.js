@@ -707,21 +707,21 @@ function bannerTop() {
   return BANNER.y + (BANNER.h + 0.28) * 0.5;
 }
 
-function hitsBanner(x, y, z, pad = 0.85) {
+function hitsBanner(x, y, z, pad = 0.55) {
   return (
     Math.abs(x - BANNER.x) < BANNER.w * 0.5 + pad &&
     Math.abs(z - BANNER.z) < BANNER.d * 0.5 + pad &&
-    y > BANNER.y - BANNER.h * 0.5 - 0.6 &&
-    y < bannerTop() + 0.2
+    y > BANNER.y - BANNER.h * 0.5 - 0.4 &&
+    y < bannerTop() - 0.05
   );
 }
 
 function bannerPerch(slot = 0) {
-  const spread = [-2.4, -0.8, 0.8, 2.4];
+  const spread = [-1.8, -0.6, 0.6, 1.8];
   return {
     x: BANNER.x + spread[slot % spread.length],
-    y: bannerTop() + 0.22,
-    z: BANNER.z + 0.08,
+    y: bannerTop() + 0.16,
+    z: BANNER.z + BANNER.d * 0.5 + 0.55,
   };
 }
 
@@ -1221,7 +1221,7 @@ function stepToward(critter, x, z, dt, mode) {
   const nx = critter.position.x + Math.sin(critter.userData.heading) * step;
   const nz = critter.position.z + Math.cos(critter.userData.heading) * step;
   const ny = critter.userData.sky ? critter.position.y : null;
-  const allowBanner = critter.userData.mood === "perch" && ny != null && ny > bannerTop();
+  const allowBanner = critter.userData.mood === "perch";
   if (roamOk(nx, nz, mode, ny, allowBanner)) {
     critter.position.x = nx;
     critter.position.z = nz;
@@ -1594,8 +1594,7 @@ function sendToPerch(critter, slot = 0, hold = 10) {
   critter.userData.playWith = null;
   critter.userData.target = perch;
   critter.userData.moodT = hold;
-  critter.userData.speed = 6.4;
-  critter.userData.heading = Math.atan2(perch.x - critter.position.x, perch.z - critter.position.z);
+  critter.userData.speed = 7.2;
 }
 
 function greetPerch(dragons) {
@@ -2281,17 +2280,13 @@ function startWorld() {
           if (data.mood === "browse" || data.mood === "guard") data.speed = 0;
         }
       } else if (data.mood === "perch" && toy) {
-        const dist = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z);
-        const sit = THREE.MathUtils.clamp(1 - dist / 4.2, 0, 1);
-        if (dist > 0.18) {
-          data.speed = THREE.MathUtils.lerp(1.4, 4.6, 1 - sit);
-          stepToward(critter, toy.x, toy.z, dt, mode);
-        } else {
-          critter.position.x += (toy.x - critter.position.x) * Math.min(1, dt * 4);
-          critter.position.z += (toy.z - critter.position.z) * Math.min(1, dt * 4);
-          data.speed = 0;
-        }
-        faceToward(critter, player.x, player.z);
+        const dist = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z, toy.y - critter.position.y);
+        const pull = Math.min(1, dt * (dist > 6 ? 1.6 : 3.4));
+        critter.position.x += (toy.x - critter.position.x) * pull;
+        critter.position.z += (toy.z - critter.position.z) * pull;
+        data.speed = 0;
+        if (dist < 1.8) faceToward(critter, player.x, player.z);
+        else steerToward(critter, toy.x, toy.z, 0.16);
       } else if (data.mood === "breath") {
         data.heading += Math.sin(now / 260) * 0.01;
       } else if (data.mood === "pounce") {
@@ -2340,14 +2335,18 @@ function startWorld() {
 
       if (data.sky) {
         const perch = data.mood === "perch" && data.target;
-        const dist = perch ? Math.hypot(data.target.x - critter.position.x, data.target.z - critter.position.z) : 99;
-        const sit = perch ? THREE.MathUtils.clamp(1 - dist / 4.2, 0, 1) : 0;
-        const landed = perch && dist < 0.35;
+        const dist = perch ? Math.hypot(data.target.x - critter.position.x, data.target.z - critter.position.z, data.target.y - critter.position.y) : 99;
+        const sit = perch ? THREE.MathUtils.clamp(1 - dist / 5.5, 0, 1) : 0;
+        const landed = perch && dist < 0.55;
         const swoop = data.mood === "chase" || data.mood === "circle";
         let wantY = data.baseY + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
-        if (perch) wantY = THREE.MathUtils.lerp(Math.max(bannerTop() + 2.8, data.target.y + 2.6), data.target.y, sit);
-        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (1.8 + sit * 2.4));
-        if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z)) {
+        if (perch) wantY = THREE.MathUtils.lerp(data.target.y + 3.2, data.target.y, sit);
+        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (2.2 + sit * 3));
+        if (landed) {
+          critter.position.x += (data.target.x - critter.position.x) * Math.min(1, dt * 8);
+          critter.position.y += (data.target.y - critter.position.y) * Math.min(1, dt * 8);
+          critter.position.z += (data.target.z - critter.position.z) * Math.min(1, dt * 8);
+        } else if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z)) {
           critter.position.y = Math.max(critter.position.y, bannerTop() + 1.1);
           if (Math.abs(critter.position.z - BANNER.z) < BANNER.d * 0.5 + 0.6) {
             critter.position.z += critter.position.z >= BANNER.z ? 1.6 : -1.6;
