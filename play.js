@@ -694,7 +694,34 @@ function makeCover(item, x) {
   return mesh;
 }
 
-function makeInstaplaySign(x, y, z, scaleX = 11.4) {
+const BANNER = {
+  x: 0.5,
+  y: 11.4,
+  z: -12.2,
+  w: 11.6,
+  h: 11.6 * 0.25,
+  d: 0.9,
+};
+
+function hitsBanner(x, y, z, pad = 1.4) {
+  return (
+    Math.abs(x - BANNER.x) < BANNER.w * 0.5 + pad &&
+    Math.abs(z - BANNER.z) < BANNER.d * 0.5 + pad &&
+    y > BANNER.y - BANNER.h * 0.5 - 1.1 &&
+    y < BANNER.y + BANNER.h * 0.5 + 1.6
+  );
+}
+
+function bannerPerch(slot = 0) {
+  const spread = [-2.6, -0.8, 0.8, 2.6];
+  return {
+    x: BANNER.x + spread[slot % spread.length],
+    y: BANNER.y + BANNER.h * 0.5 + 0.42,
+    z: BANNER.z,
+  };
+}
+
+function makeInstaplaySign(x = BANNER.x, y = BANNER.y, z = BANNER.z, scaleX = BANNER.w) {
   const tex = signTexture((ctx) => {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, 512, 128);
@@ -718,10 +745,19 @@ function makeInstaplaySign(x, y, z, scaleX = 11.4) {
     ctx.textAlign = "left";
     ctx.fillText("INSTAPLAY", 240, 66);
   });
-  const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(scaleX, scaleX * 0.25, 0.18), mat);
-  mesh.position.set(x, y, z);
-  return mesh;
+  const group = new THREE.Group();
+  group.position.set(x, y, z);
+  const face = new THREE.Mesh(
+    new THREE.BoxGeometry(scaleX, scaleX * 0.25, BANNER.d),
+    new THREE.MeshLambertMaterial({ map: tex })
+  );
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(scaleX + 0.28, scaleX * 0.25 + 0.28, BANNER.d + 0.18),
+    new THREE.MeshLambertMaterial({ map: blockTexture("stoneDark") })
+  );
+  group.add(frame);
+  group.add(face);
+  return group;
 }
 
 function buildWorld(scene) {
@@ -762,7 +798,7 @@ function buildWorld(scene) {
     scene.add(mesh);
   }
 
-  scene.add(makeInstaplaySign(0.5, 11.4, -12.2, 11.6));
+  scene.add(makeInstaplaySign());
   for (const booth of BOOTHS) {
     const title = booth.game.title.toUpperCase();
     const bg = booth.game.action === "create" ? "#15051a" : "#111111";
@@ -804,12 +840,16 @@ function makeOrb(scene, index) {
 }
 
 function addBox(parent, kind, x, y, z, sx, sy, sz, extra = {}) {
+  const layer = extra.layer || 0;
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(sx, sy, sz),
     new THREE.MeshLambertMaterial({
       map: blockTexture(kind),
       emissive: extra.emissive ?? 0x000000,
       emissiveIntensity: extra.glow ?? 0,
+      polygonOffset: layer !== 0,
+      polygonOffsetFactor: -layer,
+      polygonOffsetUnits: -layer,
     })
   );
   mesh.position.set(x, y, z);
@@ -827,14 +867,11 @@ function addPivot(parent, x, y, z) {
   return g;
 }
 
-function addLimb(parent, kind, x, y, z) {
+function addCatLeg(parent, kind, sock, x, y, z) {
   const hip = addPivot(parent, x, y, z);
-  addBox(hip, kind, 0, -0.055, 0, 0.07, 0.12, 0.07);
-  const knee = addPivot(hip, 0, -0.11, 0);
-  addBox(knee, kind, 0, -0.05, 0, 0.06, 0.1, 0.06);
-  const paw = addPivot(knee, 0, -0.1, 0);
-  addBox(paw, kind, 0, -0.02, 0.015, 0.07, 0.04, 0.08);
-  return { hip, knee, paw };
+  addBox(hip, kind, 0, -0.08, 0, 0.1, 0.16, 0.1);
+  addBox(hip, sock || kind, 0, -0.195, 0, 0.11, 0.07, 0.11, { layer: 1 });
+  return hip;
 }
 
 function addCat(root, look) {
@@ -842,39 +879,53 @@ function addCat(root, look) {
   const trim = look.trim;
   const belly = look.belly;
   const muzzle = look.muzzle;
+  const sock = look.sock || belly;
   const mark = look.mark || [];
-  const torso = addPivot(root, 0, 0.22, 0);
-  addBox(torso, body, 0, 0.08, 0, 0.28, 0.18, 0.56);
-  addBox(torso, belly, 0, -0.02, 0.02, 0.16, 0.08, 0.36);
+  const torso = addPivot(root, 0, 0.28, 0);
+  addBox(torso, body, 0, 0, 0, 0.28, 0.22, 0.72);
+  addBox(torso, belly, 0, -0.148, 0.02, 0.18, 0.07, 0.46, { layer: 1 });
 
-  const head = addPivot(torso, 0, 0.1, 0.3);
-  addBox(head, body, 0, 0.08, 0.08, 0.24, 0.2, 0.22);
-  addBox(head, muzzle, 0, 0.02, 0.2, 0.13, 0.08, 0.08);
-  addBox(head, look.nose || "pink", 0, 0.04, 0.25, 0.04, 0.03, 0.03);
-  addBox(head, look.eye || "lime", -0.055, 0.12, 0.18, 0.05, 0.05, 0.03);
-  addBox(head, look.eye || "lime", 0.055, 0.12, 0.18, 0.05, 0.05, 0.03);
-  addBox(head, "white", -0.07, 0.135, 0.195, 0.02, 0.02, 0.02);
-  addBox(head, "white", 0.04, 0.135, 0.195, 0.02, 0.02, 0.02);
-  addBox(head, trim, -0.075, 0.2, 0.02, 0.07, 0.1, 0.05);
-  addBox(head, trim, 0.075, 0.2, 0.02, 0.07, 0.1, 0.05);
-  addBox(head, "pink", -0.075, 0.18, 0.05, 0.04, 0.05, 0.02);
-  addBox(head, "pink", 0.075, 0.18, 0.05, 0.04, 0.05, 0.02);
+  const head = addPivot(torso, 0, 0.04, 0.42);
+  addBox(head, body, 0, 0.02, 0.08, 0.28, 0.24, 0.28);
+  addBox(head, muzzle, 0, -0.05, 0.23, 0.16, 0.1, 0.08, { layer: 1 });
+  addBox(head, look.nose || "pink", 0, -0.03, 0.28, 0.04, 0.03, 0.03, { layer: 2 });
+  addBox(head, look.eye || "lime", -0.07, 0.04, 0.228, 0.05, 0.05, 0.03, { layer: 1 });
+  addBox(head, look.eye || "lime", 0.07, 0.04, 0.228, 0.05, 0.05, 0.03, { layer: 1 });
+  addBox(head, "black", -0.07, 0.04, 0.246, 0.02, 0.03, 0.012, { layer: 2 });
+  addBox(head, "black", 0.07, 0.04, 0.246, 0.02, 0.03, 0.012, { layer: 2 });
+  addBox(head, trim, -0.08, 0.16, 0, 0.08, 0.08, 0.06);
+  addBox(head, trim, 0.08, 0.16, 0, 0.08, 0.08, 0.06);
+  addBox(head, look.inner || "pink", -0.08, 0.15, 0.028, 0.04, 0.04, 0.02, { layer: 1 });
+  addBox(head, look.inner || "pink", 0.08, 0.15, 0.028, 0.04, 0.04, 0.02, { layer: 1 });
 
   const legs = [
-    addLimb(torso, look.leg || body, -0.09, 0, 0.18),
-    addLimb(torso, look.leg || body, 0.09, 0, 0.18),
-    addLimb(torso, look.leg || body, -0.09, 0, -0.2),
-    addLimb(torso, look.leg || body, 0.09, 0, -0.2),
+    addCatLeg(torso, look.leg || body, sock, -0.08, -0.1, 0.24),
+    addCatLeg(torso, look.leg || body, sock, 0.08, -0.1, 0.24),
+    addCatLeg(torso, look.leg || body, sock, -0.08, -0.1, -0.24),
+    addCatLeg(torso, look.leg || body, sock, 0.08, -0.1, -0.24),
   ];
 
-  const tail = addPivot(torso, 0, 0.1, -0.28);
-  addBox(tail, look.tail || body, 0, 0.08, 0, 0.05, 0.16, 0.05);
-  const tailMid = addPivot(tail, 0, 0.16, 0);
-  addBox(tailMid, look.tail || body, 0, 0.07, 0, 0.045, 0.14, 0.045);
-  const tailTip = addPivot(tailMid, 0, 0.14, 0);
-  addBox(tailTip, look.tailTip || look.tail || body, 0, 0.07, 0, 0.04, 0.14, 0.04);
+  const tail = addPivot(torso, 0, 0.06, -0.38);
+  addBox(tail, look.tail || body, 0, 0.02, -0.18, 0.06, 0.06, 0.36);
+  const tailMid = addPivot(tail, 0, 0.02, -0.36);
+  addBox(tailMid, look.tail || body, 0, 0, -0.12, 0.055, 0.055, 0.24);
+  const tailTip = addPivot(tailMid, 0, 0, -0.24);
+  addBox(tailTip, look.tailTip || look.tail || body, 0, 0, -0.08, 0.05, 0.05, 0.16);
 
-  for (const m of mark) addBox(torso, m.kind, m.x, m.y - 0.22, m.z, m.sx, m.sy, m.sz);
+  for (const m of mark) {
+    const side = Math.abs(m.x) > 0.04;
+    addBox(
+      torso,
+      m.kind,
+      side ? Math.sign(m.x) * 0.152 : m.x,
+      side ? m.y : Math.max(m.y, 0.128),
+      m.z,
+      side ? Math.min(m.sx, 0.05) : m.sx,
+      m.sy,
+      m.sz,
+      { layer: 1 }
+    );
+  }
   return { torso, head, legs, tail, tailMid, tailTip };
 }
 
@@ -981,51 +1032,53 @@ function makeCritter(scene, spec) {
   let parts = { wings: null, tail: null, legs: [] };
   const cats = {
     tuxedo: {
-      body: "black", trim: "black", belly: "white", muzzle: "white", eye: "lime",
-      mark: [{ kind: "white", x: 0, y: 0.155, z: 0.04, sx: 0.14, sy: 0.05, sz: 0.24 }],
+      body: "black", trim: "black", belly: "white", muzzle: "white", sock: "white", eye: "lime", tailTip: "white",
+      mark: [
+        { kind: "white", x: -0.07, y: 0.12, z: 0.08, sx: 0.08, sy: 0.04, sz: 0.08 },
+        { kind: "white", x: 0.07, y: 0.12, z: 0.02, sx: 0.08, sy: 0.04, sz: 0.08 },
+      ],
     },
     tabby: {
-      body: "orange", trim: "wood", belly: "cream", muzzle: "cream", eye: "lime", tail: "orange",
+      body: "orange", trim: "wood", belly: "cream", muzzle: "cream", sock: "cream", eye: "lime", tail: "orange",
       mark: [
-        { kind: "wood", x: 0, y: 0.405, z: 0.02, sx: 0.06, sy: 0.03, sz: 0.36 },
-        { kind: "wood", x: 0, y: 0.5, z: 0.44, sx: 0.1, sy: 0.03, sz: 0.08 },
+        { kind: "wood", x: 0, y: 0.12, z: 0.04, sx: 0.06, sy: 0.03, sz: 0.4 },
+        { kind: "wood", x: 0, y: 0.14, z: 0.42, sx: 0.1, sy: 0.03, sz: 0.08 },
       ],
     },
     calico: {
-      body: "cream", trim: "orange", belly: "white", muzzle: "white", eye: "lime",
+      body: "cream", trim: "orange", belly: "white", muzzle: "white", sock: "white", eye: "lime",
       mark: [
-        { kind: "orange", x: -0.12, y: 0.32, z: 0.08, sx: 0.08, sy: 0.1, sz: 0.14 },
-        { kind: "black", x: 0.12, y: 0.3, z: -0.12, sx: 0.08, sy: 0.08, sz: 0.12 },
-        { kind: "orange", x: 0.08, y: 0.48, z: 0.44, sx: 0.08, sy: 0.06, sz: 0.08 },
+        { kind: "orange", x: -0.1, y: 0.04, z: 0.1, sx: 0.1, sy: 0.1, sz: 0.16 },
+        { kind: "black", x: 0.1, y: 0.02, z: -0.14, sx: 0.1, sy: 0.1, sz: 0.14 },
       ],
     },
     siamese: {
-      body: "cream", trim: "wood", belly: "white", muzzle: "wood", eye: "blue", tail: "wood", tailTip: "wood", leg: "wood",
+      body: "cream", trim: "wood", belly: "white", muzzle: "wood", sock: "wood", eye: "blue", tail: "wood", tailTip: "wood", leg: "cream",
     },
     void: {
-      body: "black", trim: "black", belly: "ink", muzzle: "black", eye: "lime",
+      body: "black", trim: "black", belly: "ink", muzzle: "black", sock: "ink", eye: "lime",
     },
     cream: {
-      body: "cream", trim: "gold", belly: "white", muzzle: "white", eye: "lime",
+      body: "cream", trim: "gold", belly: "white", muzzle: "white", sock: "white", eye: "lime",
     },
     gray: {
-      body: "stone", trim: "stoneDark", belly: "cream", muzzle: "cream", eye: "lime",
+      body: "stone", trim: "stoneDark", belly: "cream", muzzle: "cream", sock: "cream", eye: "lime",
     },
     cow: {
-      body: "white", trim: "black", belly: "white", muzzle: "white", eye: "lime", tailTip: "black",
+      body: "white", trim: "black", belly: "white", muzzle: "white", sock: "white", eye: "lime", tailTip: "black",
       mark: [
-        { kind: "black", x: -0.08, y: 0.32, z: 0.08, sx: 0.12, sy: 0.1, sz: 0.16 },
-        { kind: "black", x: 0.1, y: 0.3, z: -0.16, sx: 0.12, sy: 0.1, sz: 0.14 },
+        { kind: "black", x: -0.08, y: 0.04, z: 0.1, sx: 0.12, sy: 0.1, sz: 0.16 },
+        { kind: "black", x: 0.1, y: 0.02, z: -0.16, sx: 0.12, sy: 0.1, sz: 0.14 },
       ],
     },
     ginger: {
-      body: "gold", trim: "orange", belly: "cream", muzzle: "cream", eye: "lime",
+      body: "gold", trim: "orange", belly: "cream", muzzle: "cream", sock: "cream", eye: "lime",
     },
     spot: {
-      body: "white", trim: "black", belly: "white", muzzle: "white", eye: "lime",
+      body: "white", trim: "black", belly: "white", muzzle: "white", sock: "white", eye: "lime",
       mark: [
-        { kind: "black", x: -0.08, y: 0.32, z: 0.04, sx: 0.1, sy: 0.08, sz: 0.12 },
-        { kind: "black", x: 0.1, y: 0.3, z: -0.12, sx: 0.08, sy: 0.08, sz: 0.1 },
+        { kind: "black", x: -0.08, y: 0.04, z: 0.04, sx: 0.1, sy: 0.08, sz: 0.12 },
+        { kind: "black", x: 0.1, y: 0.02, z: -0.12, sx: 0.08, sy: 0.08, sz: 0.1 },
       ],
     },
   };
@@ -1059,6 +1112,7 @@ function makeCritter(scene, spec) {
     playWith: null,
     breath: 0,
     cool: 0,
+    attention: 0,
     gait: hash(spec.x, spec.z) * Math.PI * 2,
     walkSpeed: sky ? 3.8 : 0.95,
     wings: parts.wings || null,
@@ -1074,15 +1128,31 @@ function makeCritter(scene, spec) {
   return root;
 }
 
-function roamOk(x, z, mode = "walk") {
-  if (mode === "sky") return x > -42 && x < 42 && z > -32 && z < 32;
-  if (x < -11 || x > 11 || z < 2 || z > 15) return false;
+function roamOk(x, z, mode = "walk", y = null) {
+  if (mode === "sky") {
+    if (x <= -42 || x >= 42 || z <= -32 || z >= 32) return false;
+    if (y != null && hitsBanner(x, y, z)) return false;
+    return true;
+  }
+  if (x < -20 || x > 20 || z < -3.6 || z > 16.4) return false;
   if (inShelf(Math.floor(x), Math.floor(z))) return false;
   if (pageAt(Math.floor(x), Math.floor(z))) return false;
   if (boothAt(Math.floor(x), Math.floor(z))) return false;
   if (solidAt(x, 1.4, z)) return false;
   if (!solidAt(x, 0.4, z)) return false;
   return true;
+}
+
+function makeSpot(x, z, lookX, lookZ) {
+  return { position: { x, z }, look: { x: lookX, z: lookZ } };
+}
+
+function catStands() {
+  const spots = STALLS.map((stall) => makeSpot(stall.x + 0.5, stall.z + 2.35, stall.x + 0.5, stall.z - 1));
+  spots.push(makeSpot(-12.7, 9.5, -16, 9.5));
+  spots.push(makeSpot(12.7, 9.5, 16, 9.5));
+  spots.push(makeSpot(0.5, 16.2, 0.5, 20));
+  return spots.filter((spot) => roamOk(spot.position.x, spot.position.z));
 }
 
 function makeCatToys(scene) {
@@ -1145,7 +1215,8 @@ function stepToward(critter, x, z, dt, mode) {
   const step = critter.userData.speed * dt;
   const nx = critter.position.x + Math.sin(critter.userData.heading) * step;
   const nz = critter.position.z + Math.cos(critter.userData.heading) * step;
-  if (roamOk(nx, nz, mode)) {
+  const ny = critter.userData.sky ? critter.position.y : null;
+  if (roamOk(nx, nz, mode, ny)) {
     critter.position.x = nx;
     critter.position.z = nz;
     return true;
@@ -1249,6 +1320,7 @@ function setCatMood(critter, mood, extra = {}) {
   data.speed = extra.speed ?? 0;
   data.target = extra.target ?? null;
   data.playWith = extra.playWith ?? null;
+  data.attention = extra.attention ?? (mood === "pet" ? data.moodT : 0);
   data.swatLeg = extra.swatLeg ?? (hash(critter.position.x, critter.position.z) > 0.5 ? 0 : 1);
 }
 
@@ -1265,160 +1337,181 @@ function easeJoint(node, rx, ry, rz, t) {
 
 function poseCat(critter, now, dt) {
   const data = critter.userData;
-  const moving = data.mood === "wander" || data.mood === "chase" || data.mood === "yarn" || data.mood === "scratch" || (data.mood === "pounce" && data.moodT <= 0.7);
-  const pace = data.mood === "chase" ? 11 : data.mood === "yarn" ? 10 : 8;
+  const stand = data.target && (data.mood === "browse" || data.mood === "guard");
+  const atStand = stand && Math.hypot(data.target.position.x - critter.position.x, data.target.position.z - critter.position.z) < 0.55;
+  const moving = data.mood === "wander" || data.mood === "chase" || data.mood === "yarn" || data.mood === "scratch" || (stand && !atStand) || (data.mood === "pounce" && data.moodT <= 0.7);
+  const pace = data.mood === "chase" ? 10 : data.mood === "yarn" ? 9 : 7.2;
   if (moving) data.gait += dt * pace;
   const walk = Math.sin(data.gait);
   const walkB = Math.sin(data.gait + Math.PI);
-  const lift = Math.max(0, Math.sin(data.gait));
-  const liftB = Math.max(0, Math.sin(data.gait + Math.PI));
-  const blend = Math.min(1, dt * 8);
-  let torsoX = moving ? Math.sin(data.gait * 2) * 0.05 : 0;
-  let torsoZ = moving ? Math.sin(data.gait) * 0.04 : 0;
-  let torsoY = 0;
-  let headX = moving ? -0.08 : 0.04;
-  let headY = Math.sin(now / 900 + data.baseY) * 0.12;
+  const blend = Math.min(1, dt * 9);
+  let torsoX = 0;
+  let torsoZ = 0;
+  let headX = 0;
+  let headY = Math.sin(now / 1400 + data.baseY) * 0.06;
   let headZ = 0;
-  const hips = [
-    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
-    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
-    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
-    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
-  ];
+  const hips = [0, 0, 0, 0];
+  const hipZ = [0, 0, 0, 0];
   let tail = [
-    { x: -0.2, z: 0 },
-    { x: 0.15, z: 0 },
-    { x: 0.2, z: 0 },
+    { x: 0.08, y: Math.sin(now / 420) * 0.08 },
+    { x: 0.04, y: Math.sin(now / 360) * 0.1 },
+    { x: 0.02, y: Math.sin(now / 300) * 0.08 },
   ];
 
   if (data.mood === "sit" || data.mood === "regal") {
-    torsoX = data.mood === "regal" ? -0.12 : -0.06;
-    hips[0] = { x: 0.18, z: 0, kx: 0.55, px: 0.15, pz: 0 };
-    hips[1] = { x: 0.18, z: 0, kx: 0.55, px: 0.15, pz: 0 };
-    hips[2] = { x: -1.05, z: 0.18, kx: 1.35, px: 0.2, pz: 0 };
-    hips[3] = { x: -1.05, z: -0.18, kx: 1.35, px: 0.2, pz: 0 };
+    torsoX = data.mood === "regal" ? -0.02 : 0.02;
+    hips[0] = 0.12;
+    hips[1] = 0.12;
+    hips[2] = -1.18;
+    hips[3] = -1.18;
     tail = data.mood === "regal"
-      ? [{ x: 0.15, z: 0.7 }, { x: 0.25, z: 0.35 }, { x: 0.1, z: 0.15 }]
-      : [{ x: 0.35, z: 0.15 }, { x: 0.4, z: 0.2 }, { x: 0.2, z: 0.1 }];
-    headX = data.mood === "regal" ? -0.05 : 0.08;
+      ? [{ x: 0.55, y: 0.15 }, { x: 0.35, y: 0.1 }, { x: 0.2, y: 0.05 }]
+      : [{ x: 0.18, y: 0.08 }, { x: 0.12, y: 0.06 }, { x: 0.08, y: 0.04 }];
+    headX = data.mood === "regal" ? -0.04 : 0.02;
   } else if (data.mood === "loaf") {
-    torsoX = 0.06;
-    hips[0] = { x: 0.7, z: 0.08, kx: 1.1, px: 0.2, pz: 0 };
-    hips[1] = { x: 0.7, z: -0.08, kx: 1.1, px: 0.2, pz: 0 };
-    hips[2] = { x: 0.55, z: 0.1, kx: 1.05, px: 0.15, pz: 0 };
-    hips[3] = { x: 0.55, z: -0.1, kx: 1.05, px: 0.15, pz: 0 };
-    tail = [{ x: 0.7, z: 0 }, { x: 0.5, z: 0.1 }, { x: 0.2, z: 0 }];
+    hips[0] = 0.55;
+    hips[1] = 0.55;
+    hips[2] = -0.95;
+    hips[3] = -0.95;
+    tail = [{ x: 0.15, y: 0 }, { x: 0.1, y: 0 }, { x: 0.05, y: 0 }];
   } else if (data.mood === "knead") {
-    const a = (Math.sin(now / 110) + 1) * 0.5;
-    torsoX = -0.04;
-    hips[0] = { x: 0.15 + a * 0.7, z: 0, kx: 0.2 + (1 - a) * 0.5, px: 0.1, pz: 0 };
-    hips[1] = { x: 0.15 + (1 - a) * 0.7, z: 0, kx: 0.2 + a * 0.5, px: 0.1, pz: 0 };
-    hips[2] = { x: -0.85, z: 0.12, kx: 1.2, px: 0.15, pz: 0 };
-    hips[3] = { x: -0.85, z: -0.12, kx: 1.2, px: 0.15, pz: 0 };
-    tail = [{ x: 0.1, z: Math.sin(now / 180) * 0.15 }, { x: 0.2, z: 0.1 }, { x: 0.15, z: 0 }];
+    const a = (Math.sin(now / 120) + 1) * 0.5;
+    hips[0] = 0.2 + a * 0.45;
+    hips[1] = 0.2 + (1 - a) * 0.45;
+    hips[2] = -1.12;
+    hips[3] = -1.12;
+  } else if (data.mood === "browse" && atStand) {
+    torsoX = 0.04;
+    headX = -0.08;
+    headY = Math.sin(now / 700) * 0.1;
+    hips[0] = 0.18;
+    hips[1] = 0.18;
+    hips[2] = -1.08;
+    hips[3] = -1.08;
+    tail = [{ x: 0.22, y: 0.06 }, { x: 0.14, y: 0.04 }, { x: 0.08, y: 0.02 }];
+  } else if (data.mood === "guard" && atStand) {
+    torsoX = -0.02;
+    headX = -0.06;
+    hips[0] = 0.12;
+    hips[1] = 0.12;
+    hips[2] = -1.18;
+    hips[3] = -1.18;
+    tail = [{ x: 0.55, y: 0.12 }, { x: 0.32, y: 0.08 }, { x: 0.18, y: 0.04 }];
+  } else if (data.mood === "pet") {
+    torsoX = 0.03;
+    headX = 0.16 + Math.sin(now / 160) * 0.08;
+    headY = Math.sin(now / 280) * 0.14;
+    hips[0] = 0.18 + Math.abs(Math.sin(now / 130)) * 0.22;
+    hips[1] = 0.12;
+    hips[2] = -1.08;
+    hips[3] = -1.08;
+    tail = [
+      { x: 0.12, y: Math.sin(now / 140) * 0.22 },
+      { x: 0.1, y: Math.sin(now / 120) * 0.2 },
+      { x: 0.08, y: Math.sin(now / 100) * 0.16 },
+    ];
   } else if (data.mood === "swat") {
-    const bat = Math.max(0, Math.sin(now / 90));
+    const bat = Math.max(0, Math.sin(now / 100));
     const i = data.swatLeg || 0;
-    const j = i === 1 ? 0 : 1;
-    torsoZ = (i ? 1 : -1) * 0.05;
-    hips[i] = { x: 0.15 + bat * 1.05, z: (i ? 0.35 : -0.35) * bat, kx: -0.2, px: 0.4 * bat, pz: (i ? 0.2 : -0.2) * bat };
-    hips[j] = { x: 0.25, z: 0, kx: 0.35, px: 0.1, pz: 0 };
-    hips[2] = { x: -0.35, z: 0.08, kx: 0.55, px: 0.1, pz: 0 };
-    hips[3] = { x: -0.35, z: -0.08, kx: 0.55, px: 0.1, pz: 0 };
-    headY = (i ? 0.18 : -0.18);
-    tail = [{ x: -0.1, z: Math.sin(now / 80) * 0.45 }, { x: 0.2, z: Math.sin(now / 70) * 0.4 }, { x: 0.25, z: Math.sin(now / 60) * 0.35 }];
+    hips[i] = 0.15 + bat * 0.85;
+    hipZ[i] = (i ? 0.25 : -0.25) * bat;
+    hips[i === 1 ? 0 : 1] = 0.2;
+    hips[2] = -0.25;
+    hips[3] = -0.25;
+    headY = (i ? 0.1 : -0.1);
+    tail = [{ x: 0.05, y: Math.sin(now / 90) * 0.2 }, { x: 0.05, y: Math.sin(now / 80) * 0.18 }, { x: 0.04, y: Math.sin(now / 70) * 0.16 }];
   } else if (data.mood === "stretch") {
-    torsoX = 0.28;
-    hips[0] = { x: 0.95, z: 0, kx: 0.15, px: 0.1, pz: 0 };
-    hips[1] = { x: 0.95, z: 0, kx: 0.15, px: 0.1, pz: 0 };
-    hips[2] = { x: -0.85, z: 0.08, kx: 0.9, px: 0.15, pz: 0 };
-    hips[3] = { x: -0.85, z: -0.08, kx: 0.9, px: 0.15, pz: 0 };
-    headX = 0.2;
-    tail = [{ x: -0.45, z: 0 }, { x: -0.25, z: 0 }, { x: -0.1, z: 0 }];
+    torsoX = 0.16;
+    hips[0] = 0.7;
+    hips[1] = 0.7;
+    hips[2] = -0.45;
+    hips[3] = -0.45;
+    tail = [{ x: -0.12, y: 0 }, { x: -0.08, y: 0 }, { x: -0.04, y: 0 }];
   } else if (data.mood === "roll") {
-    torsoX = 0.12;
-    torsoZ = Math.sin(now / 360) * 0.55;
-    hips[0] = { x: 0.7, z: 0.25, kx: 0.6, px: 0.2, pz: 0 };
-    hips[1] = { x: 0.55, z: -0.35, kx: 0.7, px: 0.2, pz: 0 };
-    hips[2] = { x: 0.65, z: 0.2, kx: 0.55, px: 0.15, pz: 0 };
-    hips[3] = { x: 0.45, z: -0.3, kx: 0.6, px: 0.15, pz: 0 };
-    tail = [{ x: 0.2, z: 0.4 }, { x: 0.25, z: 0.3 }, { x: 0.2, z: 0.2 }];
+    torsoZ = Math.sin(now / 420) * 0.28;
+    hips[0] = 0.45;
+    hips[1] = 0.35;
+    hips[2] = 0.4;
+    hips[3] = 0.3;
   } else if (data.mood === "pounce") {
     const crouch = data.moodT > 0.7;
-    torsoX = crouch ? 0.22 : -0.12;
-    hips[0] = { x: crouch ? 0.7 : 0.35, z: 0, kx: crouch ? 0.9 : 0.25, px: 0.1, pz: 0 };
-    hips[1] = { x: crouch ? 0.7 : 0.35, z: 0, kx: crouch ? 0.9 : 0.25, px: 0.1, pz: 0 };
-    hips[2] = { x: crouch ? -0.15 : -0.45, z: 0, kx: crouch ? 0.8 : 0.4, px: 0.1, pz: 0 };
-    hips[3] = { x: crouch ? -0.15 : -0.45, z: 0, kx: crouch ? 0.8 : 0.4, px: 0.1, pz: 0 };
-    tail = [{ x: crouch ? 0.35 : -0.25, z: 0 }, { x: 0.2, z: 0 }, { x: 0.15, z: 0 }];
+    torsoX = crouch ? 0.14 : -0.06;
+    hips[0] = crouch ? 0.45 : 0.25;
+    hips[1] = crouch ? 0.45 : 0.25;
+    hips[2] = crouch ? 0.15 : -0.25;
+    hips[3] = crouch ? 0.15 : -0.25;
   } else if (data.mood === "groom") {
-    torsoZ = Math.sin(now / 180) * 0.08;
-    headX = 0.45;
-    headZ = 0.35 + Math.sin(now / 140) * 0.12;
-    hips[0] = { x: 0.85 + Math.sin(now / 140) * 0.25, z: -0.15, kx: 0.4, px: 0.2, pz: 0 };
-    hips[1] = { x: 0.2, z: 0, kx: 0.3, px: 0.1, pz: 0 };
-    hips[2] = { x: -0.4, z: 0.1, kx: 0.55, px: 0.1, pz: 0 };
-    hips[3] = { x: -0.4, z: -0.1, kx: 0.55, px: 0.1, pz: 0 };
+    headX = 0.28;
+    headZ = 0.22;
+    hips[0] = 0.55 + Math.sin(now / 150) * 0.2;
+    hips[1] = 0.15;
+    hips[2] = -0.2;
+    hips[3] = -0.2;
   } else if (data.mood === "nuzzle") {
-    torsoX = -0.04;
-    headX = 0.12;
-    headY = Math.sin(now / 200) * 0.18;
-    hips[0] = { x: 0.2, z: 0, kx: 0.25, px: 0.1, pz: 0 };
-    hips[1] = { x: 0.2, z: 0, kx: 0.25, px: 0.1, pz: 0 };
-    hips[2] = { x: -0.25, z: 0.08, kx: 0.4, px: 0.1, pz: 0 };
-    hips[3] = { x: -0.25, z: -0.08, kx: 0.4, px: 0.1, pz: 0 };
-    tail = [{ x: -0.05, z: Math.sin(now / 120) * 0.35 }, { x: 0.2, z: Math.sin(now / 100) * 0.3 }, { x: 0.25, z: Math.sin(now / 80) * 0.28 }];
+    headX = 0.08;
+    headY = Math.sin(now / 240) * 0.1;
+    hips[0] = 0.12;
+    hips[1] = 0.12;
+    hips[2] = -0.12;
+    hips[3] = -0.12;
+    tail = [{ x: 0.05, y: Math.sin(now / 140) * 0.18 }, { x: 0.06, y: Math.sin(now / 120) * 0.16 }, { x: 0.05, y: Math.sin(now / 100) * 0.14 }];
   } else if (data.mood === "scratch") {
-    hips[0] = { x: 0.15 + Math.sin(now / 70) * 0.7, z: 0, kx: 0.2, px: 0.15, pz: 0 };
-    hips[1] = { x: 0.15 + Math.sin(now / 70 + 1) * 0.7, z: 0, kx: 0.2, px: 0.15, pz: 0 };
-    hips[2] = { x: -0.15, z: 0, kx: 0.25, px: 0.1, pz: 0 };
-    hips[3] = { x: -0.15, z: 0, kx: 0.25, px: 0.1, pz: 0 };
-    torsoX = -0.08;
+    hips[0] = Math.sin(now / 80) * 0.55;
+    hips[1] = Math.sin(now / 80 + 1) * 0.55;
+    hips[2] = -0.1;
+    hips[3] = -0.1;
   } else if (moving) {
-    hips[0] = { x: walk * 0.55, z: 0, kx: lift * 0.7, px: -lift * 0.15, pz: 0 };
-    hips[1] = { x: walkB * 0.55, z: 0, kx: liftB * 0.7, px: -liftB * 0.15, pz: 0 };
-    hips[2] = { x: walkB * 0.5, z: 0, kx: liftB * 0.55, px: -liftB * 0.12, pz: 0 };
-    hips[3] = { x: walk * 0.5, z: 0, kx: lift * 0.55, px: -lift * 0.12, pz: 0 };
-    const wag = data.mood === "chase" || data.mood === "yarn" ? 0.55 : 0.28;
+    hips[0] = walk * 0.42;
+    hips[1] = walkB * 0.42;
+    hips[2] = walkB * 0.38;
+    hips[3] = walk * 0.38;
+    const wag = data.mood === "chase" || data.mood === "yarn" ? 0.22 : 0.12;
     tail = [
-      { x: -0.18 + Math.sin(now / 180) * 0.08, z: Math.sin(now / 140 + data.gait) * wag },
-      { x: 0.18, z: Math.sin(now / 120 + data.gait + 0.6) * wag },
-      { x: 0.22, z: Math.sin(now / 90 + data.gait + 1.1) * wag * 1.1 },
-    ];
-  } else {
-    tail = [
-      { x: -0.12, z: Math.sin(now / 240) * 0.12 },
-      { x: 0.16, z: Math.sin(now / 200) * 0.14 },
-      { x: 0.18, z: Math.sin(now / 160) * 0.16 },
+      { x: 0.06, y: Math.sin(now / 180 + data.gait) * wag },
+      { x: 0.05, y: Math.sin(now / 150 + data.gait + 0.4) * wag },
+      { x: 0.04, y: Math.sin(now / 120 + data.gait + 0.8) * wag },
     ];
   }
 
-  easeJoint(data.torso, torsoX, torsoY, torsoZ, blend);
+  easeJoint(data.torso, torsoX, 0, torsoZ, blend);
+  if (data.torso) {
+    const sitLow = data.mood === "sit" || data.mood === "regal" || data.mood === "knead" || data.mood === "loaf" || data.mood === "pet" || data.mood === "browse" || data.mood === "guard";
+    const wantY = sitLow ? 0.17 : 0.28;
+    data.torso.position.y += (wantY - data.torso.position.y) * blend;
+  }
   easeJoint(data.head, headX, headY, headZ, blend);
   for (const [i, leg] of data.legs.entries()) {
-    const pose = hips[i];
-    if (!leg?.hip) continue;
-    easeJoint(leg.hip, pose.x, 0, pose.z, blend);
-    easeJoint(leg.knee, pose.kx, 0, 0, blend);
-    easeJoint(leg.paw, pose.px, 0, pose.pz, blend);
+    if (!leg) continue;
+    easeJoint(leg, hips[i], 0, hipZ[i], blend);
   }
-  easeJoint(data.tail, tail[0].x, 0, tail[0].z, blend);
-  easeJoint(data.tailMid, tail[1].x, 0, tail[1].z, blend);
-  easeJoint(data.tailTip, tail[2].x, 0, tail[2].z, blend);
+  easeJoint(data.tail, tail[0].x, tail[0].y, 0, blend);
+  easeJoint(data.tailMid, tail[1].x, tail[1].y, 0, blend);
+  easeJoint(data.tailTip, tail[2].x, tail[2].y, 0, blend);
 }
 
 function pickCatMood(critter, cats, toys) {
   const roll = hash(critter.position.x * 7 + critter.userData.timer, critter.position.z * 3);
   const yarn = toys.filter((item) => item.userData.kind === "yarn");
   const posts = toys.filter((item) => item.userData.kind === "post" || item.userData.kind === "tree" || item.userData.kind === "wand");
-  if (roll < 0.1 && cats.length > 1) {
+  const stands = catStands();
+  if (roll < 0.18 && stands.length) {
+    const stand = stands[Math.floor(roll * stands.length * 11) % stands.length];
+    const mood = roll < 0.06 ? "scratch" : roll < 0.12 ? "browse" : "guard";
+    setCatMood(critter, mood, {
+      target: stand,
+      moodT: 5.4 + roll * 3,
+      speed: mood === "scratch" ? 1.35 : 1.15,
+    });
+    return;
+  }
+  if (roll < 0.26 && cats.length > 1) {
     const pal = nearestOther(critter, cats);
     if (pal) {
       setCatMood(critter, "chase", { playWith: pal, moodT: 3.4 + roll * 2, speed: 2.15 });
       return;
     }
   }
-  if (roll < 0.2 && yarn.length) {
+  if (roll < 0.34 && yarn.length) {
     setCatMood(critter, "yarn", {
       target: yarn[Math.floor(roll * yarn.length * 8) % yarn.length],
       moodT: 4 + roll * 2,
@@ -1426,7 +1519,7 @@ function pickCatMood(critter, cats, toys) {
     });
     return;
   }
-  if (roll < 0.3 && posts.length) {
+  if (roll < 0.42 && posts.length) {
     setCatMood(critter, "scratch", {
       target: posts[Math.floor(roll * posts.length * 9) % posts.length],
       moodT: 3.2 + roll,
@@ -1475,6 +1568,16 @@ function pickCatMood(critter, cats, toys) {
 
 function pickDragonMood(critter, dragons) {
   const roll = hash(critter.position.x * 5, critter.position.z + critter.userData.timer);
+  const perched = dragons.filter((other) => other !== critter && other.userData.mood === "perch");
+  if (roll < 0.18 && perched.length === 0) {
+    const perch = bannerPerch(Math.floor(roll * 20));
+    critter.userData.mood = "perch";
+    critter.userData.playWith = null;
+    critter.userData.target = perch;
+    critter.userData.moodT = 7.5 + roll * 4;
+    critter.userData.speed = 4.6;
+    return;
+  }
   if (roll < 0.42 && dragons.length > 1) {
     const pal = nearestOther(critter, dragons);
     if (pal) {
@@ -1868,10 +1971,61 @@ function startWorld() {
     if (locked) dismissIntro();
   });
 
-  canvas.addEventListener("click", () => {
+  const raycaster = new THREE.Raycaster();
+  const lookNdc = new THREE.Vector2(0, 0);
+  const catSet = new Set(cats);
+
+  function catFromObject(obj) {
+    let node = obj;
+    while (node) {
+      if (catSet.has(node)) return node;
+      node = node.parent;
+    }
+    return null;
+  }
+
+  function lookCatAt(maxDist = 2.6) {
+    raycaster.setFromCamera(lookNdc, camera);
+    const hits = raycaster.intersectObjects(cats, true);
+    for (const hit of hits) {
+      const cat = catFromObject(hit.object);
+      if (!cat) continue;
+      const dist = Math.hypot(cat.position.x - player.x, cat.position.z - player.z);
+      if (dist <= maxDist) return cat;
+    }
+    return null;
+  }
+
+  function petCat(cat) {
+    if (!cat || cat.userData.sky) return false;
+    const extra = cat.userData.mood === "pet" ? 2.8 : 0;
+    setCatMood(cat, "pet", { moodT: 6.4 + extra, attention: 6.4 + extra });
+    faceToward(cat, player.x, player.z);
+    if (promptEl) promptEl.textContent = `petting ${cat.userData.id}`;
+    return true;
+  }
+
+  function tryPet(clientX, clientY) {
+    if (!locked && Number.isFinite(clientX) && Number.isFinite(clientY)) {
+      const rect = canvas.getBoundingClientRect();
+      lookNdc.set(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1
+      );
+    } else {
+      lookNdc.set(0, 0);
+    }
+    const cat = lookCatAt();
+    lookNdc.set(0, 0);
+    return cat ? petCat(cat) : false;
+  }
+
+  canvas.addEventListener("click", (e) => {
     dismissIntro();
     if (arcadeOpen) return;
+    const petted = tryPet(e.clientX, e.clientY);
     if (!coarse) tryLock();
+    if (petted) return;
   });
 
   canvas.addEventListener("pointerdown", (e) => {
@@ -2073,11 +2227,22 @@ function startWorld() {
         const dist = Math.hypot(pal.position.x - critter.position.x, pal.position.z - critter.position.z);
         if (dist > 0.9) stepToward(critter, aim.x, aim.z, dt, mode);
         else faceToward(critter, pal.position.x, pal.position.z);
-      } else if ((data.mood === "yarn" || data.mood === "scratch") && toy) {
-        const reach = data.mood === "yarn" ? 0.35 : 0.55;
+      } else if ((data.mood === "yarn" || data.mood === "scratch" || data.mood === "browse" || data.mood === "guard") && toy) {
+        const reach = data.mood === "yarn" ? 0.35 : data.mood === "scratch" ? 0.55 : 0.42;
         const dist = Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z);
         if (dist > reach) stepToward(critter, toy.position.x, toy.position.z, dt, mode);
-        else faceToward(critter, toy.position.x, toy.position.z);
+        else {
+          const look = toy.look || toy.position;
+          faceToward(critter, look.x, look.z);
+          if (data.mood === "browse" || data.mood === "guard") data.speed = 0;
+        }
+      } else if (data.mood === "perch" && toy) {
+        const dist = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z);
+        if (dist > 0.7) stepToward(critter, toy.x, toy.z, dt, mode);
+        else {
+          faceToward(critter, player.x, player.z);
+          data.speed = 0;
+        }
       } else if (data.mood === "breath") {
         data.heading += Math.sin(now / 260) * 0.01;
       } else if (data.mood === "pounce") {
@@ -2091,6 +2256,10 @@ function startWorld() {
             critter.position.z = nz;
           }
         }
+      } else if (data.mood === "pet") {
+        faceToward(critter, player.x, player.z);
+        const near = Math.hypot(player.x - critter.position.x, player.z - critter.position.z) < 2.8;
+        if (!near) data.moodT = Math.min(data.moodT, 0.35);
       } else if (
         data.mood === "sit" ||
         data.mood === "loaf" ||
@@ -2111,7 +2280,7 @@ function startWorld() {
         const step = data.speed * dt;
         const nx = critter.position.x + Math.sin(data.heading) * step;
         const nz = critter.position.z + Math.cos(data.heading) * step;
-        if (roamOk(nx, nz, mode)) {
+        if (roamOk(nx, nz, mode, data.sky ? critter.position.y : null)) {
           critter.position.x = nx;
           critter.position.z = nz;
         } else {
@@ -2121,15 +2290,26 @@ function startWorld() {
       critter.rotation.y = data.heading;
 
       if (data.sky) {
+        const perch = data.mood === "perch" && data.target;
+        const landed = perch && Math.hypot(data.target.x - critter.position.x, data.target.z - critter.position.z) < 0.85;
         const swoop = data.mood === "chase" || data.mood === "circle";
-        critter.position.y = data.baseY + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
-        critter.rotation.x = Math.sin(now / 640 + data.heading) * 0.08;
+        let wantY = data.baseY + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
+        if (perch) wantY = landed ? data.target.y : THREE.MathUtils.lerp(critter.position.y, data.target.y + 1.4, 0.08);
+        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * 4.2);
+        if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z, 1.1)) {
+          if (critter.position.y < BANNER.y + BANNER.h * 0.5) critter.position.y = BANNER.y + BANNER.h * 0.5 + 0.5;
+          if (Math.abs(critter.position.z - BANNER.z) < BANNER.d) {
+            critter.position.z += critter.position.z >= BANNER.z ? 1.4 : -1.4;
+            data.heading += Math.PI * 0.55;
+          }
+        }
+        critter.rotation.x = landed ? 0.08 : Math.sin(now / 640 + data.heading) * 0.08;
         if (data.wings) {
-          const flap = Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
+          const flap = landed ? 0.08 + Math.sin(now / 900) * 0.04 : Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
           data.wings[0].rotation.z = flap;
           data.wings[1].rotation.z = -flap;
         }
-        if (data.tail) data.tail.rotation.y = Math.sin(now / 260 + data.heading) * 0.35;
+        if (data.tail) data.tail.rotation.y = Math.sin(now / 260 + data.heading) * (landed ? 0.12 : 0.35);
         if (data.fire) {
           const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
           data.fire.visible = blasting;
@@ -2188,7 +2368,13 @@ function startWorld() {
     }
 
     if (!arcadeOpen && promptEl) {
-      if (poi && poi.id !== lastPoi) {
+      const lookCat = lookCatAt();
+      if (lookCat) {
+        lastPoi = `cat:${lookCat.userData.id}`;
+        promptEl.textContent = lookCat.userData.mood === "pet"
+          ? `Click · keep petting ${lookCat.userData.id}`
+          : `Click · pet ${lookCat.userData.id}`;
+      } else if (poi && poi.id !== lastPoi) {
         lastPoi = poi.id;
         promptEl.textContent =
           poi.action === "embed" || poi.action === "page" || poi.action === "create"
@@ -2196,7 +2382,7 @@ function startWorld() {
             : `E · ${poi.title}`;
       } else if (!poi && lastPoi) {
         lastPoi = null;
-        promptEl.textContent = "Walk into a colored booth · or press 1–5";
+        promptEl.textContent = "Walk into a colored booth · or click a cat";
       }
     }
 
