@@ -720,7 +720,7 @@ function bannerPerch(slot = 0) {
   const spread = [-1.8, -0.6, 0.6, 1.8];
   return {
     x: BANNER.x + spread[slot % spread.length],
-    y: bannerTop() + 0.16,
+    y: bannerTop() + 0.62,
     z: BANNER.z + BANNER.d * 0.5 + 0.55,
   };
 }
@@ -948,7 +948,7 @@ function whiteOr(look) {
 
 function addFire(root, glow) {
   const fire = new THREE.Group();
-  fire.position.set(0, 0.22, 1.96);
+  fire.position.set(0, 0.02, 1.18);
   fire.visible = false;
   const kinds = [glow, "orange", "gold", glow];
   for (let i = 0; i < 5; i += 1) {
@@ -963,65 +963,94 @@ function addFire(root, glow) {
   return fire;
 }
 
+function addDragonLeg(root, look, x, y, z, hind) {
+  const hip = addPivot(root, x, y, z);
+  addBox(hip, look.body, 0, -0.18, 0.02, hind ? 0.2 : 0.18, hind ? 0.42 : 0.36, hind ? 0.22 : 0.18);
+  const knee = addPivot(hip, 0, hind ? -0.38 : -0.32, 0.02);
+  addBox(knee, look.trim, 0, -0.22, 0.04, hind ? 0.16 : 0.14, hind ? 0.46 : 0.4, hind ? 0.16 : 0.14);
+  const foot = addPivot(knee, 0, hind ? -0.44 : -0.38, 0.04);
+  addBox(foot, look.trim, 0, -0.04, 0.14, hind ? 0.22 : 0.2, 0.08, hind ? 0.32 : 0.28);
+  addBox(foot, look.glow, -0.07, -0.05, 0.28, 0.05, 0.04, 0.1, { glow: 0.55, emissive: colorFor(look.glow) });
+  addBox(foot, look.glow, 0.07, -0.05, 0.28, 0.05, 0.04, 0.1, { glow: 0.55, emissive: colorFor(look.glow) });
+  addBox(foot, look.glow, 0, -0.05, 0.32, 0.05, 0.04, 0.12, { glow: 0.7, emissive: colorFor(look.glow) });
+  return { hip, knee, foot };
+}
+
+function addDragonWing(root, look, side) {
+  const s = side < 0 ? -1 : 1;
+  const wing = addPivot(root, 0.42 * s, 0.42, 0.12);
+  addBox(wing, look.trim, 0.28 * s, 0.08, 0, 0.62, 0.1, 0.16);
+  addBox(wing, look.membrane || look.wing, 0.92 * s, -0.08, 0.16, 1.28, 0.05, 1.05);
+  addBox(wing, look.membrane || look.wing, 1.62 * s, -0.22, 0.02, 0.92, 0.04, 0.72);
+  addBox(wing, look.trim, 0.86 * s, 0.02, -0.22, 0.1, 0.07, 0.52, { rz: 0.22 * s });
+  addBox(wing, look.trim, 1.36 * s, -0.08, -0.12, 0.08, 0.06, 0.4, { rz: 0.3 * s });
+  addBox(wing, look.glow, 1.78 * s, -0.18, 0.28, 0.1, 0.04, 0.18, { glow: 0.55, emissive: colorFor(look.glow) });
+  return wing;
+}
+
 function addDragon(root, look) {
   const body = look.body;
   const trim = look.trim;
-  const wing = look.wing;
   const glow = look.glow;
-  const membrane = look.membrane || wing;
-  addBox(root, body, 0, 0.18, 0.08, 0.78, 0.46, 1.7);
-  addBox(root, bellyOr(look), 0, 0.02, 0.1, 0.5, 0.18, 1.35);
-  addBox(root, trim, 0, 0.46, 0.16, 0.16, 0.18, 1.28);
-  addBox(root, trim, 0, 0.62, 0.42, 0.1, 0.2, 0.12);
-  addBox(root, trim, 0, 0.6, 0.08, 0.1, 0.18, 0.1);
-  addBox(root, trim, 0, 0.56, -0.28, 0.08, 0.16, 0.1);
-  addBox(root, trim, 0, 0.52, -0.62, 0.08, 0.14, 0.08);
-  addBox(root, body, 0, 0.32, 1.02, 0.36, 0.3, 0.56);
-  addBox(root, body, 0, 0.42, 1.42, 0.5, 0.38, 0.46);
-  addBox(root, trim, 0, 0.32, 1.7, 0.28, 0.16, 0.28);
-  addBox(root, look.jaw || trim, 0, 0.18, 1.66, 0.22, 0.12, 0.26);
-  addBox(root, whiteOr(look), -0.08, 0.22, 1.8, 0.05, 0.05, 0.06);
-  addBox(root, whiteOr(look), 0.08, 0.22, 1.8, 0.05, 0.05, 0.06);
-  addBox(root, amberOr(look), -0.14, 0.5, 1.58, 0.1, 0.1, 0.07, { glow: 1, emissive: colorFor(glow) });
-  addBox(root, amberOr(look), 0.14, 0.5, 1.58, 0.1, 0.1, 0.07, { glow: 1, emissive: colorFor(glow) });
-  addBox(root, blackOr(look), -0.14, 0.5, 1.62, 0.04, 0.06, 0.03);
-  addBox(root, blackOr(look), 0.14, 0.5, 1.62, 0.04, 0.06, 0.03);
-  addBox(root, trim, -0.2, 0.7, 1.32, 0.1, 0.28, 0.1, { rz: 0.32 });
-  addBox(root, trim, 0.2, 0.7, 1.32, 0.1, 0.28, 0.1, { rz: -0.32 });
-  addBox(root, glow, 0, 0.28, 1.86, 0.1, 0.1, 0.16, { glow: 0.95, emissive: colorFor(glow) });
-  addBox(root, glow, 0, 0.18, 2.02, 0.08, 0.08, 0.16, { glow: 0.7, emissive: colorFor(glow) });
+  const under = bellyOr(look);
+  addBox(root, body, 0, 0.28, 0.06, 0.86, 0.52, 1.86);
+  addBox(root, under, 0, 0.04, 0.1, 0.58, 0.2, 1.48);
+  addBox(root, trim, 0, 0.58, 0.18, 0.18, 0.22, 1.42);
+  addBox(root, glow, 0, 0.72, 0.46, 0.1, 0.16, 0.14, { glow: 0.45, emissive: colorFor(glow) });
+  addBox(root, trim, 0, 0.74, 0.08, 0.1, 0.2, 0.12);
+  addBox(root, trim, 0, 0.7, -0.32, 0.08, 0.18, 0.1);
+  addBox(root, trim, 0, 0.64, -0.68, 0.08, 0.16, 0.08);
+  addBox(root, glow, 0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
+  addBox(root, glow, -0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
+
+  const head = addPivot(root, 0, 0.38, 1.08);
+  addBox(head, body, 0, 0.08, 0.18, 0.42, 0.34, 0.58);
+  addBox(head, body, 0, 0.16, 0.62, 0.56, 0.42, 0.5);
+  addBox(head, trim, 0, 0.04, 0.92, 0.32, 0.16, 0.32);
+  addBox(head, look.jaw || trim, 0, -0.1, 0.88, 0.26, 0.12, 0.3);
+  addBox(head, whiteOr(look), -0.08, -0.06, 1.04, 0.05, 0.05, 0.06);
+  addBox(head, whiteOr(look), 0.08, -0.06, 1.04, 0.05, 0.05, 0.06);
+  addBox(head, amberOr(look), -0.16, 0.24, 0.78, 0.12, 0.12, 0.08, { glow: 1.15, emissive: colorFor(glow) });
+  addBox(head, amberOr(look), 0.16, 0.24, 0.78, 0.12, 0.12, 0.08, { glow: 1.15, emissive: colorFor(glow) });
+  addBox(head, blackOr(look), -0.16, 0.24, 0.83, 0.05, 0.07, 0.03);
+  addBox(head, blackOr(look), 0.16, 0.24, 0.83, 0.05, 0.07, 0.03);
+  addBox(head, trim, -0.22, 0.46, 0.48, 0.12, 0.34, 0.12, { rz: 0.34 });
+  addBox(head, trim, 0.22, 0.46, 0.48, 0.12, 0.34, 0.12, { rz: -0.34 });
+  addBox(head, glow, -0.22, 0.64, 0.48, 0.06, 0.1, 0.06, { glow: 0.8, emissive: colorFor(glow) });
+  addBox(head, glow, 0.22, 0.64, 0.48, 0.06, 0.1, 0.06, { glow: 0.8, emissive: colorFor(glow) });
+  addBox(head, glow, 0, 0.02, 1.1, 0.1, 0.1, 0.18, { glow: 1, emissive: colorFor(glow) });
+  addBox(head, glow, 0, -0.06, 1.26, 0.08, 0.08, 0.16, { glow: 0.75, emissive: colorFor(glow) });
 
   const legs = [
-    addPivot(root, -0.3, 0.02, 0.48),
-    addPivot(root, 0.3, 0.02, 0.48),
-    addPivot(root, -0.28, 0.02, -0.48),
-    addPivot(root, 0.28, 0.02, -0.48),
+    addDragonLeg(root, look, -0.34, 0.08, 0.52, false),
+    addDragonLeg(root, look, 0.34, 0.08, 0.52, false),
+    addDragonLeg(root, look, -0.32, 0.1, -0.52, true),
+    addDragonLeg(root, look, 0.32, 0.1, -0.52, true),
   ];
-  for (const [i, leg] of legs.entries()) {
-    addBox(leg, body, 0, -0.1, 0, 0.16, 0.24, 0.16);
-    addBox(leg, trim, 0, -0.24, 0.08, 0.18, 0.08, 0.22);
-    addBox(leg, glow, (i < 2 ? -0.04 : 0.04), -0.26, 0.18, 0.04, 0.04, 0.08, { glow: 0.4, emissive: colorFor(glow) });
-  }
 
-  const tail = addPivot(root, 0, 0.2, -0.9);
-  addBox(tail, body, 0, 0.02, -0.28, 0.24, 0.2, 0.62);
-  addBox(tail, trim, 0, 0.16, -0.18, 0.08, 0.12, 0.18);
-  addBox(tail, trim, 0, 0.12, -0.72, 0.16, 0.14, 0.4);
-  addBox(tail, glow, 0, 0.14, -1.02, 0.22, 0.1, 0.24, { glow: 0.7, emissive: colorFor(glow) });
+  const tail = addPivot(root, 0, 0.28, -0.96);
+  addBox(tail, body, 0, 0.02, -0.32, 0.28, 0.22, 0.7);
+  addBox(tail, trim, 0, 0.18, -0.18, 0.08, 0.14, 0.22);
+  const tailMid = addPivot(tail, 0, 0.02, -0.68);
+  addBox(tailMid, body, 0, 0, -0.28, 0.2, 0.16, 0.56);
+  addBox(tailMid, trim, 0, 0.12, -0.18, 0.06, 0.1, 0.16);
+  const tailTip = addPivot(tailMid, 0, 0, -0.56);
+  addBox(tailTip, trim, 0, 0.02, -0.22, 0.16, 0.12, 0.46);
+  addBox(tailTip, glow, 0, 0.06, -0.48, 0.28, 0.1, 0.28, { glow: 0.85, emissive: colorFor(glow) });
 
-  const left = addPivot(root, -0.4, 0.32, 0.16);
-  const right = addPivot(root, 0.4, 0.32, 0.16);
-  addBox(left, trim, -0.22, 0.08, 0, 0.5, 0.08, 0.12);
-  addBox(left, membrane, -0.78, -0.02, 0.12, 1.02, 0.04, 0.82);
-  addBox(left, membrane, -1.32, -0.12, 0.02, 0.72, 0.03, 0.5);
-  addBox(left, trim, -0.72, 0.04, -0.18, 0.08, 0.06, 0.42, { rz: 0.2 });
-  addBox(left, trim, -1.12, -0.02, -0.08, 0.06, 0.05, 0.32, { rz: 0.28 });
-  addBox(right, trim, 0.22, 0.08, 0, 0.5, 0.08, 0.12);
-  addBox(right, membrane, 0.78, -0.02, 0.12, 1.02, 0.04, 0.82);
-  addBox(right, membrane, 1.32, -0.12, 0.02, 0.72, 0.03, 0.5);
-  addBox(right, trim, 0.72, 0.04, -0.18, 0.08, 0.06, 0.42, { rz: -0.2 });
-  addBox(right, trim, 1.12, -0.02, -0.08, 0.06, 0.05, 0.32, { rz: -0.28 });
-  return { wings: [left, right], tail, legs, fire: addFire(root, glow) };
+  const left = addDragonWing(root, look, -1);
+  const right = addDragonWing(root, look, 1);
+  return {
+    wings: [left, right],
+    head,
+    tail,
+    tailMid,
+    tailTip,
+    legs: legs.map((leg) => leg.hip),
+    knees: legs.map((leg) => leg.knee),
+    feet: legs.map((leg) => leg.foot),
+    fire: addFire(head, glow),
+  };
 }
 
 function amberOr(look) {
@@ -1127,6 +1156,8 @@ function makeCritter(scene, spec) {
     tailMid: parts.tailMid || null,
     tailTip: parts.tailTip || null,
     legs: parts.legs || [],
+    knees: parts.knees || [],
+    feet: parts.feet || [],
     fire: parts.fire || null,
   };
   scene.add(root);
@@ -1338,16 +1369,28 @@ function poseDragon(critter, now, dt, sit) {
   const data = critter.userData;
   const blend = Math.min(1, dt * 5);
   const legs = data.legs || [];
-  const tuck = [0.12, 0.12, 0.78, 0.78];
-  const splay = [-0.06, 0.06, -0.18, 0.18];
+  const knees = data.knees || [];
+  const feet = data.feet || [];
+  const hipX = [0.08, 0.08, 0.92, 0.92];
+  const hipZ = [-0.04, 0.04, -0.16, 0.16];
+  const kneeX = [0.18, 0.18, -0.72, -0.72];
+  const footX = [-0.12, -0.12, 0.22, 0.22];
   for (const [i, leg] of legs.entries()) {
     if (!leg) continue;
-    easeJoint(leg, (tuck[i] || 0) * sit, 0, (splay[i] || 0) * sit, blend);
+    easeJoint(leg, (hipX[i] || 0) * sit, 0, (hipZ[i] || 0) * sit, blend);
+    if (knees[i]) easeJoint(knees[i], (kneeX[i] || 0) * sit, 0, 0, blend);
+    if (feet[i]) easeJoint(feet[i], (footX[i] || 0) * sit, 0, 0, blend);
+  }
+  if (data.head) {
+    data.head.rotation.x += ((sit ? -0.08 : Math.sin(now / 640 + data.heading) * 0.05) - data.head.rotation.x) * blend;
+    data.head.rotation.y += ((sit ? Math.sin(now / 900) * 0.06 : 0) - data.head.rotation.y) * blend;
   }
   if (data.tail) {
-    data.tail.rotation.x += (0.42 * sit - data.tail.rotation.x) * blend;
-    data.tail.rotation.y += ((1 - sit) * Math.sin(now / 260 + data.heading) * 0.35 + sit * Math.sin(now / 480) * 0.08 - data.tail.rotation.y) * blend;
+    data.tail.rotation.x += (0.28 * sit - data.tail.rotation.x) * blend;
+    data.tail.rotation.y += ((1 - sit) * Math.sin(now / 260 + data.heading) * 0.28 + sit * Math.sin(now / 480) * 0.08 - data.tail.rotation.y) * blend;
   }
+  if (data.tailMid) data.tailMid.rotation.y += ((1 - sit) * Math.sin(now / 220 + data.heading) * 0.18 - data.tailMid.rotation.y) * blend;
+  if (data.tailTip) data.tailTip.rotation.y += ((1 - sit) * Math.sin(now / 180 + data.heading) * 0.22 - data.tailTip.rotation.y) * blend;
 }
 
 function easeJoint(node, rx, ry, rz, t) {
