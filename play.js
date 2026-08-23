@@ -717,11 +717,11 @@ function hitsBanner(x, y, z, pad = 0.85) {
 }
 
 function bannerPerch(slot = 0) {
-  const spread = [-3.4, -1.2, 1.2, 3.4];
+  const spread = [-2.4, -0.8, 0.8, 2.4];
   return {
     x: BANNER.x + spread[slot % spread.length],
-    y: bannerTop() + 0.18,
-    z: BANNER.z + 0.42,
+    y: bannerTop() + 0.22,
+    z: BANNER.z + 0.08,
   };
 }
 
@@ -1334,30 +1334,19 @@ function groundY(x, z) {
   return groundH(Math.floor(x), Math.floor(z)) + 1.02;
 }
 
-function poseDragon(critter, now, dt, landed) {
+function poseDragon(critter, now, dt, sit) {
   const data = critter.userData;
-  const blend = Math.min(1, dt * 8);
+  const blend = Math.min(1, dt * 5);
   const legs = data.legs || [];
-  if (landed) {
-    const tuck = [0.18, 0.18, 0.72, 0.72];
-    const splay = [-0.08, 0.08, -0.16, 0.16];
-    for (const [i, leg] of legs.entries()) {
-      if (!leg) continue;
-      easeJoint(leg, tuck[i] || 0, 0, splay[i] || 0, blend);
-    }
-    if (data.tail) {
-      data.tail.rotation.x += (0.35 - data.tail.rotation.x) * blend;
-      data.tail.rotation.y += (Math.sin(now / 420) * 0.08 - data.tail.rotation.y) * blend;
-    }
-    return;
-  }
-  for (const leg of legs) {
+  const tuck = [0.12, 0.12, 0.78, 0.78];
+  const splay = [-0.06, 0.06, -0.18, 0.18];
+  for (const [i, leg] of legs.entries()) {
     if (!leg) continue;
-    easeJoint(leg, 0, 0, 0, blend);
+    easeJoint(leg, (tuck[i] || 0) * sit, 0, (splay[i] || 0) * sit, blend);
   }
   if (data.tail) {
-    data.tail.rotation.x += (0 - data.tail.rotation.x) * blend;
-    data.tail.rotation.y = Math.sin(now / 260 + data.heading) * 0.35;
+    data.tail.rotation.x += (0.42 * sit - data.tail.rotation.x) * blend;
+    data.tail.rotation.y += ((1 - sit) * Math.sin(now / 260 + data.heading) * 0.35 + sit * Math.sin(now / 480) * 0.08 - data.tail.rotation.y) * blend;
   }
 }
 
@@ -2271,15 +2260,16 @@ function startWorld() {
         }
       } else if (data.mood === "perch" && toy) {
         const dist = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z);
-        if (dist > 0.35) {
-          data.speed = 5.2;
+        const sit = THREE.MathUtils.clamp(1 - dist / 4.2, 0, 1);
+        if (dist > 0.18) {
+          data.speed = THREE.MathUtils.lerp(1.4, 4.6, 1 - sit);
           stepToward(critter, toy.x, toy.z, dt, mode);
         } else {
-          critter.position.x += (toy.x - critter.position.x) * Math.min(1, dt * 8);
-          critter.position.z += (toy.z - critter.position.z) * Math.min(1, dt * 8);
-          faceToward(critter, player.x, player.z);
+          critter.position.x += (toy.x - critter.position.x) * Math.min(1, dt * 4);
+          critter.position.z += (toy.z - critter.position.z) * Math.min(1, dt * 4);
           data.speed = 0;
         }
+        faceToward(critter, player.x, player.z);
       } else if (data.mood === "breath") {
         data.heading += Math.sin(now / 260) * 0.01;
       } else if (data.mood === "pounce") {
@@ -2329,30 +2319,27 @@ function startWorld() {
       if (data.sky) {
         const perch = data.mood === "perch" && data.target;
         const dist = perch ? Math.hypot(data.target.x - critter.position.x, data.target.z - critter.position.z) : 99;
-        const landed = perch && dist < 0.55 && Math.abs(critter.position.y - data.target.y) < 0.45;
+        const sit = perch ? THREE.MathUtils.clamp(1 - dist / 4.2, 0, 1) : 0;
+        const landed = perch && dist < 0.35;
         const swoop = data.mood === "chase" || data.mood === "circle";
         let wantY = data.baseY + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
-        if (perch) wantY = dist > 1.4 ? Math.max(bannerTop() + 2.4, data.target.y + 2.2) : data.target.y;
-        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (landed ? 8 : 3.4));
-        if (landed) {
-          critter.position.x = data.target.x;
-          critter.position.y = data.target.y;
-          critter.position.z = data.target.z;
-          faceToward(critter, player.x, player.z);
-        } else if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z)) {
+        if (perch) wantY = THREE.MathUtils.lerp(Math.max(bannerTop() + 2.8, data.target.y + 2.6), data.target.y, sit);
+        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (1.8 + sit * 2.4));
+        if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z)) {
           critter.position.y = Math.max(critter.position.y, bannerTop() + 1.1);
           if (Math.abs(critter.position.z - BANNER.z) < BANNER.d * 0.5 + 0.6) {
             critter.position.z += critter.position.z >= BANNER.z ? 1.6 : -1.6;
             data.heading += Math.PI * 0.55;
           }
         }
-        critter.rotation.x = landed ? -0.18 : Math.sin(now / 640 + data.heading) * 0.08;
+        const flyTilt = Math.sin(now / 640 + data.heading) * 0.08;
+        critter.rotation.x += ((landed ? -0.22 : THREE.MathUtils.lerp(flyTilt, -0.16, sit)) - critter.rotation.x) * Math.min(1, dt * 5);
         if (data.wings) {
-          const flap = landed ? 0.42 : Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
-          data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 8);
-          data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 8);
+          const flap = landed ? 0.48 : THREE.MathUtils.lerp(Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55, 0.48, sit);
+          data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 5);
+          data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 5);
         }
-        poseDragon(critter, now, dt, landed);
+        poseDragon(critter, now, dt, sit);
         if (data.fire) {
           const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
           data.fire.visible = blasting;
