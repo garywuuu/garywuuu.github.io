@@ -1588,16 +1588,37 @@ function pickCatMood(critter, cats, toys) {
   setCatMood(critter, "wander", { moodT: 2.4 + roll * 2.2, speed: critter.userData.walkSpeed });
 }
 
+function sendToPerch(critter, slot = 0, hold = 10) {
+  const perch = bannerPerch(slot);
+  critter.userData.mood = "perch";
+  critter.userData.playWith = null;
+  critter.userData.target = perch;
+  critter.userData.moodT = hold;
+  critter.userData.speed = 6.4;
+  critter.userData.heading = Math.atan2(perch.x - critter.position.x, perch.z - critter.position.z);
+}
+
+function greetPerch(dragons) {
+  if (!dragons.length) return;
+  const already = dragons.find((d) => d.userData.mood === "perch");
+  if (already) return;
+  let best = dragons[0];
+  let bestD = Infinity;
+  for (const dragon of dragons) {
+    const d = Math.hypot(BANNER.x - dragon.position.x, BANNER.z - dragon.position.z);
+    if (d < bestD) {
+      best = dragon;
+      bestD = d;
+    }
+  }
+  sendToPerch(best, 1, 12);
+}
+
 function pickDragonMood(critter, dragons) {
   const roll = hash(critter.position.x * 5, critter.position.z + critter.userData.timer);
   const perched = dragons.filter((other) => other !== critter && other.userData.mood === "perch");
   if (roll < 0.22 && perched.length === 0) {
-    const perch = bannerPerch(Math.floor(roll * 20));
-    critter.userData.mood = "perch";
-    critter.userData.playWith = null;
-    critter.userData.target = perch;
-    critter.userData.moodT = 8.5 + roll * 4;
-    critter.userData.speed = 5.2;
+    sendToPerch(critter, Math.floor(roll * 20), 8.5 + roll * 4);
     return;
   }
   if (roll < 0.42 && dragons.length > 1) {
@@ -1738,6 +1759,7 @@ function startWorld() {
   const critters = CRITTERS.map((spec) => makeCritter(scene, spec));
   const cats = critters.filter((c) => !c.userData.sky);
   const dragons = critters.filter((c) => c.userData.sky);
+  greetPerch(dragons);
   let ballVel = new THREE.Vector3();
   let ballLive = false;
 
