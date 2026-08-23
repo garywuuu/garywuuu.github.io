@@ -1,14 +1,32 @@
 # Personal Website
 
-A minimalist black and white personal website built with plain HTML, CSS, and JavaScript, designed to be hosted on GitHub Pages.
+A minimalist black and white personal website with a Three.js voxel lobby on the homepage, hosted on GitHub Pages.
 
 ## Features
 
-- **Single-page design** with sections for About, Research Papers, Experience, and Contact
+- **Routed pages**: Play, About, Research, Experience
+- **Instaplay Spawn**: first-person voxel plaza. Walk into a labeled booth to play a live Instaplay game. Side buildings open About, Research, and Experience.
 - **Research Papers**: Display and download PDF research papers from college
-- **Experience**: Resume-style display of internships and work experiences with rich link previews
+- **Experience**: Resume-style display of internships and work experiences
 - **Responsive design**: Works on desktop and mobile devices
 - **Accessible**: Keyboard navigation and proper semantic HTML
+
+## Play
+
+Open `/`. A pixel greeting fades after a few seconds. Click the world to look around.
+
+- WASD walk, mouse look, space jump
+- Greeting: "hey / i'm gary, welcome to my site! click in and wander."
+- Plaza extras: roaming animals that stay on solid ground; Favorites bookshelf left of Experience
+- Five booths, centered: Neon Reflex, Third Rally, Make a Game, Voxel Safari, Blockfront
+- The middle stall is a 3-wide nether portal. Walk in to open Instaplay create.
+- Games load from `instaplay.ai/embed/g/{shortId}`. Make a Game goes to `instaplay.ai/create`.
+- Tower sign is YC S26 beside the white Instaplay wordmark and red icon
+- HUD map or keys 1–5 warp to a booth
+- About / Research / Experience buildings are labeled. Walk in to open that page; use **Back to game** to return.
+- Esc or **Leave cabinet** returns to the voxel world
+
+Local preview: `python3 -m http.server 4173` from this folder, then visit `http://localhost:4173`.
 
 ## Setup
 

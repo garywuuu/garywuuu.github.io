@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Personal website: research, experience, and links." />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="Walk Instaplay Spawn, a voxel lobby for Gary Wu. Prompt a game, then read about, research, and experience." />
     <meta name="robots" content="index, follow" />
     <!-- Updated: 2025 -->
     <meta name="author" content="Gary Wu" />
@@ -12,7 +12,7 @@
 
     <!-- OpenGraph (optional but nice for sharing) -->
     <meta property="og:title" content="Gary Wu" />
-    <meta property="og:description" content="Research, experience, and what I'm up to." />
+    <meta property="og:description" content="A Minecraft-style Instaplay spawn on the homepage." />
     <meta property="og:type" content="profile" />
     <meta property="og:url" content="https://gary-wu.com/" />
     <meta property="og:site_name" content="Gary Wu" />
@@ -23,11 +23,11 @@
     <meta property="profile:username" content="garywuuu" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Gary Wu" />
-    <meta name="twitter:description" content="Research, experience, and what I'm up to." />
+    <meta name="twitter:description" content="A Minecraft-style Instaplay spawn on the homepage." />
     <meta name="twitter:image" content="https://gary-wu.com/assets/images/profile.jpg" />
     <link rel="me" href="https://github.com/garywuuu" />
-    <link rel="me" href="https://www.linkedin.com/in/garywu2025" />
-    <link rel="me" href="https://twitter.com/garywu_eth" />
+    <link rel="me" href="https://www.linkedin.com/in/garywu23/" />
+    <link rel="me" href="https://x.com/gary_wu23" />
 
     <script type="application/ld+json">
       {
@@ -49,7 +49,7 @@
             "url": "https://gary-wu.com/",
             "name": "Gary Wu",
             "headline": "Gary Wu - trying to solve fun at Instaplay in San Francisco",
-            "dateModified": "2026-08-07T00:00:00-07:00",
+            "dateModified": "2026-08-15T00:00:00-07:00",
             "isPartOf": {
               "@id": "https://gary-wu.com/#website"
             },
@@ -92,7 +92,7 @@
               {
                 "@type": "Organization",
                 "name": "Instaplay",
-                "url": "https://www.instaplay.dev/"
+                "url": "https://www.instaplay.ai/"
               },
               {
                 "@type": "Organization",
@@ -109,8 +109,8 @@
             ],
             "sameAs": [
               "https://github.com/garywuuu",
-              "https://www.linkedin.com/in/garywu2025",
-              "https://twitter.com/garywu_eth"
+              "https://www.linkedin.com/in/garywu23/",
+              "https://x.com/gary_wu23"
             ],
             "knowsAbout": [
               "AI product management",
@@ -127,194 +127,96 @@
       }
     </script>
 
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg" />
   </head>
 
-  <body>
-    <a class="skipLink" href="#content">Skip to content</a>
+  <body class="playPage">
+    <a class="skipLink" href="#playHud">Skip to play controls</a>
 
-    <header class="siteHeader">
+    <header class="siteHeader playHeader">
       <div class="container">
         <div class="headerRow">
           <div>
-            <h1 class="siteTitle">Gary Wu</h1>
-            <p class="siteSubtitle"></p>
+            <a class="siteTitle" href="/">Gary Wu</a>
           </div>
-
           <nav class="nav" aria-label="Primary">
-            <a href="#about">About</a>
-            <a href="#research">Research</a>
-            <a href="#experience">Experience</a>
-            <a href="#contact">Contact</a>
+            <a href="/">Play</a>
+            <a href="/about/">About</a>
+            <a href="/research/">Research</a>
+            <a href="/experience/">Experience</a>
           </nav>
         </div>
       </div>
     </header>
 
-    <main id="content" class="container">
-      <section id="about" class="section">
-        <div class="aboutGrid">
-          <h2 class="aboutHeading">About</h2>
-          <div class="aboutProse">
-            <div class="prose">
-              <p>
-                Hey! I'm currently living in SF and trying to solve fun at <a href="https://www.instaplay.dev/" target="_blank" rel="noopener noreferrer">Instaplay</a>.
-            </p>
-            <p>
-                Before this, I was an Associate Product Manager at Salesforce, where I spearheaded RL Environments and was Product Lead for Agentforce Tableau's agentic data analysis platform.
-            </p>
-            <p>
-                I received my Bachelor's and Master's degrees in Computer Science concurrently from Harvard University through the AB/SM program, focusing on ML Fairness and Distributed Systems and learning from <a href="https://www.seas.harvard.edu/person/jim-waldo" target="_blank" rel="noopener noreferrer">Jim Waldo</a>, <a href="https://people.seas.harvard.edu/~chong/" target="_blank" rel="noopener noreferrer">Stephen Chong</a>, <a href="https://yiling.seas.harvard.edu/" target="_blank" rel="noopener noreferrer">Yiling Chen</a>, and <a href="https://dwork.seas.harvard.edu/detailed-biography-and-curriculum-vitae" target="_blank" rel="noopener noreferrer">Cynthia Dwork</a>.
-            </p>
+    <main class="playStage">
+      <canvas id="world" aria-label="Instaplay Spawn voxel world"></canvas>
 
-            <p>
-                Previously, I co-founded an LLMOps startup building custom LLM Evals and raised from Pear VC and Unusual Ventures.
-            </p>
+      <div id="playHud" class="playHud">
+        <div class="playIntro" id="playIntro" role="status">
+          <p class="playIntroHi">hey</p>
+          <p class="playIntroLead">i'm gary, welcome to my site!<br />click in and wander.</p>
+          <p class="playIntroHint">wasd · look · space</p>
+        </div>
 
-            <p>
-                Outside of work, I play tennis, eat spicy Sichuan food, and DJ.
-              </p>
-            </div>
-          </div>
-          <figure class="aboutPhoto">
-            <!-- Put your photo at assets/images/profile.jpg (or change this path). -->
-            <img src="assets/images/profile.jpg" alt="Gary Wu portrait" width="1182" height="1333" decoding="async" fetchpriority="high" />
-          </figure>
+        <div class="crosshair" id="crosshair" hidden></div>
+        <div class="playPrompt" id="playPrompt" hidden>Walk into a colored booth · or press 1–5</div>
+        <div class="playStats" id="playStats" hidden>
+          <span id="orbCount">Pick a booth</span>
         </div>
-      </section>
+        <nav class="gameMap" id="gameMap" hidden aria-label="Instaplay games"></nav>
+        <div class="playHelp" id="playHelp" hidden>WASD walk · mouse look · space jump · walk in to play · 1–5 warp · Esc leave</div>
+      </div>
 
-      <section id="research" class="section">
-        <div class="sectionHeader">
-          <h2>Research</h2>
-          <p class="muted">Graduate-level coursework and research projects.</p>
-        </div>
-        <div id="researchStatus" class="status" aria-live="polite"></div>
-        <div id="researchList" class="stack">
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Benchmarking Explainability of ImageNet Classification Against Data Suboptimality</h3>
-              <div class="cardMeta"><span>CS 2822R: ML Interpretability</span><span> - </span><span>2024</span></div>
-            </div>
-            <p class="cardText">We explore interpretable machine learning techniques to help stakeholders understand ML models and their decision-making processes. This work focuses on capturing the underlying reasoning of black box methods through various interpretability approaches.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 2822R Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 2822R Final Project.pdf" download="CS 2822R Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Stable Compute Marketplace Problem with Multi-dimensional Preference Ordering</h3>
-              <div class="cardMeta"><span>CS 236r: Advanced Topics in Econ/CS</span><span> - </span><span>2024</span></div>
-            </div>
-            <p class="cardText">We address the challenge of creating stable compute marketplaces for machine learning, where users can rent computational resources for training large models. Our work implements pricing and matching algorithms that handle multi-dimensional preference reporting in practice.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 236r Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 236r Final Project.pdf" download="CS 236r Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Incentive-Aligned Agent Selection Strategy for Federated Learning</h3>
-              <div class="cardMeta"><span>CS 243: Advanced Networking for ML Systems</span><span> - </span><span>2023</span></div>
-            </div>
-            <p class="cardText">We present PRIMES, a novel incentive-aligned approach for federated learning that addresses the misreporting and free-riding problem. By selecting clients based on next-step loss and paying them based on global performance, we incentivize truthful reporting and high-quality contributions.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 243 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 243 Final Project.pdf" download="CS 243 Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Homomorphic Encryption for Neural Network Deployment</h3>
-              <div class="cardMeta"><span>CS 254: Advanced Topics in Security</span><span> - </span><span>2025</span></div>
-            </div>
-            <p class="cardText">We implement a homomorphic encryption-based neural network using polynomial activation approximation to enable secure inference on encrypted data. We compare the security posture against standard unencrypted networks, focusing on membership inference, model extraction, and gradient-based input recovery attacks.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 254 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 254 Final Project.pdf" download="CS 254 Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Achieving Fairness in the Multi-Round Online Gaming Context</h3>
-              <div class="cardMeta"><span>CS 226: Algorithmic Fairness</span><span> - </span><span>2024</span></div>
-            </div>
-            <p class="cardText">We investigate how fairness breaks down in online learning settings with strategic gaming, where agents may modify their reported features for favorable outcomes. We introduce algorithmic changes to ensure fairness across multiple metrics, accounting for different cost functions between advantaged and disadvantaged agents.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/CS 226 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/CS 226 Final Project.pdf" download="CS 226 Final Project.pdf">Download</a>
-            </div>
-          </article>
-          <article class="card">
-            <div>
-              <h3 class="cardTitle">Metric-Based LLM-Router Using KMeans Clustering</h3>
-              <div class="cardMeta"><span>Neuro 240: Biological &amp; Artificial Intelligence</span><span> - </span><span>2024</span></div>
-            </div>
-            <p class="cardText">We explore the feasibility of Large Language Model routers that can intelligently recommend the best LLM for a given task. Using KMeans clustering on prompts, we build a model to predict which LLM will provide the best response.</p>
-            <div class="row">
-              <a class="pill" href="assets/papers/Neuro 240 Final Project.pdf" target="_blank" rel="noreferrer">View PDF</a>
-              <a class="pill" href="assets/papers/Neuro 240 Final Project.pdf" download="Neuro 240 Final Project.pdf">Download</a>
-            </div>
-          </article>
-        </div>
-      </section>
+      <aside class="playCard" id="playCard" hidden>
+        <button type="button" class="playCardClose" id="playCardClose" aria-label="Close">×</button>
+        <p class="playKicker" id="playCardKicker"></p>
+        <h2 id="playCardTitle"></h2>
+        <p id="playCardBody"></p>
+        <div class="playCardActions" id="playCardActions"></div>
+      </aside>
 
-      <section id="experience" class="section">
-        <div class="sectionHeader">
-          <h2>Experience</h2>
+      <div class="arcadeOverlay" id="arcadeOverlay" hidden>
+        <div class="arcadeShell">
+          <div class="arcadeBar">
+            <div>
+              <p class="playKicker">Instaplay Arcade</p>
+              <h2 id="arcadeTitle">Pick a cabinet</h2>
+            </div>
+            <div class="arcadeBarActions">
+              <div class="arcadePicks" id="arcadePicks"></div>
+              <a class="playCta small" id="arcadeExternal" href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer">Open on Instaplay</a>
+              <button type="button" class="playCta small" id="arcadeClose">Leave cabinet</button>
+            </div>
+          </div>
+          <iframe
+            id="arcadeFrame"
+            title="Instaplay game"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gamepad; gyroscope; pointer-lock"
+            referrerpolicy="strict-origin-when-cross-origin"
+          ></iframe>
         </div>
-        <div id="experienceStatus" class="status" aria-live="polite"></div>
-        <div id="experienceList" class="stack">
-          <div class="experienceEntry">
-            <h3>Associate Product Manager - Salesforce</h3>
-            <p>1 of 12 APM's in cohort. Pitched and led RL Environments. Product Lead for Agentforce Tableau, building the agentic data analysis platform.</p>
-          </div>
-          <div class="experienceEntry">
-            <h3>Associate Product Manager Intern - Salesforce</h3>
-            <p>Owned multi-modal prompt engineering integration from 0-1: led customer calls, wrote requirements, drove stakeholder alignment. Convinced execs to increase project priority and shipped API MVP, unlocking Agentforce's Service Agent. Doubly operated as TPM, spearheading API design and partnered with multiple engineering teams. Collaborated with Sales/AE teams to build and pitch customized demos for client C-suite audience in $XXm ACV AI deals.</p>
-          </div>
-          <div class="experienceEntry">
-            <h3>Co-Founder &amp; Head of Product - Verita</h3>
-            <p>Founded LLM Evals startup with Harvard classmates - powering businesses to test and improve their fine-tuned LLM's. Engineered MVP, conducted user/competitive research and led product growth. Raised funding from Pear VC and Unusual Ventures and participated in Unusual Academy.</p>
-          </div>
-          <div class="experienceEntry">
-            <h3>Product Manager Intern - Teradata</h3>
-            <p>Collaborated with Engineering to design a migration system from PySpark to Teradata's ML python package, enabling users to port over existing jobs, enabling and increasing onboarding efficiency. Engineered end-to-end machine learning (XGBoost) product demo within the Teradata MLOps platform, from data preparation and model training to automating deployment &amp; evaluation.</p>
-          </div>
-          <div class="experienceEntry">
-            <h3>Software Engineering Intern - Alpaca Markets</h3>
-            <p>Engineered a Slack App using Python, PostgreSQL, and Flask, integrating multiple API's, OAuth 2.0, and backend logic, allowing users to submit trades using Slack commands, such that &quot;/buy AAPL 10&quot; would buy the user 10 shares of Apple. Wrote 3 technical articles of algorithmic trading strategies, reaching 1000's of customers. Created feature requirements and managed end-to-end development of the above projects.</p>
-          </div>
-        </div>
-      </section>
-
-      <section id="contact" class="section">
-        <h2>Contact</h2>
-        <div class="prose">
-          <ul class="inlineList">
-            <li><a href="https://github.com/garywuuu" target="_blank" rel="me noreferrer">GitHub</a></li>
-            <li><a href="https://www.linkedin.com/in/garywu2025" target="_blank" rel="me noreferrer">LinkedIn</a></li>
-            <li><a href="https://twitter.com/garywu_eth" target="_blank" rel="me noreferrer">Twitter</a></li>
-          </ul>
-        </div>
-      </section>
+      </div>
 
       <noscript>
-        <div class="status">
-          JavaScript enhances navigation and keeps the footer year current; the main content is available above.
+        <div class="playFallback">
+          <p>JavaScript is required to enter the world. Read <a href="/about/">About</a> instead.</p>
         </div>
       </noscript>
     </main>
 
-    <footer class="siteFooter">
-      <div class="container">
-        <div class="footerRow">
-          <span>&copy; <span id="year"></span> Gary Wu</span>
-        </div>
-      </div>
-    </footer>
-
-    <script src="script.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.168.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module" src="play.js?v=20260822y"></script>
+    <script src="/script.js"></script>
   </body>
 </html>

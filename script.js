@@ -8,6 +8,12 @@
     return await res.json();
   }
 
+  function currentPath() {
+    const path = window.location.pathname.replace(/index\.html$/, "");
+    if (path.length > 1 && path.endsWith("/")) return path;
+    return path || "/";
+  }
+
   function el(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -179,101 +185,28 @@
     }
   }
 
+  function setupBackToGame() {
+    if (document.body.classList.contains("playPage")) return;
+    if (!document.querySelector(".siteHeader")) return;
+    if (document.querySelector(".backToGame")) return;
+    const bar = el("div", { class: "backToGame" }, [
+      el("a", { class: "playCta", href: "/", text: "Back to game" }),
+    ]);
+    document.body.append(bar);
+  }
+
   function setupActiveNav() {
     const links = $$(".nav a");
-    const sections = $$("main .section");
-    if (!links.length || !sections.length) return;
+    if (!links.length) return;
 
-    const byHash = new Map(links.map((a) => [a.getAttribute("href"), a]));
-    let isProgrammaticScroll = false;
-    let programmaticScrollTimeout = null;
-    const headerOffset = 110; // keep in sync with CSS scroll-margin-top
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    function setActiveLink(href) {
-      for (const a of links) a.removeAttribute("aria-current");
-      const target = byHash.get(href);
-      if (target) target.setAttribute("aria-current", "true");
-    }
-
-    // Choose the last section whose top is above the header-adjusted scroll position.
-    function updateActiveFromScroll() {
-      // While we're animating a click-driven scroll, don't override the chosen tab.
-      if (isProgrammaticScroll) return;
-
-      const scrollPos = window.scrollY + headerOffset + 1;
-
-      // If we're very close to the top, force About.
-      if (window.scrollY < 40) {
-        setActiveLink("#about");
-        return;
-      }
-
-      let activeSection = sections[0];
-      for (const section of sections) {
-        if (scrollPos >= section.offsetTop) {
-          activeSection = section;
-        }
-      }
-
-      // If we're very close to the bottom, force the last section (Contact).
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
-        activeSection = sections[sections.length - 1];
-      }
-
-      if (activeSection) {
-        setActiveLink(`#${activeSection.id}`);
-      }
-    }
-
-    // Initial state
-    updateActiveFromScroll();
-
-    // Scroll listener (throttled with rAF)
-    let ticking = false;
-    window.addEventListener("scroll", () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          updateActiveFromScroll();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    });
-
-    // Recalculate on resize (in case layout shifts)
-    window.addEventListener("resize", updateActiveFromScroll);
-
-    // Handle click events on navigation links
-    for (const link of links) {
-      link.addEventListener("click", (e) => {
-        const href = link.getAttribute("href");
-        if (!href || !href.startsWith("#")) return;
-
-        e.preventDefault();
-        const targetId = href.slice(1);
-        const targetSection = document.getElementById(targetId);
-        if (!targetSection) return;
-
-        // Update active immediately
-        setActiveLink(href);
-
-        // Temporarily lock the active tab while we smooth scroll,
-        // so the underline jumps straight to the clicked section.
-        isProgrammaticScroll = true;
-        if (programmaticScrollTimeout) clearTimeout(programmaticScrollTimeout);
-
-        targetSection.scrollIntoView({
-          behavior: prefersReducedMotion ? "auto" : "smooth",
-          block: "start",
-        });
-
-        // After the scroll animation, unlock and sync from scroll position once.
-        programmaticScrollTimeout = setTimeout(() => {
-          isProgrammaticScroll = false;
-          updateActiveFromScroll();
-        }, prefersReducedMotion ? 0 : 650);
-      });
+    const path = currentPath();
+    for (const a of links) {
+      const href = a.getAttribute("href");
+      if (!href) continue;
+      const normalized = href === "/" ? "/" : href.endsWith("/") ? href : `${href}/`;
+      const isActive = normalized === "/" ? path === "/" : path.startsWith(normalized);
+      if (isActive) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
     }
   }
 
@@ -287,35 +220,45 @@
   }
 
   async function main() {
-    const year = document.getElementById("year");
-    if (year) year.textContent = String(new Date().getFullYear());
+    const yearNodes = $$("[data-year], #year");
+    const year = String(new Date().getFullYear());
+    for (const node of yearNodes) node.textContent = year;
 
     setupActiveNav();
+    setupBackToGame();
 
-    setStatus("researchStatus", "Loading research…");
-    setStatus("experienceStatus", "Loading experience…");
+    const needsResearch = Boolean(document.getElementById("researchList"));
+    const needsExperience = Boolean(document.getElementById("experienceList"));
 
-    try {
-      const [papers, exps, links] = await Promise.all([
-        fetchJson("data/papers.json"),
-        fetchJson("data/experience.json"),
-        fetchJson("data/links.json").catch(() => ({})),
-      ]);
+    if (needsResearch) setStatus("researchStatus", "Loading research…");
+    if (needsExperience) setStatus("experienceStatus", "Loading experience…");
 
-      if (!Array.isArray(papers) || papers.length === 0) setStatus("researchStatus", "No research yet.");
-      else setStatus("researchStatus", "");
-      renderPapers(Array.isArray(papers) ? papers : []);
+    if (needsResearch || needsExperience) {
+      try {
+        const [papers, exps, links] = await Promise.all([
+          needsResearch ? fetchJson("/data/papers.json") : Promise.resolve([]),
+          needsExperience ? fetchJson("/data/experience.json") : Promise.resolve([]),
+          fetchJson("/data/links.json").catch(() => ({})),
+        ]);
 
-      if (!Array.isArray(exps) || exps.length === 0) setStatus("experienceStatus", "No experience entries yet.");
-      else setStatus("experienceStatus", "");
-      renderExperience(Array.isArray(exps) ? exps : [], links && typeof links === "object" ? links : {});
-    } catch (err) {
-      console.error(err);
-      setStatus("researchStatus", "Failed to load data. Check the JSON files under data/.");
-      setStatus("experienceStatus", "Failed to load data. Check the JSON files under data/.");
+        if (needsResearch) {
+          if (!Array.isArray(papers) || papers.length === 0) setStatus("researchStatus", "No research yet.");
+          else setStatus("researchStatus", "");
+          renderPapers(Array.isArray(papers) ? papers : []);
+        }
+
+        if (needsExperience) {
+          if (!Array.isArray(exps) || exps.length === 0) setStatus("experienceStatus", "No experience entries yet.");
+          else setStatus("experienceStatus", "");
+          renderExperience(Array.isArray(exps) ? exps : [], links && typeof links === "object" ? links : {});
+        }
+      } catch (err) {
+        console.error(err);
+        if (needsResearch) setStatus("researchStatus", "Failed to load data. Check the JSON files under data/.");
+        if (needsExperience) setStatus("experienceStatus", "Failed to load data. Check the JSON files under data/.");
+      }
     }
 
-    // Match photo height after a short delay to ensure content is rendered
     setTimeout(matchPhotoToProse, 50);
     window.addEventListener("resize", matchPhotoToProse);
   }

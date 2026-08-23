@@ -4,7 +4,7 @@
     "venue": "CS 2822R: ML Interpretability",
     "year": 2024,
     "summary": "We explore interpretable machine learning techniques to help stakeholders understand ML models and their decision-making processes. This work focuses on capturing the underlying reasoning of black box methods through various interpretability approaches.",
-    "pdf": "assets/papers/CS 2822R Final Project.pdf",
+    "pdf": "/assets/papers/CS 2822R Final Project.pdf",
     "links": []
   },
   {
@@ -12,7 +12,7 @@
     "venue": "CS 236r: Advanced Topics in Econ/CS",
     "year": 2024,
     "summary": "We address the challenge of creating stable compute marketplaces for machine learning, where users can rent computational resources for training large models. Our work implements pricing and matching algorithms that handle multi-dimensional preference reporting in practice.",
-    "pdf": "assets/papers/CS 236r Final Project.pdf",
+    "pdf": "/assets/papers/CS 236r Final Project.pdf",
     "links": []
   },
   {
@@ -20,7 +20,7 @@
     "venue": "CS 243: Advanced Networking for ML Systems",
     "year": 2023,
     "summary": "We present PRIMES, a novel incentive-aligned approach for federated learning that addresses the misreporting and free-riding problem. By selecting clients based on next-step loss and paying them based on global performance, we incentivize truthful reporting and high-quality contributions.",
-    "pdf": "assets/papers/CS 243 Final Project.pdf",
+    "pdf": "/assets/papers/CS 243 Final Project.pdf",
     "links": []
   },
   {
@@ -28,7 +28,7 @@
     "venue": "CS 254: Advanced Topics in Security",
     "year": 2025,
     "summary": "We implement a homomorphic encryption-based neural network using polynomial activation approximation to enable secure inference on encrypted data. We compare the security posture against standard unencrypted networks, focusing on membership inference, model extraction, and gradient-based input recovery attacks.",
-    "pdf": "assets/papers/CS 254 Final Project.pdf",
+    "pdf": "/assets/papers/CS 254 Final Project.pdf",
     "links": []
   },
   {
@@ -44,7 +44,7 @@
     "venue": "Neuro 240: Biological & Artificial Intelligence",
     "year": 2024,
     "summary": "We explore the feasibility of Large Language Model routers that can intelligently recommend the best LLM for a given task. Using KMeans clustering on prompts, we build a model to predict which LLM will provide the best response.",
-    "pdf": "assets/papers/Neuro 240 Final Project.pdf",
+    "pdf": "/assets/papers/Neuro 240 Final Project.pdf",
     "links": []
   }
 ]
