@@ -747,14 +747,15 @@ function makeInstaplaySign(x = BANNER.x, y = BANNER.y, z = BANNER.z, scaleX = BA
   });
   const group = new THREE.Group();
   group.position.set(x, y, z);
-  const face = new THREE.Mesh(
-    new THREE.BoxGeometry(scaleX, scaleX * 0.25, BANNER.d),
-    new THREE.MeshLambertMaterial({ map: tex })
-  );
   const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(scaleX + 0.28, scaleX * 0.25 + 0.28, BANNER.d + 0.18),
+    new THREE.BoxGeometry(scaleX + 0.28, scaleX * 0.25 + 0.28, BANNER.d),
     new THREE.MeshLambertMaterial({ map: blockTexture("stoneDark") })
   );
+  const face = new THREE.Mesh(
+    new THREE.BoxGeometry(scaleX, scaleX * 0.25, 0.18),
+    new THREE.MeshBasicMaterial({ map: tex })
+  );
+  face.position.z = BANNER.d * 0.5 + 0.02;
   group.add(frame);
   group.add(face);
   return group;
