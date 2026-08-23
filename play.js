@@ -703,21 +703,26 @@ const BANNER = {
   d: 0.9,
 };
 
-function hitsBanner(x, y, z, pad = 1.4) {
+function bannerTop() {
+  return BANNER.y + (BANNER.h + 0.28) * 0.5;
+}
+
+function hitsBanner(x, y, z, pad = 0.85) {
   return (
     Math.abs(x - BANNER.x) < BANNER.w * 0.5 + pad &&
     Math.abs(z - BANNER.z) < BANNER.d * 0.5 + pad &&
-    y > BANNER.y - BANNER.h * 0.5 - 1.1 &&
-    y < BANNER.y + BANNER.h * 0.5 + 1.6
+    y > BANNER.y - BANNER.h * 0.5 - 0.6 &&
+    y < bannerTop() + 0.2
   );
 }
 
 function bannerPerch(slot = 0) {
-  const spread = [-2.6, -0.8, 0.8, 2.6];
+  const spread = [-3.4, -1.2, 1.2, 3.4];
   return {
     x: BANNER.x + spread[slot % spread.length],
-    y: BANNER.y + BANNER.h * 0.5 + 0.42,
+    y: bannerTop() + 0.28,
     z: BANNER.z,
+    heading: slot % 2 ? Math.PI * 0.5 : -Math.PI * 0.5,
   };
 }
 
@@ -1129,10 +1134,10 @@ function makeCritter(scene, spec) {
   return root;
 }
 
-function roamOk(x, z, mode = "walk", y = null) {
+function roamOk(x, z, mode = "walk", y = null, allowBanner = false) {
   if (mode === "sky") {
     if (x <= -42 || x >= 42 || z <= -32 || z >= 32) return false;
-    if (y != null && hitsBanner(x, y, z)) return false;
+    if (!allowBanner && y != null && hitsBanner(x, y, z)) return false;
     return true;
   }
   if (x < -20 || x > 20 || z < -3.6 || z > 16.4) return false;
@@ -1217,7 +1222,8 @@ function stepToward(critter, x, z, dt, mode) {
   const nx = critter.position.x + Math.sin(critter.userData.heading) * step;
   const nz = critter.position.z + Math.cos(critter.userData.heading) * step;
   const ny = critter.userData.sky ? critter.position.y : null;
-  if (roamOk(nx, nz, mode, ny)) {
+  const allowBanner = critter.userData.mood === "perch" && ny != null && ny > bannerTop();
+  if (roamOk(nx, nz, mode, ny, allowBanner)) {
     critter.position.x = nx;
     critter.position.z = nz;
     return true;
@@ -1570,13 +1576,13 @@ function pickCatMood(critter, cats, toys) {
 function pickDragonMood(critter, dragons) {
   const roll = hash(critter.position.x * 5, critter.position.z + critter.userData.timer);
   const perched = dragons.filter((other) => other !== critter && other.userData.mood === "perch");
-  if (roll < 0.18 && perched.length === 0) {
+  if (roll < 0.22 && perched.length === 0) {
     const perch = bannerPerch(Math.floor(roll * 20));
     critter.userData.mood = "perch";
     critter.userData.playWith = null;
     critter.userData.target = perch;
-    critter.userData.moodT = 7.5 + roll * 4;
-    critter.userData.speed = 4.6;
+    critter.userData.moodT = 8.5 + roll * 4;
+    critter.userData.speed = 5.2;
     return;
   }
   if (roll < 0.42 && dragons.length > 1) {
@@ -2239,9 +2245,13 @@ function startWorld() {
         }
       } else if (data.mood === "perch" && toy) {
         const dist = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z);
-        if (dist > 0.7) stepToward(critter, toy.x, toy.z, dt, mode);
-        else {
-          faceToward(critter, player.x, player.z);
+        if (dist > 0.35) {
+          data.speed = 5.2;
+          stepToward(critter, toy.x, toy.z, dt, mode);
+        } else {
+          critter.position.x += (toy.x - critter.position.x) * Math.min(1, dt * 8);
+          critter.position.z += (toy.z - critter.position.z) * Math.min(1, dt * 8);
+          data.heading += (wrapAngle((toy.heading ?? 0) - data.heading)) * Math.min(1, dt * 6);
           data.speed = 0;
         }
       } else if (data.mood === "breath") {
@@ -2292,25 +2302,30 @@ function startWorld() {
 
       if (data.sky) {
         const perch = data.mood === "perch" && data.target;
-        const landed = perch && Math.hypot(data.target.x - critter.position.x, data.target.z - critter.position.z) < 0.85;
+        const dist = perch ? Math.hypot(data.target.x - critter.position.x, data.target.z - critter.position.z) : 99;
+        const landed = perch && dist < 0.55 && Math.abs(critter.position.y - data.target.y) < 0.45;
         const swoop = data.mood === "chase" || data.mood === "circle";
         let wantY = data.baseY + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
-        if (perch) wantY = landed ? data.target.y : THREE.MathUtils.lerp(critter.position.y, data.target.y + 1.4, 0.08);
-        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * 4.2);
-        if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z, 1.1)) {
-          if (critter.position.y < BANNER.y + BANNER.h * 0.5) critter.position.y = BANNER.y + BANNER.h * 0.5 + 0.5;
-          if (Math.abs(critter.position.z - BANNER.z) < BANNER.d) {
-            critter.position.z += critter.position.z >= BANNER.z ? 1.4 : -1.4;
+        if (perch) wantY = dist > 1.4 ? Math.max(bannerTop() + 2.4, data.target.y + 2.2) : data.target.y;
+        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (landed ? 8 : 3.4));
+        if (landed) {
+          critter.position.x = data.target.x;
+          critter.position.y = data.target.y;
+          critter.position.z = data.target.z;
+        } else if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z)) {
+          critter.position.y = Math.max(critter.position.y, bannerTop() + 1.1);
+          if (Math.abs(critter.position.z - BANNER.z) < BANNER.d * 0.5 + 0.6) {
+            critter.position.z += critter.position.z >= BANNER.z ? 1.6 : -1.6;
             data.heading += Math.PI * 0.55;
           }
         }
-        critter.rotation.x = landed ? 0.08 : Math.sin(now / 640 + data.heading) * 0.08;
+        critter.rotation.x = landed ? 0.02 : Math.sin(now / 640 + data.heading) * 0.08;
         if (data.wings) {
-          const flap = landed ? 0.08 + Math.sin(now / 900) * 0.04 : Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
-          data.wings[0].rotation.z = flap;
-          data.wings[1].rotation.z = -flap;
+          const flap = landed ? 0.02 : Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
+          data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 8);
+          data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 8);
         }
-        if (data.tail) data.tail.rotation.y = Math.sin(now / 260 + data.heading) * (landed ? 0.12 : 0.35);
+        if (data.tail) data.tail.rotation.y = Math.sin(now / 260 + data.heading) * (landed ? 0.08 : 0.35);
         if (data.fire) {
           const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
           data.fire.visible = blasting;
@@ -2337,7 +2352,7 @@ function startWorld() {
     }
 
     separateGroup(cats, 0.82);
-    separateGroup(dragons, 4.6);
+    separateGroup(dragons.filter((d) => d.userData.mood !== "perch"), 4.6);
 
     if (ballLive) {
       ballVel.y -= 14 * dt;
