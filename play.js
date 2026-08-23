@@ -1382,15 +1382,17 @@ function poseDragon(critter, now, dt, sit) {
     if (feet[i]) easeJoint(feet[i], (footX[i] || 0) * sit, 0, 0, blend);
   }
   if (data.head) {
-    data.head.rotation.x += ((sit ? -0.08 : Math.sin(now / 640 + data.heading) * 0.05) - data.head.rotation.x) * blend;
-    data.head.rotation.y += ((sit ? Math.sin(now / 900) * 0.06 : 0) - data.head.rotation.y) * blend;
+    const lookY = sit ? Math.sin(now / 1100 + data.baseY) * 0.32 + Math.sin(now / 2400 + data.heading) * 0.12 : 0;
+    const lookX = sit ? -0.06 + Math.sin(now / 900 + data.baseY) * 0.1 : Math.sin(now / 640 + data.heading) * 0.05;
+    data.head.rotation.x += (lookX - data.head.rotation.x) * blend;
+    data.head.rotation.y += (lookY - data.head.rotation.y) * blend;
   }
   if (data.tail) {
-    data.tail.rotation.x += (0.28 * sit - data.tail.rotation.x) * blend;
-    data.tail.rotation.y += ((1 - sit) * Math.sin(now / 260 + data.heading) * 0.28 + sit * Math.sin(now / 480) * 0.08 - data.tail.rotation.y) * blend;
+    data.tail.rotation.x += ((sit ? 0.22 + Math.sin(now / 520) * 0.06 : 0) - data.tail.rotation.x) * blend;
+    data.tail.rotation.y += ((1 - sit) * Math.sin(now / 260 + data.heading) * 0.28 + sit * Math.sin(now / 380 + data.baseY) * 0.22 - data.tail.rotation.y) * blend;
   }
-  if (data.tailMid) data.tailMid.rotation.y += ((1 - sit) * Math.sin(now / 220 + data.heading) * 0.18 - data.tailMid.rotation.y) * blend;
-  if (data.tailTip) data.tailTip.rotation.y += ((1 - sit) * Math.sin(now / 180 + data.heading) * 0.22 - data.tailTip.rotation.y) * blend;
+  if (data.tailMid) data.tailMid.rotation.y += (((1 - sit) * Math.sin(now / 220 + data.heading) * 0.18 + sit * Math.sin(now / 300) * 0.16) - data.tailMid.rotation.y) * blend;
+  if (data.tailTip) data.tailTip.rotation.y += (((1 - sit) * Math.sin(now / 180 + data.heading) * 0.22 + sit * Math.sin(now / 240) * 0.2) - data.tailTip.rotation.y) * blend;
 }
 
 function easeJoint(node, rx, ry, rz, t) {
@@ -2397,9 +2399,13 @@ function startWorld() {
           }
         }
         const flyTilt = Math.sin(now / 640 + data.heading) * 0.08;
-        critter.rotation.x += ((landed ? -0.22 : THREE.MathUtils.lerp(flyTilt, -0.16, sit)) - critter.rotation.x) * Math.min(1, dt * 5);
+        const perchBob = landed ? Math.sin(now / 700 + data.baseY) * 0.03 : 0;
+        critter.rotation.x += ((landed ? -0.2 + perchBob : THREE.MathUtils.lerp(flyTilt, -0.16, sit)) - critter.rotation.x) * Math.min(1, dt * 5);
         if (data.wings) {
-          const flap = landed ? 0.48 : THREE.MathUtils.lerp(Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55, 0.48, sit);
+          const pulse = Math.sin(now / 180 + data.heading);
+          const perchFlap = 0.28 + Math.sin(now / 420 + data.baseY) * 0.16 + Math.max(0, pulse) * 0.22;
+          const flyFlap = Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
+          const flap = landed ? perchFlap : THREE.MathUtils.lerp(flyFlap, perchFlap, sit);
           data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 5);
           data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 5);
         }
