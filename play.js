@@ -827,44 +827,55 @@ function addPivot(parent, x, y, z) {
   return g;
 }
 
+function addLimb(parent, kind, x, y, z) {
+  const hip = addPivot(parent, x, y, z);
+  addBox(hip, kind, 0, -0.055, 0, 0.07, 0.12, 0.07);
+  const knee = addPivot(hip, 0, -0.11, 0);
+  addBox(knee, kind, 0, -0.05, 0, 0.06, 0.1, 0.06);
+  const paw = addPivot(knee, 0, -0.1, 0);
+  addBox(paw, kind, 0, -0.02, 0.015, 0.07, 0.04, 0.08);
+  return { hip, knee, paw };
+}
+
 function addCat(root, look) {
   const body = look.body;
   const trim = look.trim;
   const belly = look.belly;
   const muzzle = look.muzzle;
   const mark = look.mark || [];
+  const torso = addPivot(root, 0, 0.22, 0);
+  addBox(torso, body, 0, 0.08, 0, 0.28, 0.18, 0.56);
+  addBox(torso, belly, 0, -0.02, 0.02, 0.16, 0.08, 0.36);
 
-  addBox(root, body, 0, 0.28, 0, 0.3, 0.24, 0.62);
-  addBox(root, belly, 0, 0.16, 0.02, 0.18, 0.08, 0.4);
-  addBox(root, body, 0, 0.38, 0.44, 0.26, 0.22, 0.24);
-  addBox(root, muzzle, 0, 0.3, 0.58, 0.14, 0.08, 0.08);
-  addBox(root, look.nose || "pink", 0, 0.32, 0.63, 0.04, 0.03, 0.03);
-  addBox(root, look.eye || "lime", -0.06, 0.42, 0.57, 0.05, 0.05, 0.03);
-  addBox(root, look.eye || "lime", 0.06, 0.42, 0.57, 0.05, 0.05, 0.03);
-  addBox(root, "white", -0.075, 0.435, 0.585, 0.02, 0.02, 0.02);
-  addBox(root, "white", 0.045, 0.435, 0.585, 0.02, 0.02, 0.02);
-  addBox(root, trim, -0.08, 0.52, 0.4, 0.07, 0.1, 0.05);
-  addBox(root, trim, 0.08, 0.52, 0.4, 0.07, 0.1, 0.05);
-  addBox(root, "pink", -0.08, 0.5, 0.43, 0.04, 0.05, 0.02);
-  addBox(root, "pink", 0.08, 0.5, 0.43, 0.04, 0.05, 0.02);
+  const head = addPivot(torso, 0, 0.1, 0.3);
+  addBox(head, body, 0, 0.08, 0.08, 0.24, 0.2, 0.22);
+  addBox(head, muzzle, 0, 0.02, 0.2, 0.13, 0.08, 0.08);
+  addBox(head, look.nose || "pink", 0, 0.04, 0.25, 0.04, 0.03, 0.03);
+  addBox(head, look.eye || "lime", -0.055, 0.12, 0.18, 0.05, 0.05, 0.03);
+  addBox(head, look.eye || "lime", 0.055, 0.12, 0.18, 0.05, 0.05, 0.03);
+  addBox(head, "white", -0.07, 0.135, 0.195, 0.02, 0.02, 0.02);
+  addBox(head, "white", 0.04, 0.135, 0.195, 0.02, 0.02, 0.02);
+  addBox(head, trim, -0.075, 0.2, 0.02, 0.07, 0.1, 0.05);
+  addBox(head, trim, 0.075, 0.2, 0.02, 0.07, 0.1, 0.05);
+  addBox(head, "pink", -0.075, 0.18, 0.05, 0.04, 0.05, 0.02);
+  addBox(head, "pink", 0.075, 0.18, 0.05, 0.04, 0.05, 0.02);
 
   const legs = [
-    addPivot(root, -0.1, 0.16, 0.2),
-    addPivot(root, 0.1, 0.16, 0.2),
-    addPivot(root, -0.1, 0.16, -0.22),
-    addPivot(root, 0.1, 0.16, -0.22),
+    addLimb(torso, look.leg || body, -0.09, 0, 0.18),
+    addLimb(torso, look.leg || body, 0.09, 0, 0.18),
+    addLimb(torso, look.leg || body, -0.09, 0, -0.2),
+    addLimb(torso, look.leg || body, 0.09, 0, -0.2),
   ];
-  for (const leg of legs) {
-    addBox(leg, look.leg || body, 0, -0.06, 0, 0.07, 0.14, 0.07);
-  }
 
-  const tail = addPivot(root, 0, 0.36, -0.32);
-  addBox(tail, look.tail || body, 0, 0.12, 0, 0.05, 0.24, 0.05);
-  const tailTip = addPivot(tail, 0, 0.24, 0);
-  addBox(tailTip, look.tailTip || look.tail || body, 0, 0.1, 0, 0.045, 0.2, 0.045);
+  const tail = addPivot(torso, 0, 0.1, -0.28);
+  addBox(tail, look.tail || body, 0, 0.08, 0, 0.05, 0.16, 0.05);
+  const tailMid = addPivot(tail, 0, 0.16, 0);
+  addBox(tailMid, look.tail || body, 0, 0.07, 0, 0.045, 0.14, 0.045);
+  const tailTip = addPivot(tailMid, 0, 0.14, 0);
+  addBox(tailTip, look.tailTip || look.tail || body, 0, 0.07, 0, 0.04, 0.14, 0.04);
 
-  for (const m of mark) addBox(root, m.kind, m.x, m.y, m.z, m.sx, m.sy, m.sz);
-  return { legs, tail, tailTip };
+  for (const m of mark) addBox(torso, m.kind, m.x, m.y - 0.22, m.z, m.sx, m.sy, m.sz);
+  return { torso, head, legs, tail, tailMid, tailTip };
 }
 
 function blackOr(look) {
@@ -1047,9 +1058,14 @@ function makeCritter(scene, spec) {
     target: null,
     playWith: null,
     breath: 0,
+    cool: 0,
+    gait: hash(spec.x, spec.z) * Math.PI * 2,
     walkSpeed: sky ? 3.8 : 0.95,
     wings: parts.wings || null,
+    torso: parts.torso || null,
+    head: parts.head || null,
     tail: parts.tail || null,
+    tailMid: parts.tailMid || null,
     tailTip: parts.tailTip || null,
     legs: parts.legs || [],
     fire: parts.fire || null,
@@ -1107,12 +1123,25 @@ function makeCatToys(scene) {
   return toys;
 }
 
+function wrapAngle(a) {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function steerToward(critter, x, z, turn) {
+  const want = Math.atan2(x - critter.position.x, z - critter.position.z);
+  const delta = wrapAngle(want - critter.userData.heading);
+  const max = turn ?? 0.12;
+  critter.userData.heading += THREE.MathUtils.clamp(delta, -max, max);
+}
+
 function faceToward(critter, x, z) {
-  critter.userData.heading = Math.atan2(x - critter.position.x, z - critter.position.z);
+  steerToward(critter, x, z, 0.18);
 }
 
 function stepToward(critter, x, z, dt, mode) {
-  faceToward(critter, x, z);
+  steerToward(critter, x, z, critter.userData.sky ? 0.08 : 0.14);
   const step = critter.userData.speed * dt;
   const nx = critter.position.x + Math.sin(critter.userData.heading) * step;
   const nz = critter.position.z + Math.cos(critter.userData.heading) * step;
@@ -1121,8 +1150,82 @@ function stepToward(critter, x, z, dt, mode) {
     critter.position.z = nz;
     return true;
   }
-  critter.userData.heading += Math.PI * 0.6;
+  critter.userData.heading += 0.35;
   return false;
+}
+
+function playPoint(pal, side, gap) {
+  const h = pal.userData.heading;
+  const behind = gap;
+  return {
+    x: pal.position.x - Math.sin(h) * behind + Math.cos(h) * side,
+    z: pal.position.z - Math.cos(h) * behind - Math.sin(h) * side,
+  };
+}
+
+function bumpApart(a, b, minDist) {
+  const dx = a.position.x - b.position.x;
+  const dz = a.position.z - b.position.z;
+  const d = Math.hypot(dx, dz) || 0.0001;
+  if (d >= minDist) return d;
+  const push = (minDist - d) * 0.45;
+  const ux = dx / d;
+  const uz = dz / d;
+  const modeA = a.userData.sky ? "sky" : "walk";
+  const modeB = b.userData.sky ? "sky" : "walk";
+  const ax = a.position.x + ux * push;
+  const az = a.position.z + uz * push;
+  const bx = b.position.x - ux * push;
+  const bz = b.position.z - uz * push;
+  if (roamOk(ax, az, modeA)) {
+    a.position.x = ax;
+    a.position.z = az;
+  }
+  if (roamOk(bx, bz, modeB)) {
+    b.position.x = bx;
+    b.position.z = bz;
+  }
+  return d;
+}
+
+function separateGroup(list, minDist) {
+  for (let i = 0; i < list.length; i += 1) {
+    for (let j = i + 1; j < list.length; j += 1) {
+      bumpApart(list[i], list[j], minDist);
+    }
+  }
+}
+
+function startTag(chaser, pal, now) {
+  const roll = hash(chaser.position.x + now * 0.001, pal.position.z);
+  chaser.userData.cool = 1.6;
+  pal.userData.cool = 1.2;
+  if (chaser.userData.sky) {
+    chaser.userData.mood = "circle";
+    chaser.userData.playWith = pal;
+    chaser.userData.moodT = 3.2;
+    chaser.userData.speed = 4.4;
+    chaser.userData.heading += (roll > 0.5 ? 1 : -1) * 1.1;
+    pal.userData.mood = "chase";
+    pal.userData.playWith = chaser;
+    pal.userData.moodT = 3.4;
+    pal.userData.speed = 5.0;
+    return;
+  }
+  if (roll < 0.34) {
+    setCatMood(chaser, "nuzzle", { playWith: pal, moodT: 1.8 });
+    setCatMood(pal, "nuzzle", { playWith: chaser, moodT: 1.8 });
+  } else if (roll < 0.67) {
+    setCatMood(chaser, "swat", { playWith: pal, moodT: 1.6, swatLeg: 0 });
+    setCatMood(pal, roll > 0.5 ? "pounce" : "stretch", { moodT: 1.4, speed: 0.2 });
+  } else {
+    setCatMood(chaser, "sit", { moodT: 1.5 });
+    pal.userData.mood = "chase";
+    pal.userData.playWith = chaser;
+    pal.userData.moodT = 2.8;
+    pal.userData.speed = 2.0;
+    pal.userData.heading += Math.PI * 0.55;
+  }
 }
 
 function nearestOther(critter, list) {
@@ -1147,6 +1250,161 @@ function setCatMood(critter, mood, extra = {}) {
   data.target = extra.target ?? null;
   data.playWith = extra.playWith ?? null;
   data.swatLeg = extra.swatLeg ?? (hash(critter.position.x, critter.position.z) > 0.5 ? 0 : 1);
+}
+
+function groundY(x, z) {
+  return groundH(Math.floor(x), Math.floor(z)) + 1.02;
+}
+
+function easeJoint(node, rx, ry, rz, t) {
+  if (!node) return;
+  node.rotation.x += (rx - node.rotation.x) * t;
+  node.rotation.y += (ry - node.rotation.y) * t;
+  node.rotation.z += (rz - node.rotation.z) * t;
+}
+
+function poseCat(critter, now, dt) {
+  const data = critter.userData;
+  const moving = data.mood === "wander" || data.mood === "chase" || data.mood === "yarn" || data.mood === "scratch" || (data.mood === "pounce" && data.moodT <= 0.7);
+  const pace = data.mood === "chase" ? 11 : data.mood === "yarn" ? 10 : 8;
+  if (moving) data.gait += dt * pace;
+  const walk = Math.sin(data.gait);
+  const walkB = Math.sin(data.gait + Math.PI);
+  const lift = Math.max(0, Math.sin(data.gait));
+  const liftB = Math.max(0, Math.sin(data.gait + Math.PI));
+  const blend = Math.min(1, dt * 8);
+  let torsoX = moving ? Math.sin(data.gait * 2) * 0.05 : 0;
+  let torsoZ = moving ? Math.sin(data.gait) * 0.04 : 0;
+  let torsoY = 0;
+  let headX = moving ? -0.08 : 0.04;
+  let headY = Math.sin(now / 900 + data.baseY) * 0.12;
+  let headZ = 0;
+  const hips = [
+    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
+    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
+    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
+    { x: 0, z: 0, kx: 0, px: 0, pz: 0 },
+  ];
+  let tail = [
+    { x: -0.2, z: 0 },
+    { x: 0.15, z: 0 },
+    { x: 0.2, z: 0 },
+  ];
+
+  if (data.mood === "sit" || data.mood === "regal") {
+    torsoX = data.mood === "regal" ? -0.12 : -0.06;
+    hips[0] = { x: 0.18, z: 0, kx: 0.55, px: 0.15, pz: 0 };
+    hips[1] = { x: 0.18, z: 0, kx: 0.55, px: 0.15, pz: 0 };
+    hips[2] = { x: -1.05, z: 0.18, kx: 1.35, px: 0.2, pz: 0 };
+    hips[3] = { x: -1.05, z: -0.18, kx: 1.35, px: 0.2, pz: 0 };
+    tail = data.mood === "regal"
+      ? [{ x: 0.15, z: 0.7 }, { x: 0.25, z: 0.35 }, { x: 0.1, z: 0.15 }]
+      : [{ x: 0.35, z: 0.15 }, { x: 0.4, z: 0.2 }, { x: 0.2, z: 0.1 }];
+    headX = data.mood === "regal" ? -0.05 : 0.08;
+  } else if (data.mood === "loaf") {
+    torsoX = 0.06;
+    hips[0] = { x: 0.7, z: 0.08, kx: 1.1, px: 0.2, pz: 0 };
+    hips[1] = { x: 0.7, z: -0.08, kx: 1.1, px: 0.2, pz: 0 };
+    hips[2] = { x: 0.55, z: 0.1, kx: 1.05, px: 0.15, pz: 0 };
+    hips[3] = { x: 0.55, z: -0.1, kx: 1.05, px: 0.15, pz: 0 };
+    tail = [{ x: 0.7, z: 0 }, { x: 0.5, z: 0.1 }, { x: 0.2, z: 0 }];
+  } else if (data.mood === "knead") {
+    const a = (Math.sin(now / 110) + 1) * 0.5;
+    torsoX = -0.04;
+    hips[0] = { x: 0.15 + a * 0.7, z: 0, kx: 0.2 + (1 - a) * 0.5, px: 0.1, pz: 0 };
+    hips[1] = { x: 0.15 + (1 - a) * 0.7, z: 0, kx: 0.2 + a * 0.5, px: 0.1, pz: 0 };
+    hips[2] = { x: -0.85, z: 0.12, kx: 1.2, px: 0.15, pz: 0 };
+    hips[3] = { x: -0.85, z: -0.12, kx: 1.2, px: 0.15, pz: 0 };
+    tail = [{ x: 0.1, z: Math.sin(now / 180) * 0.15 }, { x: 0.2, z: 0.1 }, { x: 0.15, z: 0 }];
+  } else if (data.mood === "swat") {
+    const bat = Math.max(0, Math.sin(now / 90));
+    const i = data.swatLeg || 0;
+    const j = i === 1 ? 0 : 1;
+    torsoZ = (i ? 1 : -1) * 0.05;
+    hips[i] = { x: 0.15 + bat * 1.05, z: (i ? 0.35 : -0.35) * bat, kx: -0.2, px: 0.4 * bat, pz: (i ? 0.2 : -0.2) * bat };
+    hips[j] = { x: 0.25, z: 0, kx: 0.35, px: 0.1, pz: 0 };
+    hips[2] = { x: -0.35, z: 0.08, kx: 0.55, px: 0.1, pz: 0 };
+    hips[3] = { x: -0.35, z: -0.08, kx: 0.55, px: 0.1, pz: 0 };
+    headY = (i ? 0.18 : -0.18);
+    tail = [{ x: -0.1, z: Math.sin(now / 80) * 0.45 }, { x: 0.2, z: Math.sin(now / 70) * 0.4 }, { x: 0.25, z: Math.sin(now / 60) * 0.35 }];
+  } else if (data.mood === "stretch") {
+    torsoX = 0.28;
+    hips[0] = { x: 0.95, z: 0, kx: 0.15, px: 0.1, pz: 0 };
+    hips[1] = { x: 0.95, z: 0, kx: 0.15, px: 0.1, pz: 0 };
+    hips[2] = { x: -0.85, z: 0.08, kx: 0.9, px: 0.15, pz: 0 };
+    hips[3] = { x: -0.85, z: -0.08, kx: 0.9, px: 0.15, pz: 0 };
+    headX = 0.2;
+    tail = [{ x: -0.45, z: 0 }, { x: -0.25, z: 0 }, { x: -0.1, z: 0 }];
+  } else if (data.mood === "roll") {
+    torsoX = 0.12;
+    torsoZ = Math.sin(now / 360) * 0.55;
+    hips[0] = { x: 0.7, z: 0.25, kx: 0.6, px: 0.2, pz: 0 };
+    hips[1] = { x: 0.55, z: -0.35, kx: 0.7, px: 0.2, pz: 0 };
+    hips[2] = { x: 0.65, z: 0.2, kx: 0.55, px: 0.15, pz: 0 };
+    hips[3] = { x: 0.45, z: -0.3, kx: 0.6, px: 0.15, pz: 0 };
+    tail = [{ x: 0.2, z: 0.4 }, { x: 0.25, z: 0.3 }, { x: 0.2, z: 0.2 }];
+  } else if (data.mood === "pounce") {
+    const crouch = data.moodT > 0.7;
+    torsoX = crouch ? 0.22 : -0.12;
+    hips[0] = { x: crouch ? 0.7 : 0.35, z: 0, kx: crouch ? 0.9 : 0.25, px: 0.1, pz: 0 };
+    hips[1] = { x: crouch ? 0.7 : 0.35, z: 0, kx: crouch ? 0.9 : 0.25, px: 0.1, pz: 0 };
+    hips[2] = { x: crouch ? -0.15 : -0.45, z: 0, kx: crouch ? 0.8 : 0.4, px: 0.1, pz: 0 };
+    hips[3] = { x: crouch ? -0.15 : -0.45, z: 0, kx: crouch ? 0.8 : 0.4, px: 0.1, pz: 0 };
+    tail = [{ x: crouch ? 0.35 : -0.25, z: 0 }, { x: 0.2, z: 0 }, { x: 0.15, z: 0 }];
+  } else if (data.mood === "groom") {
+    torsoZ = Math.sin(now / 180) * 0.08;
+    headX = 0.45;
+    headZ = 0.35 + Math.sin(now / 140) * 0.12;
+    hips[0] = { x: 0.85 + Math.sin(now / 140) * 0.25, z: -0.15, kx: 0.4, px: 0.2, pz: 0 };
+    hips[1] = { x: 0.2, z: 0, kx: 0.3, px: 0.1, pz: 0 };
+    hips[2] = { x: -0.4, z: 0.1, kx: 0.55, px: 0.1, pz: 0 };
+    hips[3] = { x: -0.4, z: -0.1, kx: 0.55, px: 0.1, pz: 0 };
+  } else if (data.mood === "nuzzle") {
+    torsoX = -0.04;
+    headX = 0.12;
+    headY = Math.sin(now / 200) * 0.18;
+    hips[0] = { x: 0.2, z: 0, kx: 0.25, px: 0.1, pz: 0 };
+    hips[1] = { x: 0.2, z: 0, kx: 0.25, px: 0.1, pz: 0 };
+    hips[2] = { x: -0.25, z: 0.08, kx: 0.4, px: 0.1, pz: 0 };
+    hips[3] = { x: -0.25, z: -0.08, kx: 0.4, px: 0.1, pz: 0 };
+    tail = [{ x: -0.05, z: Math.sin(now / 120) * 0.35 }, { x: 0.2, z: Math.sin(now / 100) * 0.3 }, { x: 0.25, z: Math.sin(now / 80) * 0.28 }];
+  } else if (data.mood === "scratch") {
+    hips[0] = { x: 0.15 + Math.sin(now / 70) * 0.7, z: 0, kx: 0.2, px: 0.15, pz: 0 };
+    hips[1] = { x: 0.15 + Math.sin(now / 70 + 1) * 0.7, z: 0, kx: 0.2, px: 0.15, pz: 0 };
+    hips[2] = { x: -0.15, z: 0, kx: 0.25, px: 0.1, pz: 0 };
+    hips[3] = { x: -0.15, z: 0, kx: 0.25, px: 0.1, pz: 0 };
+    torsoX = -0.08;
+  } else if (moving) {
+    hips[0] = { x: walk * 0.55, z: 0, kx: lift * 0.7, px: -lift * 0.15, pz: 0 };
+    hips[1] = { x: walkB * 0.55, z: 0, kx: liftB * 0.7, px: -liftB * 0.15, pz: 0 };
+    hips[2] = { x: walkB * 0.5, z: 0, kx: liftB * 0.55, px: -liftB * 0.12, pz: 0 };
+    hips[3] = { x: walk * 0.5, z: 0, kx: lift * 0.55, px: -lift * 0.12, pz: 0 };
+    const wag = data.mood === "chase" || data.mood === "yarn" ? 0.55 : 0.28;
+    tail = [
+      { x: -0.18 + Math.sin(now / 180) * 0.08, z: Math.sin(now / 140 + data.gait) * wag },
+      { x: 0.18, z: Math.sin(now / 120 + data.gait + 0.6) * wag },
+      { x: 0.22, z: Math.sin(now / 90 + data.gait + 1.1) * wag * 1.1 },
+    ];
+  } else {
+    tail = [
+      { x: -0.12, z: Math.sin(now / 240) * 0.12 },
+      { x: 0.16, z: Math.sin(now / 200) * 0.14 },
+      { x: 0.18, z: Math.sin(now / 160) * 0.16 },
+    ];
+  }
+
+  easeJoint(data.torso, torsoX, torsoY, torsoZ, blend);
+  easeJoint(data.head, headX, headY, headZ, blend);
+  for (const [i, leg] of data.legs.entries()) {
+    const pose = hips[i];
+    if (!leg?.hip) continue;
+    easeJoint(leg.hip, pose.x, 0, pose.z, blend);
+    easeJoint(leg.knee, pose.kx, 0, 0, blend);
+    easeJoint(leg.paw, pose.px, 0, pose.pz, blend);
+  }
+  easeJoint(data.tail, tail[0].x, 0, tail[0].z, blend);
+  easeJoint(data.tailMid, tail[1].x, 0, tail[1].z, blend);
+  easeJoint(data.tailTip, tail[2].x, 0, tail[2].z, blend);
 }
 
 function pickCatMood(critter, cats, toys) {
@@ -1798,13 +2056,23 @@ function startWorld() {
       const mode = data.sky ? "sky" : "walk";
       const pal = data.playWith;
       const toy = data.target;
+      if (data.cool > 0) data.cool -= dt;
       if (data.mood === "chase" && pal) {
-        const leadX = pal.position.x - Math.sin(pal.userData.heading) * 0.7;
-        const leadZ = pal.position.z - Math.cos(pal.userData.heading) * 0.7;
-        stepToward(critter, leadX, leadZ, dt, mode);
+        const gap = data.sky ? 5.4 : 1.35;
+        const side = data.sky ? 1.8 : 0.55;
+        const aim = playPoint(pal, side, gap);
+        const dist = Math.hypot(pal.position.x - critter.position.x, pal.position.z - critter.position.z);
+        if (dist < (data.sky ? 3.4 : 0.95) && data.cool <= 0) startTag(critter, pal, now);
+        else stepToward(critter, aim.x, aim.z, dt, mode);
       } else if (data.mood === "circle" && pal) {
-        const ang = now / 420 + data.heading;
-        stepToward(critter, pal.position.x + Math.cos(ang) * 4.2, pal.position.z + Math.sin(ang) * 4.2, dt, mode);
+        const radius = data.sky ? 7.2 : 1.8;
+        const ang = now / 520 + data.heading;
+        stepToward(critter, pal.position.x + Math.cos(ang) * radius, pal.position.z + Math.sin(ang) * radius, dt, mode);
+      } else if (data.mood === "nuzzle" && pal) {
+        const aim = playPoint(pal, 0.35, 0.85);
+        const dist = Math.hypot(pal.position.x - critter.position.x, pal.position.z - critter.position.z);
+        if (dist > 0.9) stepToward(critter, aim.x, aim.z, dt, mode);
+        else faceToward(critter, pal.position.x, pal.position.z);
       } else if ((data.mood === "yarn" || data.mood === "scratch") && toy) {
         const reach = data.mood === "yarn" ? 0.35 : 0.55;
         const dist = Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z);
@@ -1831,7 +2099,8 @@ function startWorld() {
         data.mood === "regal" ||
         data.mood === "swat" ||
         data.mood === "stretch" ||
-        data.mood === "roll"
+        data.mood === "roll" ||
+        data.mood === "nuzzle"
       ) {
         data.heading += Math.sin(now / 900 + data.baseY) * (data.mood === "regal" ? 0.01 : 0.004);
       } else {
@@ -1874,121 +2143,20 @@ function startWorld() {
           }
         }
       } else {
-        const moving = data.mood === "wander" || data.mood === "chase" || data.mood === "yarn" || data.mood === "scratch";
-        const walk = moving ? Math.sin(now / 140 + data.heading) : 0;
-        let poseY = 1.02;
         critter.rotation.x = 0;
         critter.rotation.z = 0;
-        if (data.mood === "sit") {
-          poseY = 1.08;
-          critter.rotation.x = -0.18;
-        } else if (data.mood === "regal") {
-          poseY = 1.14;
-          critter.rotation.x = -0.28;
-        } else if (data.mood === "knead") {
-          poseY = 1.1;
-          critter.rotation.x = -0.12;
-        } else if (data.mood === "swat") {
-          poseY = 1.08;
-          critter.rotation.x = -0.1;
-          critter.rotation.z = (data.swatLeg ? 1 : -1) * 0.06;
-        } else if (data.mood === "stretch") {
-          poseY = 1.0;
-          critter.rotation.x = 0.42;
-        } else if (data.mood === "roll") {
-          poseY = 0.98;
-          critter.rotation.z = Math.sin(now / 320) * 1.15;
-          critter.rotation.x = 0.35;
-        } else if (data.mood === "pounce") {
-          poseY = data.moodT > 0.7 ? 0.98 : 1.02 + Math.abs(Math.sin(now / 90)) * 0.22;
-          critter.rotation.x = data.moodT > 0.7 ? 0.32 : -0.18;
-        } else if (data.mood === "loaf") {
-          poseY = 0.96;
-          critter.rotation.x = 0.08;
-        } else if (data.mood === "groom") {
-          poseY = 1.06;
-          critter.rotation.z = Math.sin(now / 180) * 0.18;
-        } else if (data.mood === "yarn" && toy && Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z) < 0.5) {
-          poseY = 1.02 + Math.abs(Math.sin(now / 120)) * 0.16;
-        } else if (data.mood === "scratch" && toy && Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z) < 0.7) {
-          poseY = 1.08;
-        } else if (data.hop && moving) {
-          poseY = 1.02 + Math.abs(Math.sin(now / 180 + data.heading)) * 0.12;
-        }
-        critter.position.y = poseY;
-        if (data.tail) {
-          const still = data.mood === "sit" || data.mood === "loaf" || data.mood === "regal" || data.mood === "knead";
-          const wag = data.mood === "yarn" || data.mood === "chase" || data.mood === "swat" ? 0.95 : still ? 0.12 : 0.55;
-          data.tail.rotation.z = data.mood === "regal" ? 0.85 : Math.sin(now / 160 + data.heading) * wag;
-          data.tail.rotation.x = data.mood === "loaf" ? 0.4 : data.mood === "regal" ? 0.55 : data.mood === "stretch" ? -0.5 : -0.15 + Math.sin(now / 240 + data.heading * 1.7) * 0.22;
-        }
-        if (data.tailTip) {
-          data.tailTip.rotation.z = Math.sin(now / 120 + data.heading + 0.8) * (data.mood === "groom" || data.mood === "regal" ? 0.22 : 0.7);
-          data.tailTip.rotation.x = Math.sin(now / 200 + data.heading) * 0.28;
-        }
-        if (data.legs?.length === 4) {
-          const knead = Math.abs(Math.sin(now / 110));
-          if (data.mood === "knead") {
-            data.legs[0].rotation.x = 0.15 + knead * 0.85;
-            data.legs[1].rotation.x = 0.15 + (1 - knead) * 0.85;
-            data.legs[2].rotation.x = -0.4;
-            data.legs[3].rotation.x = -0.4;
-          } else if (data.mood === "regal") {
-            data.legs[0].rotation.x = 0.15;
-            data.legs[1].rotation.x = 0.15;
-            data.legs[2].rotation.x = -0.85;
-            data.legs[3].rotation.x = -0.85;
-          } else if (data.mood === "swat") {
-            const bat = Math.max(0, Math.sin(now / 90));
-            const idle = data.swatLeg === 1 ? 0 : 1;
-            data.legs[data.swatLeg || 0].rotation.x = 0.2 + bat * 1.35;
-            data.legs[data.swatLeg || 0].rotation.z = (data.swatLeg ? 1 : -1) * bat * 0.45;
-            data.legs[idle].rotation.x = 0.35;
-            data.legs[idle].rotation.z = 0;
-            data.legs[2].rotation.x = -0.25;
-            data.legs[3].rotation.x = -0.25;
-          } else if (data.mood === "stretch") {
-            data.legs[0].rotation.x = 1.05;
-            data.legs[1].rotation.x = 1.05;
-            data.legs[2].rotation.x = -0.7;
-            data.legs[3].rotation.x = -0.7;
-          } else if (data.mood === "roll") {
-            data.legs[0].rotation.x = 0.9;
-            data.legs[1].rotation.x = 0.7;
-            data.legs[2].rotation.x = 0.8;
-            data.legs[3].rotation.x = 0.55;
-          } else if (data.mood === "pounce") {
-            const spring = data.moodT > 0.7 ? 0.85 : walk * 0.7;
-            data.legs[0].rotation.x = spring;
-            data.legs[1].rotation.x = spring;
-            data.legs[2].rotation.x = -spring * 0.6;
-            data.legs[3].rotation.x = -spring * 0.6;
-          } else if (data.mood === "sit" || data.mood === "loaf") {
-            data.legs[0].rotation.x = 0.7;
-            data.legs[1].rotation.x = 0.7;
-            data.legs[2].rotation.x = -0.35;
-            data.legs[3].rotation.x = -0.35;
-          } else if (data.mood === "groom") {
-            data.legs[0].rotation.x = 0.9 + Math.sin(now / 140) * 0.35;
-            data.legs[1].rotation.x = 0.2;
-            data.legs[2].rotation.x = -0.2;
-            data.legs[3].rotation.x = -0.2;
-          } else if (data.mood === "scratch") {
-            data.legs[0].rotation.x = Math.sin(now / 70) * 0.8;
-            data.legs[1].rotation.x = Math.sin(now / 70 + 1) * 0.8;
-            data.legs[2].rotation.x = 0.15;
-            data.legs[3].rotation.x = 0.15;
-          } else {
-            data.legs[0].rotation.x = walk * 0.5;
-            data.legs[1].rotation.x = -walk * 0.5;
-            data.legs[2].rotation.x = -walk * 0.5;
-            data.legs[3].rotation.x = walk * 0.5;
-            data.legs[0].rotation.z = 0;
-            data.legs[1].rotation.z = 0;
-          }
-        }
+        const floor = groundY(critter.position.x, critter.position.z);
+        let bob = 0;
+        if (data.mood === "pounce" && data.moodT <= 0.7) bob = Math.abs(Math.sin(now / 90)) * 0.1;
+        else if (data.mood === "yarn" && toy && Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z) < 0.5) bob = Math.abs(Math.sin(now / 140)) * 0.06;
+        else if (data.mood === "wander" || data.mood === "chase") bob = Math.abs(Math.sin(data.gait * 2)) * 0.03;
+        critter.position.y = Math.max(floor, floor + bob);
+        poseCat(critter, now, dt);
       }
     }
+
+    separateGroup(cats, 0.82);
+    separateGroup(dragons, 4.6);
 
     if (ballLive) {
       ballVel.y -= 14 * dt;
