@@ -720,9 +720,8 @@ function bannerPerch(slot = 0) {
   const spread = [-3.4, -1.2, 1.2, 3.4];
   return {
     x: BANNER.x + spread[slot % spread.length],
-    y: bannerTop() + 0.28,
-    z: BANNER.z,
-    heading: slot % 2 ? Math.PI * 0.5 : -Math.PI * 0.5,
+    y: bannerTop() + 0.18,
+    z: BANNER.z + 0.42,
   };
 }
 
@@ -1333,6 +1332,33 @@ function setCatMood(critter, mood, extra = {}) {
 
 function groundY(x, z) {
   return groundH(Math.floor(x), Math.floor(z)) + 1.02;
+}
+
+function poseDragon(critter, now, dt, landed) {
+  const data = critter.userData;
+  const blend = Math.min(1, dt * 8);
+  const legs = data.legs || [];
+  if (landed) {
+    const tuck = [0.18, 0.18, 0.72, 0.72];
+    const splay = [-0.08, 0.08, -0.16, 0.16];
+    for (const [i, leg] of legs.entries()) {
+      if (!leg) continue;
+      easeJoint(leg, tuck[i] || 0, 0, splay[i] || 0, blend);
+    }
+    if (data.tail) {
+      data.tail.rotation.x += (0.35 - data.tail.rotation.x) * blend;
+      data.tail.rotation.y += (Math.sin(now / 420) * 0.08 - data.tail.rotation.y) * blend;
+    }
+    return;
+  }
+  for (const leg of legs) {
+    if (!leg) continue;
+    easeJoint(leg, 0, 0, 0, blend);
+  }
+  if (data.tail) {
+    data.tail.rotation.x += (0 - data.tail.rotation.x) * blend;
+    data.tail.rotation.y = Math.sin(now / 260 + data.heading) * 0.35;
+  }
 }
 
 function easeJoint(node, rx, ry, rz, t) {
@@ -2251,7 +2277,7 @@ function startWorld() {
         } else {
           critter.position.x += (toy.x - critter.position.x) * Math.min(1, dt * 8);
           critter.position.z += (toy.z - critter.position.z) * Math.min(1, dt * 8);
-          data.heading += (wrapAngle((toy.heading ?? 0) - data.heading)) * Math.min(1, dt * 6);
+          faceToward(critter, player.x, player.z);
           data.speed = 0;
         }
       } else if (data.mood === "breath") {
@@ -2312,6 +2338,7 @@ function startWorld() {
           critter.position.x = data.target.x;
           critter.position.y = data.target.y;
           critter.position.z = data.target.z;
+          faceToward(critter, player.x, player.z);
         } else if (!perch && hitsBanner(critter.position.x, critter.position.y, critter.position.z)) {
           critter.position.y = Math.max(critter.position.y, bannerTop() + 1.1);
           if (Math.abs(critter.position.z - BANNER.z) < BANNER.d * 0.5 + 0.6) {
@@ -2319,13 +2346,13 @@ function startWorld() {
             data.heading += Math.PI * 0.55;
           }
         }
-        critter.rotation.x = landed ? 0.02 : Math.sin(now / 640 + data.heading) * 0.08;
+        critter.rotation.x = landed ? -0.18 : Math.sin(now / 640 + data.heading) * 0.08;
         if (data.wings) {
-          const flap = landed ? 0.02 : Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
+          const flap = landed ? 0.42 : Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
           data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 8);
           data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 8);
         }
-        if (data.tail) data.tail.rotation.y = Math.sin(now / 260 + data.heading) * (landed ? 0.08 : 0.35);
+        poseDragon(critter, now, dt, landed);
         if (data.fire) {
           const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
           data.fire.visible = blasting;
