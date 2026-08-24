@@ -272,6 +272,9 @@ code {
   margin-top: auto;
   padding-top: 14px;
 }
+.paperCard .pill {
+  border-radius: 0;
+}
 
 body.paperOpen {
   overflow: hidden;
@@ -374,8 +377,8 @@ body.paperOpen {
   padding: 12px 16px;
   border-top: 1px solid var(--border);
 }
-.paperBar .pill {
-  border-radius: 0;
+.paperBar .paperBtn {
+  min-width: 118px;
 }
 
 .cardTitle {

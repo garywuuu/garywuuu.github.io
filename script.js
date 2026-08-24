@@ -145,7 +145,7 @@
           el("iframe", { title: "Research PDF", loading: "lazy" }),
         ]),
         el("div", { class: "paperBar" }, [
-          el("a", { class: "pill", "data-paper-download": "", href: "#", text: "Download PDF" }),
+          el("a", { class: "paperBtn", "data-paper-download": "", href: "#", text: "Download PDF" }),
         ]),
       ]),
     ]);
@@ -175,7 +175,7 @@
         ),
       ]);
 
-      const openBtn = el("button", { class: "pill", type: "button", text: "Read paper" });
+      const openBtn = el("button", { class: "paperBtn", type: "button", text: "Read paper" });
       openBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         openPaperReader(p);
@@ -183,7 +183,7 @@
 
       const actions = el("div", { class: "row" }, [
         openBtn,
-        el("a", { class: "pill", href: paperHref(p.pdf), download: safeFileName(p.pdf), text: "Download" }),
+        el("a", { class: "paperBtn", href: paperHref(p.pdf), download: safeFileName(p.pdf), text: "Download" }),
       ]);
 
       if (Array.isArray(p.links)) {
