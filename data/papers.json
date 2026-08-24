@@ -36,7 +36,7 @@
     "venue": "CS 226: Algorithmic Fairness",
     "year": 2024,
     "summary": "We investigate how fairness breaks down in online learning settings with strategic gaming, where agents may modify their reported features for favorable outcomes. We introduce algorithmic changes to ensure fairness across multiple metrics, accounting for different cost functions between advantaged and disadvantaged agents.",
-    "pdf": "assets/papers/CS 226 Final Project.pdf",
+    "pdf": "/assets/papers/CS 226 Final Project.pdf",
     "links": []
   },
   {

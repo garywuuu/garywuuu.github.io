@@ -91,10 +91,75 @@
     );
   }
 
+  function paperHref(path) {
+    if (!path) return "";
+    if (/^https?:\/\//i.test(path)) return path;
+    return path.startsWith("/") ? path : `/${path}`;
+  }
+
+  function paperViewerSrc(path) {
+    const href = paperHref(path);
+    if (!href) return "";
+    const join = href.includes("#") ? "&" : "#";
+    return `${href}${join}toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+  }
+
+  function closePaperReader() {
+    const modal = document.getElementById("paperReader");
+    if (!modal) return;
+    modal.setAttribute("hidden", "true");
+    document.body.classList.remove("paperOpen");
+    const frame = modal.querySelector("iframe");
+    if (frame) frame.removeAttribute("src");
+  }
+
+  function openPaperReader(paper) {
+    const modal = document.getElementById("paperReader");
+    if (!modal || !paper?.pdf) return;
+    modal.querySelector("[data-paper-kicker]").textContent = [paper.venue, paper.year].filter(Boolean).join(" · ");
+    modal.querySelector("[data-paper-title]").textContent = paper.title || "Untitled research";
+    modal.querySelector("[data-paper-summary]").textContent = paper.summary || paper.abstract || "";
+    const download = modal.querySelector("[data-paper-download]");
+    download.href = paperHref(paper.pdf);
+    download.setAttribute("download", safeFileName(paper.pdf));
+    modal.querySelector("iframe").src = paperViewerSrc(paper.pdf);
+    modal.removeAttribute("hidden");
+    document.body.classList.add("paperOpen");
+    modal.querySelector(".paperClose")?.focus();
+  }
+
+  function setupPaperReader() {
+    if (document.getElementById("paperReader")) return;
+    const modal = el("div", { class: "paperReader", id: "paperReader", hidden: "true", role: "dialog", "aria-modal": "true", "aria-labelledby": "paperReaderTitle" }, [
+      el("div", { class: "paperScrim", onclick: closePaperReader }),
+      el("div", { class: "paperSheet" }, [
+        el("header", { class: "paperHead" }, [
+          el("div", {}, [
+            el("p", { class: "paperKicker", "data-paper-kicker": "", text: "" }),
+            el("h2", { id: "paperReaderTitle", "data-paper-title": "", text: "" }),
+          ]),
+          el("button", { class: "paperClose", type: "button", "aria-label": "Close paper", onclick: closePaperReader, text: "Close" }),
+        ]),
+        el("p", { class: "paperSummary", "data-paper-summary": "", text: "" }),
+        el("div", { class: "paperStage" }, [
+          el("iframe", { title: "Research PDF", loading: "lazy" }),
+        ]),
+        el("div", { class: "paperBar" }, [
+          el("a", { class: "pill", "data-paper-download": "", href: "#", text: "Download PDF" }),
+        ]),
+      ]),
+    ]);
+    document.body.append(modal);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.hasAttribute("hidden")) closePaperReader();
+    });
+  }
+
   function renderPapers(papers) {
     const list = document.getElementById("researchList");
     if (!list) return;
     list.innerHTML = "";
+    setupPaperReader();
 
     for (const [idx, p] of papers.entries()) {
       const titleRow = el("div", {}, [
@@ -110,12 +175,17 @@
         ),
       ]);
 
+      const openBtn = el("button", { class: "pill", type: "button", text: "Read paper" });
+      openBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openPaperReader(p);
+      });
+
       const actions = el("div", { class: "row" }, [
-        el("a", { class: "pill", href: p.pdf, target: "_blank", rel: "noreferrer", text: "View PDF" }),
-        el("a", { class: "pill", href: p.pdf, download: safeFileName(p.pdf), text: "Download" }),
+        openBtn,
+        el("a", { class: "pill", href: paperHref(p.pdf), download: safeFileName(p.pdf), text: "Download" }),
       ]);
 
-      // Optional extra links
       if (Array.isArray(p.links)) {
         for (const l of p.links) {
           if (!l || !l.url) continue;
@@ -123,11 +193,24 @@
         }
       }
 
-      const card = el("article", { class: "card" }, [
+      const card = el("article", { class: "card paperCard", tabindex: "0", role: "button", "aria-label": `Read ${p.title || "paper"}` }, [
+        el("div", { class: "paperMark", "aria-hidden": "true" }),
         titleRow,
         p.summary ? el("p", { class: "cardText", text: p.summary }) : el("span"),
         actions,
       ]);
+
+      const open = () => openPaperReader(p);
+      card.addEventListener("click", (e) => {
+        if (e.target.closest("a, button")) return;
+        open();
+      });
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open();
+        }
+      });
 
       if (p.abstract) {
         const detailsId = `research-abs-${idx}`;
@@ -140,11 +223,12 @@
         });
         const details = el("div", { class: "details", id: detailsId, hidden: "true" }, [el("p", { class: "cardText", text: p.abstract })]);
 
-        btn.addEventListener("click", () => {
-          const open = btn.getAttribute("aria-expanded") === "true";
-          btn.setAttribute("aria-expanded", open ? "false" : "true");
-          btn.textContent = open ? "Show abstract" : "Hide abstract";
-          if (open) details.setAttribute("hidden", "true");
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const openAbs = btn.getAttribute("aria-expanded") === "true";
+          btn.setAttribute("aria-expanded", openAbs ? "false" : "true");
+          btn.textContent = openAbs ? "Show abstract" : "Hide abstract";
+          if (openAbs) details.setAttribute("hidden", "true");
           else details.removeAttribute("hidden");
         });
 
