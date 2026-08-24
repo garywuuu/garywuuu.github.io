@@ -272,8 +272,35 @@ code {
   margin-top: auto;
   padding-top: 14px;
 }
-.paperCard .pill {
+button.paperBtn,
+a.paperBtn {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 118px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #111;
   border-radius: 0;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+button.paperBtn:hover,
+button.paperBtn:focus,
+a.paperBtn:hover,
+a.paperBtn:focus {
+  background: #111;
+  color: #fff;
+  outline: none;
 }
 
 body.paperOpen {
