@@ -1825,7 +1825,7 @@ function startWorld() {
   };
 
   const keys = new Set();
-  const touch = { forward: false, back: false, left: false, right: false, look: false };
+  const touch = { forward: false, back: false, left: false, right: false, look: false, jx: 0, jz: 0 };
   let locked = false;
   let lastPoi = null;
   let lastAutoGame = null;
@@ -1877,36 +1877,105 @@ function startWorld() {
     const pad = document.createElement("div");
     pad.className = "playPad";
     pad.innerHTML = `
-      <button type="button" data-dir="forward">↑</button>
-      <div class="playPadRow">
-        <button type="button" data-dir="left">←</button>
-        <button type="button" data-dir="use">E</button>
-        <button type="button" data-dir="right">→</button>
+      <div class="playStick">
+        <div class="playStickBase" aria-label="Move stick">
+          <div class="playStickKnob"></div>
+        </div>
       </div>
-      <button type="button" data-dir="back">↓</button>
+      <button type="button" class="playUseBtn" data-dir="use" aria-label="Use">E</button>
     `;
     document.body.append(pad);
-    const setDir = (dir, on) => {
-      if (dir === "use") {
-        if (on) useNearby();
-        return;
-      }
-      if (dir in touch) touch[dir] = on;
-    };
-    pad.addEventListener("pointerdown", (e) => {
-      const dir = e.target?.dataset?.dir;
-      if (!dir) return;
+
+    const base = pad.querySelector(".playStickBase");
+    const knob = pad.querySelector(".playStickKnob");
+    const maxR = 44;
+    let stickId = null;
+
+    function setJoy(x, z) {
+      touch.jx = Math.max(-1, Math.min(1, x / maxR));
+      touch.jz = Math.max(-1, Math.min(1, z / maxR));
+      if (knob) knob.style.transform = `translate(${Math.round(touch.jx * maxR)}px, ${Math.round(touch.jz * maxR)}px)`;
+    }
+    function releaseJoy() {
+      touch.jx = 0;
+      touch.jz = 0;
+      if (knob) knob.style.transform = "translate(0, 0)";
+      stickId = null;
+    }
+    function stickMove(e) {
+      const rect = base.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const r = Math.hypot(dx, dy);
+      const clamped = Math.min(r, maxR);
+      const ang = Math.atan2(dy, dx);
+      setJoy(Math.cos(ang) * clamped, Math.sin(ang) * clamped);
+    }
+    base?.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      setDir(dir, true);
+      base.setPointerCapture(e.pointerId);
+      stickId = e.pointerId;
+      stickMove(e);
     });
-    pad.addEventListener("pointerup", (e) => {
-      const dir = e.target?.dataset?.dir;
-      if (!dir) return;
-      setDir(dir, false);
+    base?.addEventListener("pointermove", (e) => {
+      if (stickId !== e.pointerId) return;
+      e.preventDefault();
+      stickMove(e);
     });
-    pad.addEventListener("pointerleave", () => {
-      touch.forward = touch.back = touch.left = touch.right = false;
+    base?.addEventListener("pointerup", (e) => {
+      if (stickId !== e.pointerId) return;
+      e.preventDefault();
+      releaseJoy();
     });
+    base?.addEventListener("pointercancel", (e) => {
+      if (stickId !== e.pointerId) return;
+      e.preventDefault();
+      releaseJoy();
+    });
+    base?.addEventListener("pointerleave", (e) => {
+      if (stickId !== e.pointerId) return;
+      e.preventDefault();
+      releaseJoy();
+    });
+
+    const useBtn = pad.querySelector("[data-dir=\"use\"]");
+    useBtn?.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      useNearby();
+    });
+
+    if (document.querySelector(".playLook")) return;
+    const look = document.createElement("div");
+    look.className = "playLook";
+    document.body.append(look);
+    let lookId = null;
+    let lastX = 0;
+    let lastY = 0;
+    look.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      look.setPointerCapture(e.pointerId);
+      lookId = e.pointerId;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+    look.addEventListener("pointermove", (e) => {
+      if (lookId !== e.pointerId) return;
+      e.preventDefault();
+      pointerDx += (e.clientX - lastX) * 0.55;
+      pointerDy += (e.clientY - lastY) * 0.55;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+    const endLook = (e) => {
+      if (lookId !== e.pointerId) return;
+      e.preventDefault();
+      lookId = null;
+    };
+    look.addEventListener("pointerup", endLook);
+    look.addEventListener("pointercancel", endLook);
+    look.addEventListener("pointerleave", endLook);
   }
 
   function openCreate() {
@@ -1986,8 +2055,7 @@ function startWorld() {
     }
     if (overlay) overlay.hidden = false;
     document.querySelector(".playPad")?.setAttribute("hidden", "true");
-    renderPicks();
-    renderMap(activeGame);
+    )derMap(activeGame);
     if (promptEl) promptEl.textContent = `Playing ${game.title}`;
     if (orbCount) orbCount.textContent = game.title;
   }
@@ -1996,6 +2064,7 @@ function startWorld() {
     arcadeOpen = false;
     if (overlay) overlay.hidden = true;
     document.querySelector(".playPad")?.removeAttribute("hidden");
+    document.querySelector(".playLook")?.removeAttribute("hidden");
     if (frame) {
       frame.removeAttribute("src");
       delete frame.dataset.gameId;
@@ -2243,10 +2312,16 @@ function startWorld() {
       if (touch.left) wishX -= 1;
       if (touch.right) wishX += 1;
       if (touch.back) wishZ += 1;
+      if (touch.jx !== 0 || touch.jz !== 0) {
+        wishX += touch.jx;
+        wishZ += touch.jz;
+      }
     }
     const len = Math.hypot(wishX, wishZ) || 1;
-    wishX /= len;
-    wishZ /= len;
+    if (len > 1) {
+      wishX /= len;
+      wishZ /= len;
+    }
     const sin = Math.sin(player.yaw);
     const cos = Math.cos(player.yaw);
     player.vx = (wishX * cos + wishZ * sin) * speed;

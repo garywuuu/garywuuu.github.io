@@ -1049,23 +1049,80 @@ html:has(.playPage),
   left: 16px;
   bottom: 16px;
   z-index: 12;
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-}
-
-.playPadRow {
   display: flex;
-  gap: 6px;
+  gap: 12px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.playPad > * {
+  pointer-events: auto;
 }
 
-.playPad button {
+.playStickBase {
+  width: 104px;
+  height: 104px;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(4px);
+  position: relative;
+  touch-action: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.playStickKnob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  background: #111;
+  transition: transform 0.04s linear;
+  pointer-events: none;
+}
+
+.playUseBtn {
   width: 48px;
   height: 48px;
+  margin: 0 0 28px;
   border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.86);
+  font: inherit;
   font-size: 16px;
+  color: #111;
+  touch-action: none;
+}
+.playUseBtn:active {
+  background: #111;
+  color: #fff;
+}
+
+.playLook {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 55%;
+  height: 100%;
+  z-index: 11;
+  touch-action: none;
+}
+
+@media (max-width: 720px) {
+  .playPad {
+    left: 12px;
+    bottom: 12px;
+  }
+  .playStickBase {
+    width: 96px;
+    height: 96px;
+  }
+  .playLook {
+    width: 62%;
+  }
 }
 
 @media (max-width: 720px) {
