@@ -684,7 +684,7 @@ html:has(.playPage),
   font-family: "Press Start 2P", ui-monospace, monospace;
   image-rendering: pixelated;
   transition: opacity 0.2s steps(4, end);
-  z-index: 9;
+  z-index: 13;
 }
 
 .playIntro[hidden] {

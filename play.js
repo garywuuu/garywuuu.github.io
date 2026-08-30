@@ -2055,7 +2055,9 @@ function startWorld() {
     }
     if (overlay) overlay.hidden = false;
     document.querySelector(".playPad")?.setAttribute("hidden", "true");
-    )derMap(activeGame);
+    document.querySelector(".playLook")?.setAttribute("hidden", "true");
+    renderPicks();
+    renderMap(activeGame);
     if (promptEl) promptEl.textContent = `Playing ${game.title}`;
     if (orbCount) orbCount.textContent = game.title;
   }
@@ -2127,6 +2129,8 @@ function startWorld() {
   enterWorld();
   window.setTimeout(dismissIntro, 3500);
   intro?.addEventListener("click", dismissIntro);
+  intro?.addEventListener("pointerdown", dismissIntro);
+  canvas?.addEventListener("pointerdown", dismissIntro, { once: true });
 
   document.addEventListener("pointerlockchange", () => {
     locked = document.pointerLockElement === canvas;
