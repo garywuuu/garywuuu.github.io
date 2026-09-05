@@ -348,4 +348,20 @@
   }
 
   document.addEventListener("DOMContentLoaded", main);
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+      el,
+      formatMonth,
+      hostFromUrl,
+      safeFileName,
+      setStatus,
+      renderLinkCard,
+      renderPapers,
+      renderExperience,
+      setupActiveNav,
+      matchPhotoToProse,
+      main,
+    };
+  }
 })();
