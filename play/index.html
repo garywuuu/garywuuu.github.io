@@ -2,17 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Gary Wu: SF-based founder trying to solve fun at Instaplay." />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="Walk Instaplay Spawn, a voxel lobby for Gary Wu. Prompt a game, then read about, research, and experience." />
     <meta name="robots" content="index, follow" />
+    <!-- Updated: 2025 -->
     <meta name="author" content="Gary Wu" />
-    <title>Gary Wu</title>
-    <link rel="canonical" href="https://gary-wu.com/" />
+    <title>Play · Gary Wu</title>
+    <link rel="canonical" href="https://gary-wu.com/play/" />
 
+    <!-- OpenGraph (optional but nice for sharing) -->
     <meta property="og:title" content="Gary Wu" />
-    <meta property="og:description" content="SF-based founder trying to solve fun at Instaplay." />
+    <meta property="og:description" content="A Minecraft-style Instaplay spawn on the homepage." />
     <meta property="og:type" content="profile" />
-    <meta property="og:url" content="https://gary-wu.com/" />
+    <meta property="og:url" content="https://gary-wu.com/play/" />
     <meta property="og:site_name" content="Gary Wu" />
     <meta property="og:image" content="https://gary-wu.com/assets/images/profile.jpg" />
     <meta property="og:image:alt" content="Gary Wu portrait" />
@@ -21,7 +23,7 @@
     <meta property="profile:username" content="garywuuu" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Gary Wu" />
-    <meta name="twitter:description" content="SF-based founder trying to solve fun at Instaplay." />
+    <meta name="twitter:description" content="A Minecraft-style Instaplay spawn on the homepage." />
     <meta name="twitter:image" content="https://gary-wu.com/assets/images/profile.jpg" />
     <link rel="me" href="https://github.com/garywuuu" />
     <link rel="me" href="https://www.linkedin.com/in/garywu23/" />
@@ -47,7 +49,7 @@
             "url": "https://gary-wu.com/",
             "name": "Gary Wu",
             "headline": "Gary Wu - trying to solve fun at Instaplay in San Francisco",
-            "dateModified": "2026-09-04T00:00:00-07:00",
+            "dateModified": "2026-08-15T00:00:00-07:00",
             "isPartOf": {
               "@id": "https://gary-wu.com/#website"
             },
@@ -125,14 +127,17 @@
       }
     </script>
 
-    <link rel="stylesheet" href="/styles.css?v=20260904a" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css?v=20260830a" />
     <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg" />
   </head>
 
-  <body>
-    <a class="skipLink" href="#content">Skip to content</a>
+  <body class="playPage">
+    <a class="skipLink" href="#playHud">Skip to play controls</a>
 
-    <header class="siteHeader">
+    <header class="siteHeader playHeader">
       <div class="container">
         <div class="headerRow">
           <div>
@@ -148,58 +153,70 @@
       </div>
     </header>
 
-    <main id="content" class="container">
-      <section id="about" class="section">
-        <div class="aboutGrid">
-          <h1 class="aboutHeading">About</h1>
-          <div class="aboutProse">
-            <div class="prose">
-              <p>
-                Hey! I'm currently living in SF and trying to solve fun at <a href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer">Instaplay</a>.
-              </p>
-              <p>
-                Before this, I was an Associate Product Manager at Salesforce, where I spearheaded RL Environments and was Product Lead for Agentforce Tableau's agentic data analysis platform.
-              </p>
-              <p>
-                I received my Bachelor's and Master's degrees in Computer Science concurrently from Harvard University through the AB/SM program, focusing on ML Fairness and Distributed Systems and learning from <a href="https://www.seas.harvard.edu/person/jim-waldo" target="_blank" rel="noopener noreferrer">Jim Waldo</a>, <a href="https://people.seas.harvard.edu/~chong/" target="_blank" rel="noopener noreferrer">Stephen Chong</a>, <a href="https://yiling.seas.harvard.edu/" target="_blank" rel="noopener noreferrer">Yiling Chen</a>, and <a href="https://dwork.seas.harvard.edu/detailed-biography-and-curriculum-vitae" target="_blank" rel="noopener noreferrer">Cynthia Dwork</a>.
-              </p>
-              <p>
-                Previously, I co-founded an LLMOps startup building custom LLM Evals and raised from Pear VC and Unusual Ventures.
-              </p>
-              <p>
-                Outside of work, I play tennis, eat spicy Sichuan food, and DJ.
-              </p>
-              <p>
-                Want to wander? <a href="/play/">Enter the voxel world</a>.
-              </p>
+    <main class="playStage">
+      <canvas id="world" aria-label="Instaplay Spawn voxel world"></canvas>
+
+      <div id="playHud" class="playHud">
+        <div class="playIntro" id="playIntro" role="status">
+          <p class="playIntroHi">hey</p>
+          <p class="playIntroLead">i'm gary, welcome to my site!<br />click in and wander.</p>
+          <p class="playIntroHint">wasd · look · space</p>
+        </div>
+
+        <div class="crosshair" id="crosshair" hidden></div>
+        <div class="playPrompt" id="playPrompt" hidden>Walk into a colored booth · or press 1–5</div>
+        <div class="playStats" id="playStats" hidden>
+          <span id="orbCount">Pick a booth</span>
+        </div>
+        <nav class="gameMap" id="gameMap" hidden aria-label="Instaplay games"></nav>
+        <div class="playHelp" id="playHelp" hidden>WASD walk · mouse look · space jump · walk in to play · 1–5 warp · Esc leave</div>
+      </div>
+
+      <aside class="playCard" id="playCard" hidden>
+        <button type="button" class="playCardClose" id="playCardClose" aria-label="Close">×</button>
+        <p class="playKicker" id="playCardKicker"></p>
+        <h2 id="playCardTitle"></h2>
+        <p id="playCardBody"></p>
+        <div class="playCardActions" id="playCardActions"></div>
+      </aside>
+
+      <div class="arcadeOverlay" id="arcadeOverlay" hidden>
+        <div class="arcadeShell">
+          <div class="arcadeBar">
+            <div>
+              <p class="playKicker">Instaplay Arcade</p>
+              <h2 id="arcadeTitle">Pick a cabinet</h2>
+            </div>
+            <div class="arcadeBarActions">
+              <div class="arcadePicks" id="arcadePicks"></div>
+              <a class="playCta small" id="arcadeExternal" href="https://www.instaplay.ai/" target="_blank" rel="noopener noreferrer">Open on Instaplay</a>
+              <button type="button" class="playCta small" id="arcadeClose">Leave cabinet</button>
             </div>
           </div>
-          <figure class="aboutPhoto">
-            <img src="/assets/images/profile.jpg" alt="Gary Wu portrait" width="1182" height="1333" decoding="async" fetchpriority="high" />
-          </figure>
-        </div>
-      </section>
-
-      <section id="contact" class="section">
-        <h2>Contact</h2>
-        <div class="prose">
-          <ul class="inlineList">
-            <li><a href="https://github.com/garywuuu" target="_blank" rel="me noreferrer">GitHub</a></li>
-            <li><a href="https://www.linkedin.com/in/garywu23/" target="_blank" rel="me noreferrer">LinkedIn</a></li>
-            <li><a href="https://x.com/gary_wu23" target="_blank" rel="me noreferrer">X</a></li>
-          </ul>
-        </div>
-      </section>
-    </main>
-
-    <footer class="siteFooter">
-      <div class="container">
-        <div class="footerRow">
-          <span>&copy; <span data-year></span> Gary Wu</span>
+          <iframe
+            id="arcadeFrame"
+            title="Instaplay game"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gamepad; gyroscope; pointer-lock"
+            referrerpolicy="strict-origin-when-cross-origin"
+          ></iframe>
         </div>
       </div>
-    </footer>
 
+      <noscript>
+        <div class="playFallback">
+          <p>JavaScript is required to enter the world. Read <a href="/">About</a> instead.</p>
+        </div>
+      </noscript>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.168.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module" src="/play.js?v=20260904a"></script>
     <script src="/script.js"></script>
   </body>
 </html>

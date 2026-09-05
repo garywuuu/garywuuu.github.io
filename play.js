@@ -114,7 +114,7 @@ const BOOTHS = STALLS.map((game) => ({
 }));
 
 const PAGES = [
-  { id: "about", title: "About", href: "/about/", x0: -21, x1: -14, z0: 6, z1: 13, wall: "plank", roof: "wood", door: "east" },
+  { id: "about", title: "About", href: "/", x0: -21, x1: -14, z0: 6, z1: 13, wall: "plank", roof: "wood", door: "east" },
   { id: "research", title: "Research", href: "/research/", x0: 14, x1: 21, z0: 6, z1: 13, wall: "stone", roof: "stoneDark", door: "west" },
   { id: "experience", title: "Experience", href: "/experience/", x0: -5, x1: 6, z0: 18, z1: 24, wall: "ink", roof: "gold", door: "north" },
 ];
@@ -160,7 +160,7 @@ const POIS = [
     title: "About",
     kicker: "Gary Wu",
     body: "SF. Harvard CS. Trying to solve fun.",
-    href: "/about/",
+    href: "/",
     action: "page",
     actionLabel: "Open about",
     x: -14.2,
