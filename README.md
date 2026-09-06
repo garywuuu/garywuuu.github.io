@@ -1,6 +1,6 @@
 # Personal Website
 
-A minimalist black and white personal website with a Three.js voxel lobby on the homepage, hosted on GitHub Pages.
+A minimalist black and white personal website with a Three.js voxel lobby at `/play/`, hosted on GitHub Pages.
 
 ## Features
 
@@ -13,17 +13,17 @@ A minimalist black and white personal website with a Three.js voxel lobby on the
 
 ## Play
 
-Open `/`. A pixel greeting fades after a few seconds. Click the world to look around.
+Open `/play/`. A pixel greeting fades after a few seconds. Click the world to look around.
 
 - WASD walk, mouse look, space jump
-- Greeting: "hey / i'm gary, welcome to my site! click in and wander."
+- Greeting: "hey / i'm gary, welcome to my site! click to play."
 - Plaza extras: roaming animals that stay on solid ground; Favorites bookshelf left of Experience
 - Five booths, centered: Neon Reflex, Third Rally, Make a Game, Voxel Safari, Blockfront
 - The middle stall is a 3-wide nether portal. Walk in to open Instaplay create.
 - Games load from `instaplay.ai/embed/g/{shortId}`. Make a Game goes to `instaplay.ai/create`.
 - Tower sign is YC S26 beside the white Instaplay wordmark and red icon
 - HUD map or keys 1–5 warp to a booth
-- About / Research / Experience buildings are labeled. Walk in to open that page; use **Back to game** to return.
+- About / Research / Experience buildings are labeled. Walk in to open that page; use **Play** in the navigation to return.
 - Esc or **Leave cabinet** returns to the voxel world
 
 Local preview: `python3 -m http.server 4173` from this folder, then visit `http://localhost:4173`.
@@ -113,4 +113,3 @@ personal-website/
 ## License
 
 MIT License - feel free to use this template for your own personal website.
-

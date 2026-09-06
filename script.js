@@ -269,16 +269,6 @@
     }
   }
 
-  function setupBackToGame() {
-    if (document.body.classList.contains("playPage")) return;
-    if (!document.querySelector(".siteHeader")) return;
-    if (document.querySelector(".backToGame")) return;
-    const bar = el("div", { class: "backToGame" }, [
-      el("a", { class: "playCta", href: "/", text: "Back to game" }),
-    ]);
-    document.body.append(bar);
-  }
-
   function setupActiveNav() {
     const links = $$(".nav a");
     if (!links.length) return;
@@ -309,7 +299,6 @@
     for (const node of yearNodes) node.textContent = year;
 
     setupActiveNav();
-    setupBackToGame();
 
     const needsResearch = Boolean(document.getElementById("researchList"));
     const needsExperience = Boolean(document.getElementById("experienceList"));

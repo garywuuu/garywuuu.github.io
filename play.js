@@ -849,7 +849,8 @@ function addBox(parent, kind, x, y, z, sx, sy, sz, extra = {}) {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(sx, sy, sz),
     new THREE.MeshLambertMaterial({
-      map: blockTexture(kind),
+      map: extra.solid ? null : blockTexture(kind),
+      color: extra.solid ? colorFor(kind) : 0xffffff,
       emissive: extra.emissive ?? 0x000000,
       emissiveIntensity: extra.glow ?? 0,
       polygonOffset: layer !== 0,
@@ -872,10 +873,25 @@ function addPivot(parent, x, y, z) {
   return g;
 }
 
+// Four-sided points keep ears, horns, and spines in the world's angular style.
+function addSpike(parent, kind, start, end, radius, glow = 0) {
+  const a = new THREE.Vector3(...start);
+  const b = new THREE.Vector3(...end);
+  const direction = b.clone().sub(a);
+  const mesh = new THREE.Mesh(
+    new THREE.ConeGeometry(radius, direction.length(), 4),
+    new THREE.MeshLambertMaterial({ color: colorFor(kind), emissive: colorFor(kind), emissiveIntensity: glow })
+  );
+  mesh.position.copy(a.add(b).multiplyScalar(0.5));
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  parent.add(mesh);
+  return mesh;
+}
+
 function addCatLeg(parent, kind, sock, x, y, z) {
   const hip = addPivot(parent, x, y, z);
-  addBox(hip, kind, 0, -0.08, 0, 0.1, 0.16, 0.1);
-  addBox(hip, sock || kind, 0, -0.195, 0, 0.11, 0.07, 0.11, { layer: 1 });
+  addBox(hip, kind, 0, -0.055, 0, 0.13, 0.15, 0.13);
+  addBox(hip, sock || kind, 0, -0.155, 0.025, 0.16, 0.09, 0.19);
   return hip;
 }
 
@@ -886,52 +902,66 @@ function addCat(root, look) {
   const muzzle = look.muzzle;
   const sock = look.sock || belly;
   const mark = look.mark || [];
-  const torso = addPivot(root, 0, 0.28, 0);
-  addBox(torso, body, 0, 0, 0, 0.28, 0.22, 0.72);
-  addBox(torso, belly, 0, -0.148, 0.02, 0.18, 0.07, 0.46, { layer: 1 });
+  const torso = addPivot(root, 0, 0.32, 0);
+  addBox(torso, body, 0, 0, 0, 0.4, 0.3, 0.58);
+  addBox(torso, body, 0, 0.015, -0.08, 0.44, 0.22, 0.36);
+  addBox(torso, belly, 0, -0.12, 0.03, 0.3, 0.09, 0.46);
+  addBox(torso, belly, 0, 0.025, 0.28, 0.24, 0.25, 0.05);
 
-  const head = addPivot(torso, 0, 0.04, 0.42);
-  addBox(head, body, 0, 0.02, 0.08, 0.28, 0.24, 0.28);
-  addBox(head, muzzle, 0, -0.05, 0.23, 0.16, 0.1, 0.08, { layer: 1 });
-  addBox(head, look.nose || "pink", 0, -0.03, 0.28, 0.04, 0.03, 0.03, { layer: 2 });
-  addBox(head, look.eye || "lime", -0.07, 0.04, 0.228, 0.05, 0.05, 0.03, { layer: 1 });
-  addBox(head, look.eye || "lime", 0.07, 0.04, 0.228, 0.05, 0.05, 0.03, { layer: 1 });
-  addBox(head, "black", -0.07, 0.04, 0.246, 0.02, 0.03, 0.012, { layer: 2 });
-  addBox(head, "black", 0.07, 0.04, 0.246, 0.02, 0.03, 0.012, { layer: 2 });
-  addBox(head, trim, -0.08, 0.16, 0, 0.08, 0.08, 0.06);
-  addBox(head, trim, 0.08, 0.16, 0, 0.08, 0.08, 0.06);
-  addBox(head, look.inner || "pink", -0.08, 0.15, 0.028, 0.04, 0.04, 0.02, { layer: 1 });
-  addBox(head, look.inner || "pink", 0.08, 0.15, 0.028, 0.04, 0.04, 0.02, { layer: 1 });
+  const head = addPivot(torso, 0, 0.12, 0.32);
+  addBox(head, body, 0, 0.04, 0.06, 0.44, 0.36, 0.36);
+  addBox(head, body, 0, 0, 0.08, 0.48, 0.23, 0.32);
+  const eyes = [];
+  const ears = [];
+  for (const side of [-1, 1]) {
+    addBox(head, muzzle, side * 0.062, -0.065, 0.252, 0.13, 0.095, 0.09);
+    const eye = addPivot(head, side * 0.112, 0.068, 0.247);
+    addBox(eye, look.eye || "lime", 0, 0, 0, 0.09, 0.105, 0.022, { solid: true });
+    addBox(eye, "black", 0, 0, 0.015, 0.063, 0.085, 0.012, { solid: true });
+    addBox(eye, "white", -0.015, 0.025, 0.024, 0.025, 0.025, 0.01, { solid: true, glow: 0.3, emissive: 0xffffff });
+    eyes.push(eye);
+    const ear = addPivot(head, side * 0.15, 0.2, 0.015);
+    addSpike(ear, trim, [0, 0, 0], [side * 0.03, 0.22, -0.02], 0.105);
+    addSpike(ear, look.inner || "pink", [0, 0.015, 0.054], [side * 0.02, 0.165, 0.018], 0.055);
+    ears.push(ear);
+    for (const row of [-1, 1]) {
+      addBox(head, "cream", side * 0.205, -0.055 + row * 0.024, 0.29, 0.15, 0.009, 0.009, { rz: side * row * 0.14, solid: true });
+    }
+    addBox(head, "black", side * 0.02, -0.1, 0.303, 0.035, 0.012, 0.009, { rz: side * 0.3, solid: true });
+  }
+  addBox(head, look.nose || "pink", 0, -0.042, 0.31, 0.044, 0.03, 0.027, { solid: true });
 
   const legs = [
-    addCatLeg(torso, look.leg || body, sock, -0.08, -0.1, 0.24),
-    addCatLeg(torso, look.leg || body, sock, 0.08, -0.1, 0.24),
-    addCatLeg(torso, look.leg || body, sock, -0.08, -0.1, -0.24),
-    addCatLeg(torso, look.leg || body, sock, 0.08, -0.1, -0.24),
+    addCatLeg(torso, look.leg || body, sock, -0.125, -0.1, 0.2),
+    addCatLeg(torso, look.leg || body, sock, 0.125, -0.1, 0.2),
+    addCatLeg(torso, look.leg || body, sock, -0.125, -0.1, -0.2),
+    addCatLeg(torso, look.leg || body, sock, 0.125, -0.1, -0.2),
   ];
 
-  const tail = addPivot(torso, 0, 0.06, -0.38);
-  addBox(tail, look.tail || body, 0, 0.02, -0.18, 0.06, 0.06, 0.36);
-  const tailMid = addPivot(tail, 0, 0.02, -0.36);
-  addBox(tailMid, look.tail || body, 0, 0, -0.12, 0.055, 0.055, 0.24);
-  const tailTip = addPivot(tailMid, 0, 0, -0.24);
-  addBox(tailTip, look.tailTip || look.tail || body, 0, 0, -0.08, 0.05, 0.05, 0.16);
+  const tail = addPivot(torso, 0, 0.075, -0.3);
+  addBox(tail, look.tail || body, 0, 0, -0.14, 0.1, 0.1, 0.3);
+  const tailMid = addPivot(tail, 0, 0, -0.28);
+  addBox(tailMid, look.tail || body, 0, 0, -0.1, 0.09, 0.09, 0.22);
+  const tailTip = addPivot(tailMid, 0, 0, -0.2);
+  addBox(tailTip, look.tailTip || look.tail || body, 0, 0, -0.06, 0.085, 0.085, 0.14);
+  tail.rotation.x = 0.95;
+  tailTip.rotation.x = 0.6;
 
   for (const m of mark) {
     const side = Math.abs(m.x) > 0.04;
     addBox(
       torso,
       m.kind,
-      side ? Math.sign(m.x) * 0.152 : m.x,
-      side ? m.y : Math.max(m.y, 0.128),
-      m.z,
+      side ? Math.sign(m.x) * 0.218 : m.x,
+      side ? m.y : Math.max(m.y, 0.158),
+      THREE.MathUtils.clamp(m.z, -0.22, 0.22),
       side ? Math.min(m.sx, 0.05) : m.sx,
       m.sy,
       m.sz,
       { layer: 1 }
     );
   }
-  return { torso, head, legs, tail, tailMid, tailTip };
+  return { torso, head, eyes, ears, legs, tail, tailMid, tailTip };
 }
 
 function blackOr(look) {
@@ -978,13 +1008,30 @@ function addDragonLeg(root, look, x, y, z, hind) {
 
 function addDragonWing(root, look, side) {
   const s = side < 0 ? -1 : 1;
-  const wing = addPivot(root, 0.42 * s, 0.42, 0.12);
-  addBox(wing, look.trim, 0.28 * s, 0.08, 0, 0.62, 0.1, 0.16);
-  addBox(wing, look.membrane || look.wing, 0.92 * s, -0.08, 0.16, 1.28, 0.05, 1.05);
-  addBox(wing, look.membrane || look.wing, 1.62 * s, -0.22, 0.02, 0.92, 0.04, 0.72);
-  addBox(wing, look.trim, 0.86 * s, 0.02, -0.22, 0.1, 0.07, 0.52, { rz: 0.22 * s });
-  addBox(wing, look.trim, 1.36 * s, -0.08, -0.12, 0.08, 0.06, 0.4, { rz: 0.3 * s });
-  addBox(wing, look.glow, 1.78 * s, -0.18, 0.28, 0.1, 0.04, 0.18, { glow: 0.55, emissive: colorFor(look.glow) });
+  const wing = addPivot(root, 0.42 * s, 0.48, 0.35);
+  // A swept leading edge and scalloped trailing edge read clearly from below.
+  const outline = [[0, 0], [0.95, 0.58], [2.85, -0.16], [2.08, -0.55], [1.66, -1.42], [1.06, -0.96], [0.66, -1.5], [0.3, -0.88], [0, -0.65]];
+  const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x * s, z)));
+  const geometry = new THREE.ShapeGeometry(shape);
+  geometry.rotateX(Math.PI / 2);
+  const membrane = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
+    color: colorFor(look.wing),
+    emissive: colorFor(look.glow),
+    emissiveIntensity: 0.14,
+    side: THREE.DoubleSide,
+  }));
+  wing.add(membrane);
+  const knuckle = [0.95 * s, 0.025, 0.58];
+  for (const tip of [[0, 0, 0], [2.85 * s, 0, -0.16], [1.66 * s, 0, -1.42], [0.66 * s, 0, -1.5]]) {
+    const a = new THREE.Vector3(...knuckle);
+    const b = new THREE.Vector3(...tip);
+    const direction = b.clone().sub(a);
+    const rib = addBox(wing, look.body, 0, 0, 0, 0.075, direction.length(), 0.075, { solid: true });
+    rib.position.copy(a.add(b).multiplyScalar(0.5));
+    rib.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  }
+  addSpike(wing, look.trim, knuckle, [1.02 * s, 0.16, 0.94], 0.12);
+  addSpike(wing, look.glow, [2.4 * s, 0.015, 0.02], [3.02 * s, 0.015, -0.23], 0.065, 0.55);
   return wing;
 }
 
@@ -993,33 +1040,31 @@ function addDragon(root, look) {
   const trim = look.trim;
   const glow = look.glow;
   const under = bellyOr(look);
-  addBox(root, body, 0, 0.28, 0.06, 0.86, 0.52, 1.86);
-  addBox(root, under, 0, 0.04, 0.1, 0.58, 0.2, 1.48);
-  addBox(root, trim, 0, 0.58, 0.18, 0.18, 0.22, 1.42);
-  addBox(root, glow, 0, 0.72, 0.46, 0.1, 0.16, 0.14, { glow: 0.45, emissive: colorFor(glow) });
-  addBox(root, trim, 0, 0.74, 0.08, 0.1, 0.2, 0.12);
-  addBox(root, trim, 0, 0.7, -0.32, 0.08, 0.18, 0.1);
-  addBox(root, trim, 0, 0.64, -0.68, 0.08, 0.16, 0.08);
+  addBox(root, body, 0, 0.28, 0.34, 0.94, 0.62, 1.16);
+  addBox(root, body, 0, 0.25, -0.48, 0.68, 0.48, 0.94);
+  for (let i = 0; i < 5; i += 1) {
+    addBox(root, under, 0, -0.015, 0.73 - i * 0.3, 0.55 - i * 0.035, 0.13, 0.24);
+    addSpike(root, i % 2 ? trim : glow, [0, 0.57 - i * 0.02, 0.65 - i * 0.34], [0, 1.02 - i * 0.07, 0.43 - i * 0.34], 0.13 - i * 0.012, i % 2 ? 0 : 0.4);
+  }
   addBox(root, glow, 0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
   addBox(root, glow, -0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
 
   const head = addPivot(root, 0, 0.38, 1.08);
   addBox(head, body, 0, 0.08, 0.18, 0.42, 0.34, 0.58);
-  addBox(head, body, 0, 0.16, 0.62, 0.56, 0.42, 0.5);
-  addBox(head, trim, 0, 0.04, 0.92, 0.32, 0.16, 0.32);
-  addBox(head, look.jaw || trim, 0, -0.1, 0.88, 0.26, 0.12, 0.3);
-  addBox(head, whiteOr(look), -0.08, -0.06, 1.04, 0.05, 0.05, 0.06);
-  addBox(head, whiteOr(look), 0.08, -0.06, 1.04, 0.05, 0.05, 0.06);
-  addBox(head, amberOr(look), -0.16, 0.24, 0.78, 0.12, 0.12, 0.08, { glow: 1.15, emissive: colorFor(glow) });
-  addBox(head, amberOr(look), 0.16, 0.24, 0.78, 0.12, 0.12, 0.08, { glow: 1.15, emissive: colorFor(glow) });
-  addBox(head, blackOr(look), -0.16, 0.24, 0.83, 0.05, 0.07, 0.03);
-  addBox(head, blackOr(look), 0.16, 0.24, 0.83, 0.05, 0.07, 0.03);
-  addBox(head, trim, -0.22, 0.46, 0.48, 0.12, 0.34, 0.12, { rz: 0.34 });
-  addBox(head, trim, 0.22, 0.46, 0.48, 0.12, 0.34, 0.12, { rz: -0.34 });
-  addBox(head, glow, -0.22, 0.64, 0.48, 0.06, 0.1, 0.06, { glow: 0.8, emissive: colorFor(glow) });
-  addBox(head, glow, 0.22, 0.64, 0.48, 0.06, 0.1, 0.06, { glow: 0.8, emissive: colorFor(glow) });
-  addBox(head, glow, 0, 0.02, 1.1, 0.1, 0.1, 0.18, { glow: 1, emissive: colorFor(glow) });
-  addBox(head, glow, 0, -0.06, 1.26, 0.08, 0.08, 0.16, { glow: 0.75, emissive: colorFor(glow) });
+  addBox(head, body, 0, 0.16, 0.61, 0.58, 0.36, 0.58);
+  addBox(head, body, 0, 0.06, 0.98, 0.38, 0.19, 0.48);
+  addBox(head, look.jaw || trim, 0, -0.105, 0.93, 0.34, 0.09, 0.5);
+  addBox(head, glow, 0, -0.044, 1.07, 0.28, 0.035, 0.28, { solid: true, glow: 0.85, emissive: colorFor(glow) });
+  for (const side of [-1, 1]) {
+    addBox(head, amberOr(look), side * 0.21, 0.205, 0.914, 0.13, 0.065, 0.03, { solid: true, glow: 1, emissive: colorFor(glow) });
+    addBox(head, blackOr(look), side * 0.21, 0.205, 0.936, 0.025, 0.062, 0.014, { solid: true });
+    addBox(head, trim, side * 0.21, 0.26, 0.895, 0.21, 0.055, 0.12, { rz: side * 0.2 });
+    addBox(head, "black", side * 0.105, 0.125, 1.22, 0.065, 0.03, 0.018, { solid: true });
+    addSpike(head, trim, [side * 0.22, 0.28, 0.45], [side * 0.44, 0.85, -0.15], 0.16);
+    addSpike(head, glow, [side * 0.39, 0.72, -0.02], [side * 0.5, 0.98, -0.32], 0.065, 0.65);
+    addSpike(head, trim, [side * 0.27, 0.05, 0.54], [side * 0.52, 0.14, 0.12], 0.13);
+    for (const z of [0.85, 1.12]) addSpike(head, whiteOr(look), [side * 0.15, -0.015, z], [side * 0.15, -0.14, z + 0.025], 0.035);
+  }
 
   const legs = [
     addDragonLeg(root, look, -0.34, 0.08, 0.52, false),
@@ -1030,13 +1075,13 @@ function addDragon(root, look) {
 
   const tail = addPivot(root, 0, 0.28, -0.96);
   addBox(tail, body, 0, 0.02, -0.32, 0.28, 0.22, 0.7);
-  addBox(tail, trim, 0, 0.18, -0.18, 0.08, 0.14, 0.22);
+  addSpike(tail, trim, [0, 0.12, -0.2], [0, 0.43, -0.42], 0.1);
   const tailMid = addPivot(tail, 0, 0.02, -0.68);
   addBox(tailMid, body, 0, 0, -0.28, 0.2, 0.16, 0.56);
-  addBox(tailMid, trim, 0, 0.12, -0.18, 0.06, 0.1, 0.16);
+  addSpike(tailMid, trim, [0, 0.08, -0.2], [0, 0.31, -0.38], 0.08);
   const tailTip = addPivot(tailMid, 0, 0, -0.56);
   addBox(tailTip, trim, 0, 0.02, -0.22, 0.16, 0.12, 0.46);
-  addBox(tailTip, glow, 0, 0.06, -0.48, 0.28, 0.1, 0.28, { glow: 0.85, emissive: colorFor(glow) });
+  addSpike(tailTip, glow, [0, 0.02, -0.38], [0, 0.02, -0.95], 0.22, 0.65);
 
   const left = addDragonWing(root, look, -1);
   const right = addDragonWing(root, look, 1);
@@ -1148,10 +1193,13 @@ function makeCritter(scene, spec) {
     cool: 0,
     attention: 0,
     gait: hash(spec.x, spec.z) * Math.PI * 2,
+    blinkOffset: hash(spec.x, spec.z) * 4.8,
     walkSpeed: sky ? 3.8 : 0.95,
     wings: parts.wings || null,
     torso: parts.torso || null,
     head: parts.head || null,
+    eyes: parts.eyes || [],
+    ears: parts.ears || [],
     tail: parts.tail || null,
     tailMid: parts.tailMid || null,
     tailTip: parts.tailTip || null,
@@ -1548,17 +1596,25 @@ function poseCat(critter, now, dt) {
   easeJoint(data.torso, torsoX, 0, torsoZ, blend);
   if (data.torso) {
     const sitLow = data.mood === "sit" || data.mood === "regal" || data.mood === "knead" || data.mood === "loaf" || data.mood === "pet" || data.mood === "browse" || data.mood === "guard";
-    const wantY = sitLow ? 0.17 : 0.28;
+    const wantY = sitLow ? 0.23 : 0.32;
     data.torso.position.y += (wantY - data.torso.position.y) * blend;
   }
   easeJoint(data.head, headX, headY, headZ, blend);
+  const blinkPhase = (now / 1000 + data.blinkOffset) % 4.8;
+  const eyeOpen = blinkPhase < 0.16 ? 0.08 : data.mood === "pet" || data.mood === "nuzzle" ? 0.3 : 1;
+  for (const eye of data.eyes) eye.scale.y += (eyeOpen - eye.scale.y) * Math.min(1, dt * 24);
+  for (const [i, ear] of data.ears.entries()) {
+    const twitch = Math.max(0, Math.sin(now / 680 + data.gait + i * 2)) ** 12;
+    easeJoint(ear, twitch * 0.12, 0, (i ? 1 : -1) * twitch * 0.18, blend);
+  }
   for (const [i, leg] of data.legs.entries()) {
     if (!leg) continue;
     easeJoint(leg, hips[i], 0, hipZ[i], blend);
   }
-  easeJoint(data.tail, tail[0].x, tail[0].y, 0, blend);
+  const tailLift = data.mood === "loaf" || data.mood === "sit" ? 0.25 : 0.9;
+  easeJoint(data.tail, tail[0].x + tailLift, tail[0].y, 0, blend);
   easeJoint(data.tailMid, tail[1].x, tail[1].y, 0, blend);
-  easeJoint(data.tailTip, tail[2].x, tail[2].y, 0, blend);
+  easeJoint(data.tailTip, tail[2].x + 0.6, tail[2].y, 0, blend);
 }
 
 function pickCatMood(critter, cats, toys) {
@@ -2486,9 +2542,8 @@ function startWorld() {
         const perchBob = landed ? Math.sin(now / 700 + data.baseY) * 0.03 : 0;
         critter.rotation.x += ((landed ? -0.2 + perchBob : THREE.MathUtils.lerp(flyTilt, -0.16, sit)) - critter.rotation.x) * Math.min(1, dt * 5);
         if (data.wings) {
-          const pulse = Math.sin(now / 180 + data.heading);
-          const perchFlap = 0.28 + Math.sin(now / 420 + data.baseY) * 0.16 + Math.max(0, pulse) * 0.22;
-          const flyFlap = Math.sin(now / (data.mood === "breath" ? 90 : 120) + data.heading) * 0.55;
+          const perchFlap = 1.02 + Math.sin(now / 750 + data.baseY) * 0.05;
+          const flyFlap = 0.12 + Math.sin(now / (data.mood === "breath" ? 160 : 260) + data.heading) * 0.48;
           const flap = landed ? perchFlap : THREE.MathUtils.lerp(flyFlap, perchFlap, sit);
           data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 5);
           data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 5);
