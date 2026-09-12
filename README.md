@@ -123,6 +123,18 @@ The primary URL is `https://wugary.com/`. GitHub Pages redirects `www.wugary.com
 }
 ```
 
+## Tests
+
+Unit tests for `script.js` run with [Vitest](https://vitest.dev/) in a jsdom environment.
+
+```bash
+npm install
+npm test          # run the suite
+npm run coverage  # run the suite with a coverage report
+```
+
+The site itself stays dependency-free: `node_modules` is only needed to run the tests.
+
 ## License
 
 MIT License - feel free to use this template for your own personal website.

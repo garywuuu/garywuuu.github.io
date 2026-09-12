@@ -17,3 +17,7 @@
 *.tmp
 *.temp
 
+
+# Node
+node_modules/
+coverage/
