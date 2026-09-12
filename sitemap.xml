@@ -1,56 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
-    <loc>https://gary-wu.com/</loc>
+    <loc>https://wugary.com/</loc>
     <lastmod>2026-08-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://gary-wu.com/assets/images/profile.jpg</image:loc>
+      <image:loc>https://wugary.com/assets/images/profile.jpg</image:loc>
       <image:title>Gary Wu</image:title>
       <image:caption>Gary Wu portrait</image:caption>
     </image:image>
   </url>
   <url>
-    <loc>https://gary-wu.com/play/</loc>
+    <loc>https://wugary.com/play/</loc>
     <lastmod>2026-09-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://gary-wu.com/research/</loc>
+    <loc>https://wugary.com/research/</loc>
     <lastmod>2026-08-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://gary-wu.com/experience/</loc>
+    <loc>https://wugary.com/experience/</loc>
     <lastmod>2026-08-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://gary-wu.com/assets/papers/CS%202822R%20Final%20Project.pdf</loc>
+    <loc>https://wugary.com/assets/papers/CS%202822R%20Final%20Project.pdf</loc>
     <lastmod>2026-05-10</lastmod>
   </url>
   <url>
-    <loc>https://gary-wu.com/assets/papers/CS%20236r%20Final%20Project.pdf</loc>
+    <loc>https://wugary.com/assets/papers/CS%20236r%20Final%20Project.pdf</loc>
     <lastmod>2026-05-10</lastmod>
   </url>
   <url>
-    <loc>https://gary-wu.com/assets/papers/CS%20243%20Final%20Project.pdf</loc>
+    <loc>https://wugary.com/assets/papers/CS%20243%20Final%20Project.pdf</loc>
     <lastmod>2026-05-10</lastmod>
   </url>
   <url>
-    <loc>https://gary-wu.com/assets/papers/CS%20254%20Final%20Project.pdf</loc>
+    <loc>https://wugary.com/assets/papers/CS%20254%20Final%20Project.pdf</loc>
     <lastmod>2026-05-10</lastmod>
   </url>
   <url>
-    <loc>https://gary-wu.com/assets/papers/CS%20226%20Final%20Project.pdf</loc>
+    <loc>https://wugary.com/assets/papers/CS%20226%20Final%20Project.pdf</loc>
     <lastmod>2026-05-10</lastmod>
   </url>
   <url>
-    <loc>https://gary-wu.com/assets/papers/Neuro%20240%20Final%20Project.pdf</loc>
+    <loc>https://wugary.com/assets/papers/Neuro%20240%20Final%20Project.pdf</loc>
     <lastmod>2026-05-10</lastmod>
   </url>
 </urlset>

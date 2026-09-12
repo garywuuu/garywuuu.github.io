@@ -38,7 +38,7 @@ Local preview: `python3 -m http.server 4173` from this folder, then visit `http:
 4. Add your experience:
    - Update `data/experience.json` with your work history
    - Update `data/links.json` with link preview metadata (optional images in `assets/images/`)
-5. Update `robots.txt` and `sitemap.xml` with your GitHub Pages URL
+5. Keep `CNAME`, page metadata, `robots.txt`, and `sitemap.xml` aligned with `https://wugary.com`
 
 ## File Structure
 
@@ -60,10 +60,23 @@ personal-website/
 
 ## Deployment
 
-1. Push your code to a GitHub repository
-2. Go to Settings > Pages
-3. Select the branch (usually `main`) and root directory
-4. Your site will be available at `https://yourusername.github.io/personal-website/`
+The site is hosted by GitHub Pages from the `main` branch and repository root of `garywuuu/garywuuu.github.io`. The custom domain is `wugary.com`; `CNAME` preserves it across deployments.
+
+In Namecheap, open **Domain List → wugary.com → Manage → Advanced DNS**. With Namecheap BasicDNS, configure these host records with Automatic TTL:
+
+| Type | Host | Value |
+| --- | --- | --- |
+| A | `@` | `185.199.108.153` |
+| A | `@` | `185.199.109.153` |
+| A | `@` | `185.199.110.153` |
+| A | `@` | `185.199.111.153` |
+| CNAME | `www` | `garywuuu.github.io` |
+
+Replace Namecheap's parking or URL redirect records for `@` and `www` with these records. Preserve unrelated records, including email and verification records. These addresses are documented in [GitHub's custom-domain setup guide](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
+
+For the initial domain switch, have Namecheap ready before publishing the change. Push the domain configuration to `main`, then save the DNS records above. In **GitHub → Settings → Pages**, confirm the custom domain is `wugary.com`. Once DNS passes and GitHub provisions its certificate, enable **Enforce HTTPS**. DNS changes can take up to 24 hours to propagate.
+
+The primary URL is `https://wugary.com/`. GitHub Pages redirects `www.wugary.com` to the primary domain after DNS and HTTPS are ready. The previous domain needs separate redirect hosting if it should continue forwarding visitors to the new address.
 
 ## Customization
 
