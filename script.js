@@ -246,8 +246,8 @@
     list.innerHTML = "";
 
     const score = (e) => {
-      // prefer end date, otherwise start date; higher is more recent
-      const key = e.end || e.start || "";
+      // prefer end date, otherwise start date; higher is more recent. A null end means current.
+      const key = e.end === null ? "9999-99" : e.end || e.start || "";
       return key.replaceAll("-", "");
     };
     const sorted = [...exps].sort((a, b) => (score(b) > score(a) ? 1 : -1));

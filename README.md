@@ -15,13 +15,16 @@ A minimalist black and white personal website with a Three.js voxel lobby at `/p
 
 Open `/play/`. A pixel greeting fades after a few seconds. Click the world to look around.
 
-- WASD walk, mouse look, space jump
+- WASD walk, shift sprint, mouse look, space jump. Single-block ledges step up automatically.
 - Greeting: "hey / i'm gary, welcome to my site! click to play."
 - Plaza extras: roaming animals that stay on solid ground; Favorites bookshelf left of Experience
+- Chibi kittens watch you when you're close, show happy eyes and hearts when petted (click one), and nap with floating z's
+- Dragons have jaws, two-part wings that fold on the perch, glowing seams, wingtip sparks, bank into turns, barrel roll, and breathe colored fire/ice/void/jade that lights the plaza
 - Five booths, centered: Neon Reflex, Third Rally, Make a Game, Voxel Safari, Blockfront
 - The middle stall is a 3-wide nether portal. Walk in to open Instaplay create.
 - Games load from `instaplay.ai/embed/g/{shortId}`. Make a Game goes to `instaplay.ai/create`.
-- Tower sign is YC S26 beside the white Instaplay wordmark and red icon
+- Tower sign is YC S26 beside the white Instaplay wordmark and red icon, with a General Context Labs plaque below it (Instaplay is one of the lab's products)
+- Gradient sky with a square sun, plaza-framed soft shadows (desktop only), and an animated swirl-shader portal
 - HUD map or keys 1–5 warp to a booth
 - About / Research / Experience buildings are labeled. Walk in to open that page; use **Play** in the navigation to return.
 - Esc or **Leave cabinet** returns to the voxel world

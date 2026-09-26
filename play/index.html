@@ -48,8 +48,8 @@
             "@id": "https://wugary.com/#profile",
             "url": "https://wugary.com/",
             "name": "Gary Wu",
-            "headline": "Gary Wu - trying to solve fun at Instaplay in San Francisco",
-            "dateModified": "2026-08-15T00:00:00-07:00",
+            "headline": "Gary Wu - co-founder of General Context Labs, the team behind Instaplay, in San Francisco",
+            "dateModified": "2026-09-24T00:00:00-07:00",
             "isPartOf": {
               "@id": "https://wugary.com/#website"
             },
@@ -69,18 +69,24 @@
             "mainEntityOfPage": {
               "@id": "https://wugary.com/#profile"
             },
-            "description": "Gary Wu is an SF-based founder trying to solve fun at Instaplay, with experience in LLM evaluations, Agentforce, machine learning fairness, and distributed systems.",
-            "disambiguatingDescription": "Gary Wu, also known online as garywuuu, is trying to solve fun at Instaplay and is based in San Francisco.",
-            "jobTitle": "Founder and AI product builder",
+            "description": "Gary Wu is an SF-based co-founder at General Context Labs, a research lab building interactive environments for long-horizon AI. One of its products is Instaplay. He previously worked on LLM evaluations, Agentforce, machine learning fairness, and distributed systems.",
+            "disambiguatingDescription": "Gary Wu, also known online as garywuuu, works at General Context Labs on Instaplay and is based in San Francisco.",
+            "jobTitle": "Co-Founder",
             "homeLocation": {
               "@type": "Place",
               "name": "San Francisco, California"
             },
             "worksFor": {
               "@type": "Organization",
-              "name": "Instaplay",
-              "url": "https://www.instaplay.dev/",
-              "description": "Trying to solve fun"
+              "name": "General Context Labs",
+              "legalName": "General Context Labs, Inc.",
+              "url": "https://generalcontextlabs.com/",
+              "description": "A research lab building interactive environments for long-horizon AI.",
+              "brand": {
+                "@type": "Brand",
+                "name": "Instaplay",
+                "url": "https://www.instaplay.ai/"
+              }
             },
             "alumniOf": [
               {
@@ -89,6 +95,11 @@
               }
             ],
             "affiliation": [
+              {
+                "@type": "Organization",
+                "name": "General Context Labs",
+                "url": "https://generalcontextlabs.com/"
+              },
               {
                 "@type": "Organization",
                 "name": "Instaplay",
@@ -114,6 +125,7 @@
             ],
             "knowsAbout": [
               "AI product management",
+              "Long-horizon AI environments",
               "AI for multiplayer games",
               "LLM evaluations",
               "Agentic data analysis",
@@ -130,7 +142,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles.css?v=20260830a" />
+    <link rel="stylesheet" href="/styles.css?v=20260924a" />
     <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg" />
   </head>
 
@@ -169,7 +181,7 @@
           <span id="orbCount">Pick a booth</span>
         </div>
         <nav class="gameMap" id="gameMap" hidden aria-label="Instaplay games"></nav>
-        <div class="playHelp" id="playHelp" hidden>WASD walk · mouse look · space jump · walk in to play · 1–5 warp · Esc leave</div>
+        <div class="playHelp" id="playHelp" hidden>WASD walk · shift sprint · mouse look · space jump · walk in to play · 1–5 warp · Esc leave</div>
       </div>
 
       <aside class="playCard" id="playCard" hidden>
@@ -216,7 +228,7 @@
         }
       }
     </script>
-    <script type="module" src="/play.js?v=20260905b"></script>
+    <script type="module" src="/play.js?v=20260925a"></script>
     <script src="/script.js"></script>
   </body>
 </html>

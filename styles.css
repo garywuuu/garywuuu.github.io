@@ -1150,6 +1150,20 @@ html:has(.playPage),
   }
 }
 
+@media (pointer: coarse) {
+  .playHelp {
+    display: none;
+  }
+  .playPrompt {
+    top: 14px;
+    bottom: auto;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+    font-size: 14px;
+  }
+}
+
 @media print {
   .siteHeader {
     position: static;

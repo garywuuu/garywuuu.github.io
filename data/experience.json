@@ -1,6 +1,18 @@
 [
   {
     "_comment": "Fields: title, org, location(optional), start(YYYY-MM), end(YYYY-MM or null), bullets[], technologies[], links[] (ids from links.json).",
+    "title": "Co-Founder",
+    "org": "General Context Labs",
+    "location": "San Francisco",
+    "start": "2026-02",
+    "end": null,
+    "bullets": [
+      "Research lab building interactive environments for long-horizon AI agents. One of our products is Instaplay, where anyone can make and play games from a prompt. YC S26."
+    ],
+    "technologies": [],
+    "links": []
+  },
+  {
     "title": "Associate Product Manager",
     "org": "Salesforce",
     "location": "",
