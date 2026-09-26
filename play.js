@@ -39,6 +39,7 @@ const PALETTE = {
   frostGlow: 0x9ae7ff,
   nightGlow: 0xb388ff,
   jadeGlow: 0x7dff9a,
+  blush: 0xff8fa8,
 };
 
 const GAMES = [
@@ -147,8 +148,8 @@ const POIS = [
   {
     id: "tower",
     title: "Instaplay Tower",
-    kicker: "More games",
-    body: "The product. Walk a booth to play, or open the full arcade here.",
+    kicker: "General Context Labs",
+    body: "Instaplay is one of our products at General Context Labs. Walk a booth to play, or open the full arcade here.",
     action: "arcade",
     actionLabel: "Open arcade",
     x: 0.5,
@@ -159,7 +160,7 @@ const POIS = [
     id: "about",
     title: "About",
     kicker: "Gary Wu",
-    body: "SF. Harvard CS. Trying to solve fun.",
+    body: "SF. Harvard CS. Building at General Context Labs.",
     href: "/",
     action: "page",
     actionLabel: "Open about",
@@ -183,7 +184,7 @@ const POIS = [
     id: "experience",
     title: "Experience",
     kicker: "Work",
-    body: "Instaplay, Salesforce, Verita, Teradata, Alpaca.",
+    body: "General Context Labs, Salesforce, Verita, Teradata, Alpaca.",
     href: "/experience/?from=game",
     action: "page",
     actionLabel: "Open experience",
@@ -221,11 +222,11 @@ function inShelf(ix, iz) {
 }
 
 const MEDIA = [
-  { id: "dota", title: "Dota 2", kicker: "Game", body: "One more ancient.", x: -10.5, z: 17.4, art: "assets/images/covers/dota.jpg" },
-  { id: "valorant", title: "Valorant", kicker: "Game", body: "Aim, then aim again.", x: -9.5, z: 17.4, art: "assets/images/covers/valorant.png" },
-  { id: "minecraft", title: "Minecraft", kicker: "Game", body: "The reason this lobby is made of blocks.", x: -8.5, z: 17.4, art: "assets/images/covers/minecraft.jpg" },
-  { id: "inception", title: "Inception", kicker: "Movie", body: "A dream about building worlds.", x: -7.5, z: 17.4, art: "assets/images/covers/inception.jpg" },
-  { id: "oppenheimer", title: "Oppenheimer", kicker: "Movie", body: "I am become death, destroyer of worlds.", x: -6.5, z: 17.4, art: "assets/images/covers/oppenheimer.jpg" },
+  { id: "dota", title: "Dota 2", kicker: "Game", body: "One more ancient.", x: -10.5, z: 17.4, art: "/assets/images/covers/dota.jpg" },
+  { id: "valorant", title: "Valorant", kicker: "Game", body: "Aim, then aim again.", x: -9.5, z: 17.4, art: "/assets/images/covers/valorant.png" },
+  { id: "minecraft", title: "Minecraft", kicker: "Game", body: "The reason this lobby is made of blocks.", x: -8.5, z: 17.4, art: "/assets/images/covers/minecraft.jpg" },
+  { id: "inception", title: "Inception", kicker: "Movie", body: "A dream about building worlds.", x: -7.5, z: 17.4, art: "/assets/images/covers/inception.jpg" },
+  { id: "oppenheimer", title: "Oppenheimer", kicker: "Movie", body: "I am become death, destroyer of worlds.", x: -6.5, z: 17.4, art: "/assets/images/covers/oppenheimer.jpg" },
 ];
 
 const CRITTERS = [
@@ -320,6 +321,9 @@ function pondAt(ix, iz) {
   return inRect(ix, iz, 16, -22, 24, -16);
 }
 
+// Tall enough that the lab plaque clears the Make a Game sign from spawn.
+const TOWER_TOP = 12;
+
 function blockAt(x, y, z) {
   const ix = Math.floor(x);
   const iy = Math.floor(y);
@@ -336,16 +340,16 @@ function blockAt(x, y, z) {
     }
   }
 
-  if (inRect(ix, iz, -3, -20, 4, -13) && iy <= 10) {
+  if (inRect(ix, iz, -3, -20, 4, -13) && iy <= TOWER_TOP) {
     if (iy === 0) return "ink";
     if (ix === -3 || ix === 4 || iz === -20 || iz === -13) {
-      if (iy <= 9) return (ix + iy + iz) % 2 === 0 ? "magenta" : "magentaDark";
+      if (iy < TOWER_TOP) return (ix + iy + iz) % 2 === 0 ? "magenta" : "magentaDark";
     }
-    if (iy === 10 && Math.abs(ix) <= 2 && iz >= -18 && iz <= -15) return "gold";
-    if (iy === 9 && (ix === -2 || ix === 3) && (iz === -19 || iz === -14)) return "gold";
+    if (iy === TOWER_TOP && Math.abs(ix) <= 2 && iz >= -18 && iz <= -15) return "gold";
+    if (iy === TOWER_TOP - 1 && (ix === -2 || ix === 3) && (iz === -19 || iz === -14)) return "gold";
     if (iy >= 3 && iy <= 6 && ix === 0 && iz === -20) return "glass";
     if (iy >= 1 && iy <= 2 && Math.abs(ix) <= 1 && iz === -13) return null;
-    if (iy > 0 && iy < 10 && ix > -3 && ix < 4 && iz > -20 && iz < -13) return null;
+    if (iy > 0 && iy < TOWER_TOP && ix > -3 && ix < 4 && iz > -20 && iz < -13) return null;
   }
 
   const booth = boothAt(ix, iz);
@@ -478,8 +482,14 @@ function shadeRgb(rgb, amount) {
 
 const TEX_CACHE = {};
 
-function blockTexture(kind) {
-  if (TEX_CACHE[kind]) return TEX_CACHE[kind];
+// Blocks that read differently on top than on their sides.
+const FACED = new Set(["grass", "grassDark", "wood"]);
+const SEE_THROUGH = new Set(["glass", "water", "portal", "cloud"]);
+const ANIMATED = new Set(["water"]);
+
+function blockTexture(kind, face = "side") {
+  const key = FACED.has(kind) ? `${kind}:${face}` : kind;
+  if (TEX_CACHE[key]) return TEX_CACHE[key];
   const size = 16;
   const canvas = document.createElement("canvas");
   canvas.width = size;
@@ -491,10 +501,19 @@ function blockTexture(kind) {
     for (let x = 0; x < size; x += 1) {
       const n = hash3(x + 1, y + 3, kind.length + x * y);
       let rgb = base;
-      if (kind === "grass" || kind === "grassDark") {
+      if ((kind === "grass" || kind === "grassDark") && face === "bottom") {
+        rgb = shadeRgb(hexRgb(PALETTE.dirt), n > 0.6 ? 14 : -10);
+      } else if (kind === "grass" || kind === "grassDark") {
         rgb = shadeRgb(base, n > 0.55 ? 18 : n < 0.2 ? -22 : 0);
-        if (y < 3) rgb = shadeRgb(rgb, 16);
-        if (y > 12) rgb = shadeRgb(hexRgb(PALETTE.dirt), n > 0.5 ? 10 : -8);
+        if (face === "side") {
+          // Ragged grass lip over dirt, like the classic side texture.
+          const lip = 3 + Math.floor(hash3(x, 7, kind.length) * 3);
+          if (y < 2) rgb = shadeRgb(rgb, 12);
+          if (y >= lip) rgb = shadeRgb(hexRgb(PALETTE.dirt), n > 0.5 ? 10 : -8);
+        }
+      } else if (kind === "wood" && face !== "side") {
+        const ring = Math.round(Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)));
+        rgb = shadeRgb(hexRgb(PALETTE.plank), ring === 7 ? -70 : ring % 2 ? -18 : 6);
       } else if (kind === "wood") {
         rgb = shadeRgb(base, x % 8 < 2 ? -28 : n > 0.7 ? 14 : -6);
       } else if (kind === "plank") {
@@ -534,8 +553,26 @@ function blockTexture(kind) {
   tex.minFilter = THREE.NearestFilter;
   tex.generateMipmaps = false;
   tex.colorSpace = THREE.SRGBColorSpace;
-  TEX_CACHE[kind] = tex;
+  if (ANIMATED.has(kind)) {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+  }
+  TEX_CACHE[key] = tex;
   return tex;
+}
+
+// BoxGeometry face order: +x, -x, +y, -y, +z, -z.
+function blockMaterial(kind) {
+  const opts = {
+    transparent: SEE_THROUGH.has(kind) && kind !== "cloud",
+    opacity: kind === "glass" ? 0.55 : kind === "water" ? 0.78 : kind === "portal" ? 0.72 : 1,
+    depthWrite: kind !== "glass" && kind !== "portal",
+  };
+  if (!FACED.has(kind)) return new THREE.MeshLambertMaterial({ map: blockTexture(kind), ...opts });
+  const side = new THREE.MeshLambertMaterial({ map: blockTexture(kind, "side"), ...opts });
+  const top = new THREE.MeshLambertMaterial({ map: blockTexture(kind, "top"), ...opts });
+  const bottom = new THREE.MeshLambertMaterial({ map: blockTexture(kind, "bottom"), ...opts });
+  return [side, side, top, bottom, side, side];
 }
 
 function signTexture(draw) {
@@ -571,8 +608,9 @@ function makeSign(text, color, x, y, z, scaleX = 6.4, bg = "#3a2a18", rotY = 0) 
     ctx.textBaseline = "middle";
     ctx.fillText(text, 256, 68);
   });
-  const mat = new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide });
+  const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(scaleX, scaleX * 0.28, 0.22), mat);
+  mesh.castShadow = true;
   mesh.position.set(x, y, z);
   mesh.rotation.y = rotY;
   return mesh;
@@ -696,7 +734,7 @@ function makeCover(item, x) {
 
 const BANNER = {
   x: 0.5,
-  y: 11.4,
+  y: 13.4,
   z: -12.2,
   w: 11.6,
   h: 11.6 * 0.25,
@@ -720,7 +758,7 @@ function bannerPerch(slot = 0) {
   const spread = [-1.8, -0.6, 0.6, 1.8];
   return {
     x: BANNER.x + spread[slot % spread.length],
-    y: bannerTop() + 0.62,
+    y: bannerTop() + 0.62 * DRAGON_SCALE,
     z: BANNER.z + BANNER.d * 0.5 + 0.55,
   };
 }
@@ -765,35 +803,89 @@ function makeInstaplaySign(x = BANNER.x, y = BANNER.y, z = BANNER.z, scaleX = BA
   return group;
 }
 
-function buildWorld(scene) {
-  const groups = {};
-  for (const key of Object.keys(PALETTE)) groups[key] = { positions: [] };
+function makeLabPlaque() {
+  const tex = signTexture((ctx) => {
+    ctx.fillStyle = "#0c0f0d";
+    ctx.fillRect(0, 0, 512, 128);
+    ctx.strokeStyle = "#f4efe6";
+    ctx.lineWidth = 6;
+    // Corner-bracket mark from the General Context Labs logo.
+    const m = { x: 26, y: 34, s: 60, a: 16 };
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y + m.a); ctx.lineTo(m.x, m.y); ctx.lineTo(m.x + m.a, m.y);
+    ctx.moveTo(m.x + m.s - m.a, m.y); ctx.lineTo(m.x + m.s, m.y); ctx.lineTo(m.x + m.s, m.y + m.a);
+    ctx.moveTo(m.x + m.s, m.y + m.s - m.a); ctx.lineTo(m.x + m.s, m.y + m.s); ctx.lineTo(m.x + m.s - m.a, m.y + m.s);
+    ctx.moveTo(m.x + m.a, m.y + m.s); ctx.lineTo(m.x, m.y + m.s); ctx.lineTo(m.x, m.y + m.s - m.a);
+    ctx.stroke();
+    ctx.fillStyle = "#7dff9a";
+    ctx.fillRect(m.x + 24, m.y + 24, 12, 12);
+    ctx.fillStyle = "#f4efe6";
+    ctx.font = "bold 30px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("GENERAL CONTEXT LABS", 112, 54);
+    ctx.fillStyle = "#9aa39c";
+    ctx.font = "bold 22px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillText("MAKERS OF INSTAPLAY", 112, 90);
+  });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(7.2, 7.2 * 0.25, 0.12), new THREE.MeshBasicMaterial({ map: tex }));
+  mesh.position.set(0.5, 10.75, -11.92);
+  return mesh;
+}
 
-  const half = WORLD.size / 2;
+function buildWorld(scene, shadows) {
+  const kinds = Object.keys(PALETTE);
+  const groups = {};
+  for (const key of kinds) groups[key] = { positions: [] };
+
+  // Sample every cell once into a grid so hidden blocks can be skipped cheaply.
+  const size = WORLD.size;
+  const half = size / 2;
+  const height = 25;
+  const grid = new Uint8Array(size * size * height);
+  const cell = (x, y, z) => ((x + half) * size + (z + half)) * height + y;
   for (let x = -half; x < half; x += 1) {
     for (let z = -half; z < half; z += 1) {
       const gh = groundH(x + 0.5, z + 0.5);
-      const yMax = Math.min(24, Math.max(gh + 7, 11));
+      const yMax = Math.min(height - 1, Math.max(gh + 7, TOWER_TOP + 1));
       for (let y = 0; y <= yMax; y += 1) {
         const kind = blockAt(x + 0.5, y + 0.5, z + 0.5);
-        if (!kind || !groups[kind]) continue;
-        groups[kind].positions.push(x + 0.5, y + 0.5, z + 0.5);
+        if (kind && groups[kind]) grid[cell(x, y, z)] = kinds.indexOf(kind) + 1;
+      }
+    }
+  }
+
+  const clear = (x, y, z, self) => {
+    if (y < 0) return false;
+    if (y >= height || x < -half || x >= half || z < -half || z >= half) return true;
+    const id = grid[cell(x, y, z)];
+    return id === 0 || (id !== self && SEE_THROUGH.has(kinds[id - 1]));
+  };
+  for (let x = -half; x < half; x += 1) {
+    for (let z = -half; z < half; z += 1) {
+      for (let y = 0; y < height; y += 1) {
+        const id = grid[cell(x, y, z)];
+        if (!id) continue;
+        const exposed =
+          clear(x + 1, y, z, id) || clear(x - 1, y, z, id) ||
+          clear(x, y + 1, z, id) || clear(x, y - 1, z, id) ||
+          clear(x, y, z + 1, id) || clear(x, y, z - 1, id);
+        // The portal is drawn as one shader surface by makePortalFx.
+        if (exposed && kinds[id - 1] !== "portal") groups[kinds[id - 1]].positions.push(x + 0.5, y + 0.5, z + 0.5);
       }
     }
   }
 
   const geo = new THREE.BoxGeometry(1, 1, 1);
+  const animated = [];
   for (const [kind, data] of Object.entries(groups)) {
     const count = data.positions.length / 3;
     if (!count) continue;
-    const mat = new THREE.MeshLambertMaterial({
-      map: blockTexture(kind),
-      transparent: kind === "glass" || kind === "water" || kind === "portal",
-      opacity: kind === "glass" ? 0.55 : kind === "water" ? 0.78 : kind === "portal" ? 0.72 : 1,
-      depthWrite: kind !== "glass" && kind !== "portal",
-    });
+    const mat = blockMaterial(kind);
     const mesh = new THREE.InstancedMesh(geo, mat, count);
-    mesh.receiveShadow = true;
+    mesh.receiveShadow = shadows;
+    mesh.castShadow = shadows && !SEE_THROUGH.has(kind);
+    if (ANIMATED.has(kind)) animated.push({ kind, mat });
     const dummy = new THREE.Object3D();
     for (let i = 0; i < count; i += 1) {
       dummy.position.set(data.positions[i * 3], data.positions[i * 3 + 1], data.positions[i * 3 + 2]);
@@ -824,7 +916,9 @@ function buildWorld(scene) {
     scene.add(makeSign(page.title.toUpperCase(), "#ffffff", pose.x, pose.y, pose.z, width, "#111111", pose.rotY));
   }
   scene.add(makeShelfPlaque());
+  scene.add(makeLabPlaque());
   for (const [idx, item] of MEDIA.entries()) scene.add(makeCover(item, -10.5 + idx));
+  return { animated };
 }
 
 function makeOrb(scene, index) {
@@ -890,11 +984,14 @@ function addSpike(parent, kind, start, end, radius, glow = 0) {
 
 function addCatLeg(parent, kind, sock, x, y, z) {
   const hip = addPivot(parent, x, y, z);
-  addBox(hip, kind, 0, -0.055, 0, 0.13, 0.15, 0.13);
-  addBox(hip, sock || kind, 0, -0.155, 0.025, 0.16, 0.09, 0.19);
+  addBox(hip, kind, 0, -0.04, 0, 0.12, 0.11, 0.12);
+  addBox(hip, sock || kind, 0, -0.125, 0.02, 0.14, 0.08, 0.16);
+  // Toe beans, visible when a paw lifts to swat or the kitten rolls over.
+  addBox(hip, "blush", 0, -0.166, 0.045, 0.08, 0.01, 0.07, { solid: true });
   return hip;
 }
 
+// Chibi proportions: a big round head, stubby legs, and oversized eyes.
 function addCat(root, look) {
   const body = look.body;
   const trim = look.trim;
@@ -902,48 +999,62 @@ function addCat(root, look) {
   const muzzle = look.muzzle;
   const sock = look.sock || belly;
   const mark = look.mark || [];
-  const torso = addPivot(root, 0, 0.32, 0);
-  addBox(torso, body, 0, 0, 0, 0.4, 0.3, 0.58);
-  addBox(torso, body, 0, 0.015, -0.08, 0.44, 0.22, 0.36);
-  addBox(torso, belly, 0, -0.12, 0.03, 0.3, 0.09, 0.46);
-  addBox(torso, belly, 0, 0.025, 0.28, 0.24, 0.25, 0.05);
+  const torso = addPivot(root, 0, 0.27, 0);
+  addBox(torso, body, 0, 0, 0, 0.36, 0.26, 0.44);
+  addBox(torso, body, 0, 0.012, -0.06, 0.39, 0.2, 0.28);
+  addBox(torso, belly, 0, -0.1, 0.02, 0.26, 0.08, 0.34);
+  addBox(torso, belly, 0, -0.005, 0.215, 0.24, 0.2, 0.05);
 
-  const head = addPivot(torso, 0, 0.12, 0.32);
-  addBox(head, body, 0, 0.04, 0.06, 0.44, 0.36, 0.36);
-  addBox(head, body, 0, 0, 0.08, 0.48, 0.23, 0.32);
+  const head = addPivot(torso, 0, 0.15, 0.23);
+  addBox(head, body, 0, 0.07, 0.08, 0.5, 0.4, 0.38);
+  // Cheek fluff widens the bottom of the face so it reads round, not square.
+  addBox(head, body, 0, -0.04, 0.09, 0.58, 0.17, 0.3);
+  addBox(head, look.tuft || body, 0, 0.285, 0.14, 0.12, 0.05, 0.1);
+  addBox(head, look.tuft || body, 0.05, 0.3, 0.1, 0.06, 0.05, 0.06);
   const eyes = [];
   const ears = [];
   for (const side of [-1, 1]) {
-    addBox(head, muzzle, side * 0.062, -0.065, 0.252, 0.13, 0.095, 0.09);
-    const eye = addPivot(head, side * 0.112, 0.068, 0.247);
-    addBox(eye, look.eye || "lime", 0, 0, 0, 0.09, 0.105, 0.022, { solid: true });
-    addBox(eye, "black", 0, 0, 0.015, 0.063, 0.085, 0.012, { solid: true });
-    addBox(eye, "white", -0.015, 0.025, 0.024, 0.025, 0.025, 0.01, { solid: true, glow: 0.3, emissive: 0xffffff });
+    addBox(head, muzzle, side * 0.042, -0.075, 0.27, 0.09, 0.075, 0.05);
+    const eye = addPivot(head, side * 0.118, 0.055, 0.272);
+    const open = addPivot(eye, 0, 0, 0);
+    addBox(open, look.eye || "lime", 0, 0, 0, 0.13, 0.15, 0.018, { solid: true, glow: 0.12, emissive: colorFor(look.eye || "lime") });
+    addBox(open, "black", 0, -0.008, 0.01, 0.098, 0.128, 0.01, { solid: true });
+    addBox(open, "white", -0.024, 0.034, 0.017, 0.042, 0.042, 0.006, { solid: true, glow: 0.5, emissive: 0xffffff });
+    addBox(open, "white", 0.027, -0.036, 0.017, 0.02, 0.02, 0.006, { solid: true, glow: 0.5, emissive: 0xffffff });
+    const happy = addPivot(eye, 0, 0.01, 0.012);
+    const lash = ["black", "ink", "stoneDark", "stone"].includes(body) ? "cream" : "ink";
+    addBox(happy, lash, -0.026, 0, 0, 0.07, 0.022, 0.01, { solid: true, rz: 0.62 });
+    addBox(happy, lash, 0.026, 0, 0, 0.07, 0.022, 0.01, { solid: true, rz: -0.62 });
+    happy.visible = false;
+    eye.userData = { open, happy };
     eyes.push(eye);
-    const ear = addPivot(head, side * 0.15, 0.2, 0.015);
-    addSpike(ear, trim, [0, 0, 0], [side * 0.03, 0.22, -0.02], 0.105);
-    addSpike(ear, look.inner || "pink", [0, 0.015, 0.054], [side * 0.02, 0.165, 0.018], 0.055);
+    addBox(head, "blush", side * 0.19, -0.055, 0.268, 0.08, 0.036, 0.008, { solid: true, layer: 1 });
+    const ear = addPivot(head, side * 0.155, 0.25, 0.05);
+    ear.rotation.z = -side * 0.18;
+    addSpike(ear, trim, [0, 0, 0], [side * 0.02, 0.19, -0.01], 0.105);
+    addSpike(ear, look.inner || "pink", [0, 0.012, 0.05], [side * 0.012, 0.15, 0.02], 0.058);
     ears.push(ear);
     for (const row of [-1, 1]) {
-      addBox(head, "cream", side * 0.205, -0.055 + row * 0.024, 0.29, 0.15, 0.009, 0.009, { rz: side * row * 0.14, solid: true });
+      addBox(head, "cream", side * 0.215, -0.07 + row * 0.022, 0.26, 0.15, 0.008, 0.008, { rz: side * row * 0.16, solid: true });
     }
-    addBox(head, "black", side * 0.02, -0.1, 0.303, 0.035, 0.012, 0.009, { rz: side * 0.3, solid: true });
   }
-  addBox(head, look.nose || "pink", 0, -0.042, 0.31, 0.044, 0.03, 0.027, { solid: true });
+  addBox(head, look.nose || "pink", 0, -0.034, 0.296, 0.05, 0.032, 0.022, { solid: true });
+  addBox(head, "ink", 0, -0.062, 0.296, 0.012, 0.03, 0.01, { solid: true });
 
   const legs = [
-    addCatLeg(torso, look.leg || body, sock, -0.125, -0.1, 0.2),
-    addCatLeg(torso, look.leg || body, sock, 0.125, -0.1, 0.2),
-    addCatLeg(torso, look.leg || body, sock, -0.125, -0.1, -0.2),
-    addCatLeg(torso, look.leg || body, sock, 0.125, -0.1, -0.2),
+    addCatLeg(torso, look.leg || body, sock, -0.1, -0.09, 0.15),
+    addCatLeg(torso, look.leg || body, sock, 0.1, -0.09, 0.15),
+    addCatLeg(torso, look.leg || body, sock, -0.1, -0.09, -0.15),
+    addCatLeg(torso, look.leg || body, sock, 0.1, -0.09, -0.15),
   ];
 
-  const tail = addPivot(torso, 0, 0.075, -0.3);
-  addBox(tail, look.tail || body, 0, 0, -0.14, 0.1, 0.1, 0.3);
-  const tailMid = addPivot(tail, 0, 0, -0.28);
-  addBox(tailMid, look.tail || body, 0, 0, -0.1, 0.09, 0.09, 0.22);
-  const tailTip = addPivot(tailMid, 0, 0, -0.2);
-  addBox(tailTip, look.tailTip || look.tail || body, 0, 0, -0.06, 0.085, 0.085, 0.14);
+  // Thickens toward a fluffy tip.
+  const tail = addPivot(torso, 0, 0.06, -0.21);
+  addBox(tail, look.tail || body, 0, 0, -0.1, 0.1, 0.1, 0.22);
+  const tailMid = addPivot(tail, 0, 0, -0.2);
+  addBox(tailMid, look.tail || body, 0, 0, -0.09, 0.11, 0.11, 0.2);
+  const tailTip = addPivot(tailMid, 0, 0, -0.18);
+  addBox(tailTip, look.tailTip || look.tail || body, 0, 0, -0.08, 0.13, 0.13, 0.17);
   tail.rotation.x = 0.95;
   tailTip.rotation.x = 0.6;
 
@@ -952,12 +1063,12 @@ function addCat(root, look) {
     addBox(
       torso,
       m.kind,
-      side ? Math.sign(m.x) * 0.218 : m.x,
-      side ? m.y : Math.max(m.y, 0.158),
-      THREE.MathUtils.clamp(m.z, -0.22, 0.22),
-      side ? Math.min(m.sx, 0.05) : m.sx,
-      m.sy,
-      m.sz,
+      side ? Math.sign(m.x) * 0.188 : m.x * 0.85,
+      side ? m.y * 0.85 : Math.max(m.y, 0.138),
+      THREE.MathUtils.clamp(m.z * 0.8, -0.18, 0.18),
+      side ? Math.min(m.sx, 0.05) : m.sx * 0.9,
+      m.sy * 0.85,
+      m.sz * 0.8,
       { layer: 1 }
     );
   }
@@ -976,21 +1087,20 @@ function whiteOr(look) {
   return look.shine || "white";
 }
 
-function addFire(root, glow) {
-  const fire = new THREE.Group();
-  fire.position.set(0, 0.02, 1.18);
-  fire.visible = false;
-  const kinds = [glow, "orange", "gold", glow];
-  for (let i = 0; i < 5; i += 1) {
-    const kind = kinds[i % kinds.length];
-    const puff = addBox(fire, kind, 0, 0, 0.18 + i * 0.3, 0.1 + i * 0.05, 0.1 + i * 0.04, 0.22, {
-      glow: 1.15 - i * 0.14,
-      emissive: colorFor(kind),
-    });
-    puff.userData.phase = i;
-  }
-  root.add(fire);
-  return fire;
+function glowBox(parent, glows, kind, x, y, z, sx, sy, sz, glow, extra = {}) {
+  const mesh = addBox(parent, kind, x, y, z, sx, sy, sz, { solid: true, glow, emissive: colorFor(kind), ...extra });
+  glows.push({ mat: mesh.material, base: glow });
+  return mesh;
+}
+
+function segment(parent, kind, a, b, thick, extra = {}) {
+  const start = new THREE.Vector3(...a);
+  const end = new THREE.Vector3(...b);
+  const dir = end.clone().sub(start);
+  const mesh = addBox(parent, kind, 0, 0, 0, thick, dir.length(), thick, { solid: true, ...extra });
+  mesh.position.copy(start.add(end).multiplyScalar(0.5));
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  return mesh;
 }
 
 function addDragonLeg(root, look, x, y, z, hind) {
@@ -1006,33 +1116,47 @@ function addDragonLeg(root, look, x, y, z, hind) {
   return { hip, knee, foot };
 }
 
-function addDragonWing(root, look, side) {
-  const s = side < 0 ? -1 : 1;
-  const wing = addPivot(root, 0.42 * s, 0.48, 0.35);
-  // A swept leading edge and scalloped trailing edge read clearly from below.
-  const outline = [[0, 0], [0.95, 0.58], [2.85, -0.16], [2.08, -0.55], [1.66, -1.42], [1.06, -0.96], [0.66, -1.5], [0.3, -0.88], [0, -0.65]];
-  const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x * s, z)));
+function membrane(parent, look, points, s) {
+  const shape = new THREE.Shape(points.map(([x, z]) => new THREE.Vector2(x * s, z)));
   const geometry = new THREE.ShapeGeometry(shape);
   geometry.rotateX(Math.PI / 2);
-  const membrane = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
     color: colorFor(look.wing),
     emissive: colorFor(look.glow),
-    emissiveIntensity: 0.14,
+    emissiveIntensity: 0.16,
     side: THREE.DoubleSide,
   }));
-  wing.add(membrane);
-  const knuckle = [0.95 * s, 0.025, 0.58];
-  for (const tip of [[0, 0, 0], [2.85 * s, 0, -0.16], [1.66 * s, 0, -1.42], [0.66 * s, 0, -1.5]]) {
-    const a = new THREE.Vector3(...knuckle);
-    const b = new THREE.Vector3(...tip);
-    const direction = b.clone().sub(a);
-    const rib = addBox(wing, look.body, 0, 0, 0, 0.075, direction.length(), 0.075, { solid: true });
-    rib.position.copy(a.add(b).multiplyScalar(0.5));
-    rib.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  parent.add(mesh);
+  return mesh;
+}
+
+// Two-part bat wing: the outer hand hinges at the wrist so flaps travel as a wave
+// and the wing can fold back along the body when perched.
+function addDragonWing(root, look, side, glows) {
+  const s = side < 0 ? -1 : 1;
+  const wing = addPivot(root, 0.42 * s, 0.5, 0.35);
+  const wrist = [1.45 * s, 0, 0.42];
+  membrane(wing, look, [[0, 0.1], [1.45, 0.42], [1.45, -1.18], [0.95, -1.05], [0.55, -1.4], [0, -0.8]], s);
+  segment(wing, look.body, [0, 0.02, 0.05], [wrist[0], 0.02, wrist[2]], 0.11);
+  segment(wing, look.body, [wrist[0], 0.02, wrist[2]], [0.55 * s, 0.02, -1.4], 0.06);
+
+  const hand = addPivot(wing, ...wrist);
+  const tips = [[2.35, -0.3], [1.85, -1.3], [1.05, -1.62], [0, -1.6]];
+  membrane(hand, look, [[0, 0], [2.35, -0.3], [2.0, -0.78], [1.85, -1.3], [1.38, -1.12], [1.05, -1.62], [0.55, -1.3], [0, -1.6]], s);
+  for (const [x, z] of tips.slice(0, 3)) segment(hand, look.body, [0, 0.02, 0], [x * s, 0.02, z], 0.07);
+  // Neon trailing edge between the finger tips.
+  const edge = [[2.35, -0.3], [2.0, -0.78], [1.85, -1.3], [1.38, -1.12], [1.05, -1.62], [0.55, -1.3], [0, -1.6]];
+  for (let i = 0; i < edge.length - 1; i += 1) {
+    const mesh = segment(hand, look.glow, [edge[i][0] * s, 0.012, edge[i][1]], [edge[i + 1][0] * s, 0.012, edge[i + 1][1]], 0.045, {
+      glow: 0.9,
+      emissive: colorFor(look.glow),
+    });
+    glows.push({ mat: mesh.material, base: 0.9 });
   }
-  addSpike(wing, look.trim, knuckle, [1.02 * s, 0.16, 0.94], 0.12);
-  addSpike(wing, look.glow, [2.4 * s, 0.015, 0.02], [3.02 * s, 0.015, -0.23], 0.065, 0.55);
-  return wing;
+  addSpike(wing, look.trim, [wrist[0], 0.03, wrist[2]], [1.55 * s, 0.2, 0.84], 0.12);
+  addSpike(hand, look.glow, [2.1 * s, 0.015, -0.22], [2.85 * s, 0.015, -0.5], 0.07, 0.8);
+  const tip = addPivot(hand, 2.7 * s, 0, -0.45);
+  return { wing, hand, tip };
 }
 
 function addDragon(root, look) {
@@ -1040,31 +1164,51 @@ function addDragon(root, look) {
   const trim = look.trim;
   const glow = look.glow;
   const under = bellyOr(look);
-  addBox(root, body, 0, 0.28, 0.34, 0.94, 0.62, 1.16);
-  addBox(root, body, 0, 0.25, -0.48, 0.68, 0.48, 0.94);
+  const glows = [];
+  addBox(root, body, 0, 0.3, 0.34, 0.94, 0.66, 1.12);
+  addBox(root, body, 0, 0.26, -0.48, 0.7, 0.5, 0.94);
   for (let i = 0; i < 5; i += 1) {
-    addBox(root, under, 0, -0.015, 0.73 - i * 0.3, 0.55 - i * 0.035, 0.13, 0.24);
-    addSpike(root, i % 2 ? trim : glow, [0, 0.57 - i * 0.02, 0.65 - i * 0.34], [0, 1.02 - i * 0.07, 0.43 - i * 0.34], 0.13 - i * 0.012, i % 2 ? 0 : 0.4);
+    addBox(root, under, 0, -0.01, 0.73 - i * 0.3, 0.55 - i * 0.035, 0.13, 0.24);
+    addSpike(root, i % 2 ? trim : glow, [0, 0.6 - i * 0.02, 0.65 - i * 0.34], [0, 1.08 - i * 0.08, 0.4 - i * 0.34], 0.13 - i * 0.012, i % 2 ? 0 : 0.5);
   }
-  addBox(root, glow, 0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
-  addBox(root, glow, -0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
+  // Glowing flank seams and a furnace in the chest that flares before a breath.
+  glowBox(root, glows, glow, 0.48, 0.24, 0.22, 0.03, 0.06, 0.8, 0.5);
+  glowBox(root, glows, glow, -0.48, 0.24, 0.22, 0.03, 0.06, 0.8, 0.5);
+  glowBox(root, glows, glow, 0.36, 0.16, -0.5, 0.03, 0.05, 0.6, 0.4);
+  glowBox(root, glows, glow, -0.36, 0.16, -0.5, 0.03, 0.05, 0.6, 0.4);
+  const core = glowBox(root, glows, glow, 0, 0.1, 0.91, 0.36, 0.28, 0.03, 0.7);
 
-  const head = addPivot(root, 0, 0.38, 1.08);
-  addBox(head, body, 0, 0.08, 0.18, 0.42, 0.34, 0.58);
-  addBox(head, body, 0, 0.16, 0.61, 0.58, 0.36, 0.58);
-  addBox(head, body, 0, 0.06, 0.98, 0.38, 0.19, 0.48);
-  addBox(head, look.jaw || trim, 0, -0.105, 0.93, 0.34, 0.09, 0.5);
-  addBox(head, glow, 0, -0.044, 1.07, 0.28, 0.035, 0.28, { solid: true, glow: 0.85, emissive: colorFor(glow) });
+  const neck = addPivot(root, 0, 0.46, 0.82);
+  addBox(neck, body, 0, 0.14, 0.24, 0.4, 0.38, 0.62, { rx: -0.55 });
+  addBox(neck, under, 0, 0.01, 0.3, 0.26, 0.16, 0.5, { rx: -0.55 });
+  addSpike(neck, glow, [0, 0.38, 0.14], [0, 0.72, -0.08], 0.1, 0.5);
+  addSpike(neck, trim, [0, 0.5, 0.42], [0, 0.8, 0.26], 0.08);
+
+  const head = addPivot(neck, 0, 0.42, 0.5);
+  addBox(head, body, 0, 0.16, 0.26, 0.58, 0.38, 0.6);
+  addBox(head, body, 0, 0.08, 0.66, 0.4, 0.22, 0.48);
+  addBox(head, trim, 0, 0.21, 0.72, 0.12, 0.08, 0.36);
   for (const side of [-1, 1]) {
-    addBox(head, amberOr(look), side * 0.21, 0.205, 0.914, 0.13, 0.065, 0.03, { solid: true, glow: 1, emissive: colorFor(glow) });
-    addBox(head, blackOr(look), side * 0.21, 0.205, 0.936, 0.025, 0.062, 0.014, { solid: true });
-    addBox(head, trim, side * 0.21, 0.26, 0.895, 0.21, 0.055, 0.12, { rz: side * 0.2 });
-    addBox(head, "black", side * 0.105, 0.125, 1.22, 0.065, 0.03, 0.018, { solid: true });
-    addSpike(head, trim, [side * 0.22, 0.28, 0.45], [side * 0.44, 0.85, -0.15], 0.16);
-    addSpike(head, glow, [side * 0.39, 0.72, -0.02], [side * 0.5, 0.98, -0.32], 0.065, 0.65);
-    addSpike(head, trim, [side * 0.27, 0.05, 0.54], [side * 0.52, 0.14, 0.12], 0.13);
-    for (const z of [0.85, 1.12]) addSpike(head, whiteOr(look), [side * 0.15, -0.015, z], [side * 0.15, -0.14, z + 0.025], 0.035);
+    addBox(head, amberOr(look), side * 0.215, 0.215, 0.56, 0.14, 0.07, 0.03, { solid: true, glow: 1.2, emissive: colorFor(glow) });
+    addBox(head, blackOr(look), side * 0.215, 0.215, 0.58, 0.028, 0.066, 0.014, { solid: true });
+    addBox(head, trim, side * 0.21, 0.28, 0.54, 0.22, 0.06, 0.14, { rz: side * 0.22 });
+    addBox(head, "black", side * 0.1, 0.15, 0.905, 0.065, 0.03, 0.018, { solid: true });
+    // Big swept horns, a smaller second pair, and cheek frills.
+    addSpike(head, trim, [side * 0.22, 0.3, 0.14], [side * 0.5, 0.92, -0.5], 0.17);
+    addSpike(head, glow, [side * 0.44, 0.8, -0.36], [side * 0.56, 1.06, -0.7], 0.07, 0.8);
+    addSpike(head, trim, [side * 0.16, 0.34, 0.3], [side * 0.28, 0.66, -0.06], 0.09);
+    addSpike(head, trim, [side * 0.28, 0.06, 0.2], [side * 0.62, 0.14, -0.2], 0.13);
+    addSpike(head, glow, [side * 0.28, -0.04, 0.14], [side * 0.54, -0.1, -0.16], 0.07, 0.5);
+    for (const z of [0.6, 0.86]) addSpike(head, whiteOr(look), [side * 0.15, -0.02, z], [side * 0.15, -0.14, z + 0.02], 0.035);
   }
+  // The jaw hinges open to breathe; a glowing throat shows inside.
+  const jaw = addPivot(head, 0, -0.03, 0.34);
+  addBox(jaw, look.jaw || trim, 0, -0.06, 0.28, 0.36, 0.09, 0.56);
+  glowBox(jaw, glows, glow, 0, -0.005, 0.24, 0.26, 0.02, 0.44, 1);
+  for (const side of [-1, 1]) {
+    for (const z of [0.36, 0.5]) addSpike(jaw, whiteOr(look), [side * 0.14, -0.02, z], [side * 0.14, 0.09, z], 0.03);
+  }
+  const mouth = addPivot(head, 0, 0.02, 0.95);
 
   const legs = [
     addDragonLeg(root, look, -0.34, 0.08, 0.52, false),
@@ -1073,28 +1217,41 @@ function addDragon(root, look) {
     addDragonLeg(root, look, 0.32, 0.1, -0.52, true),
   ];
 
-  const tail = addPivot(root, 0, 0.28, -0.96);
-  addBox(tail, body, 0, 0.02, -0.32, 0.28, 0.22, 0.7);
-  addSpike(tail, trim, [0, 0.12, -0.2], [0, 0.43, -0.42], 0.1);
+  const tail = addPivot(root, 0, 0.28, -0.94);
+  addBox(tail, body, 0, 0.02, -0.32, 0.3, 0.24, 0.7);
+  addSpike(tail, glow, [0, 0.13, -0.2], [0, 0.46, -0.42], 0.1, 0.5);
   const tailMid = addPivot(tail, 0, 0.02, -0.68);
-  addBox(tailMid, body, 0, 0, -0.28, 0.2, 0.16, 0.56);
-  addSpike(tailMid, trim, [0, 0.08, -0.2], [0, 0.31, -0.38], 0.08);
-  const tailTip = addPivot(tailMid, 0, 0, -0.56);
-  addBox(tailTip, trim, 0, 0.02, -0.22, 0.16, 0.12, 0.46);
-  addSpike(tailTip, glow, [0, 0.02, -0.38], [0, 0.02, -0.95], 0.22, 0.65);
+  addBox(tailMid, body, 0, 0, -0.28, 0.22, 0.18, 0.58);
+  addSpike(tailMid, trim, [0, 0.09, -0.2], [0, 0.33, -0.38], 0.08);
+  const tailEnd = addPivot(tailMid, 0, 0, -0.56);
+  addBox(tailEnd, body, 0, 0, -0.24, 0.16, 0.13, 0.5);
+  addSpike(tailEnd, glow, [0, 0.06, -0.16], [0, 0.24, -0.32], 0.06, 0.5);
+  const tailTip = addPivot(tailEnd, 0, 0, -0.48);
+  addBox(tailTip, trim, 0, 0.01, -0.16, 0.12, 0.1, 0.34);
+  // Glowing spade blade on the tail tip.
+  addSpike(tailTip, glow, [0, 0.01, -0.3], [0, 0.01, -0.95], 0.2, 0.9);
+  addSpike(tailTip, glow, [0, 0.01, -0.42], [0.34, 0.01, -0.62], 0.1, 0.9);
+  addSpike(tailTip, glow, [0, 0.01, -0.42], [-0.34, 0.01, -0.62], 0.1, 0.9);
 
-  const left = addDragonWing(root, look, -1);
-  const right = addDragonWing(root, look, 1);
+  const left = addDragonWing(root, look, -1, glows);
+  const right = addDragonWing(root, look, 1, glows);
   return {
-    wings: [left, right],
+    wings: [left.wing, right.wing],
+    hands: [left.hand, right.hand],
+    wingTips: [left.tip, right.tip],
+    neck,
     head,
+    jaw,
+    mouth,
+    core,
+    glows,
     tail,
     tailMid,
+    tailEnd,
     tailTip,
     legs: legs.map((leg) => leg.hip),
     knees: legs.map((leg) => leg.knee),
     feet: legs.map((leg) => leg.foot),
-    fire: addFire(head, glow),
   };
 }
 
@@ -1104,6 +1261,180 @@ function amberOr(look) {
 
 function bellyOr(look) {
   return look.under || look.trim;
+}
+
+const DRAGON_SCALE = 1.2;
+
+// Hot core, flame, edge, and the smoke it cools into.
+const BREATH_COLORS = {
+  ember: [0xfff1a8, 0xffa12e, 0xe8340f, 0x3b3434],
+  frost: [0xf2feff, 0x8fe6ff, 0x3a7dff, 0xc9dcf0],
+  night: [0xf3e6ff, 0xc28cff, 0x6a1bff, 0x241a33],
+  jade: [0xf4ffd8, 0xb6ff7a, 0x1fbf4a, 0x2d3b30],
+};
+
+// World-space cubes for dragon breath (kind 0) and wingtip sparks (kind 1).
+function makeBreath(scene, colors) {
+  const count = 90;
+  const mesh = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, depthWrite: false }),
+    count
+  );
+  mesh.frustumCulled = false;
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  const stops = colors.map((c) => new THREE.Color(c));
+  const black = new THREE.Color(0x000000);
+  const color = new THREE.Color();
+  const dummy = new THREE.Object3D();
+  const parts = Array.from({ length: count }, () => ({ age: 1, life: 1, pos: new THREE.Vector3(), vel: new THREE.Vector3(), size: 0, spin: 0, kind: 0 }));
+  for (let i = 0; i < count; i += 1) {
+    mesh.setColorAt(i, black);
+    dummy.scale.setScalar(0);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+  }
+  scene.add(mesh);
+  let cursor = 0;
+  return {
+    color: stops[1],
+    emit(pos, vel, life, size, kind) {
+      const p = parts[cursor];
+      cursor = (cursor + 1) % count;
+      p.pos.copy(pos);
+      p.vel.copy(vel);
+      p.age = 0;
+      p.life = life;
+      p.size = size;
+      p.kind = kind;
+      p.spin = Math.random() * Math.PI * 2;
+    },
+    update(dt) {
+      for (const [i, p] of parts.entries()) {
+        if (p.age >= p.life) {
+          if (p.size) {
+            p.size = 0;
+            dummy.scale.setScalar(0);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+          }
+          continue;
+        }
+        p.age += dt;
+        const t = Math.min(1, p.age / p.life);
+        p.pos.addScaledVector(p.vel, dt);
+        if (p.kind === 0) {
+          p.vel.multiplyScalar(Math.max(0, 1 - dt * 1.6));
+          p.vel.y += dt * 1.4;
+          if (t < 0.12) color.lerpColors(stops[0], stops[1], t / 0.12);
+          else if (t < 0.45) color.lerpColors(stops[1], stops[2], (t - 0.12) / 0.33);
+          else color.lerpColors(stops[2], stops[3], Math.min(1, (t - 0.45) / 0.3));
+        } else {
+          p.vel.y -= dt * 0.4;
+          color.lerpColors(stops[0], stops[1], t);
+        }
+        // Flames swell into smoke puffs, then shrink away.
+        const grow = p.kind === 0 ? (0.35 + t * 1.7) * (t > 0.8 ? (1 - t) / 0.2 : 1) : 1 - t;
+        dummy.position.copy(p.pos);
+        dummy.rotation.set(p.spin + t * 3, p.spin * 0.7 + t * 2, 0);
+        dummy.scale.setScalar(p.size * grow);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+        mesh.setColorAt(i, color);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.instanceColor.needsUpdate = true;
+    },
+  };
+}
+
+function pixelSprite(rows, palette) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 16;
+  canvas.height = 16;
+  const ctx = canvas.getContext("2d");
+  const ox = Math.floor((16 - rows[0].length * 2) / 2);
+  const oy = Math.floor((16 - rows.length * 2) / 2);
+  for (const [y, row] of rows.entries()) {
+    for (const [x, ch] of [...row].entries()) {
+      if (!palette[ch]) continue;
+      ctx.fillStyle = palette[ch];
+      ctx.fillRect(ox + x * 2, oy + y * 2, 2, 2);
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Floating hearts and z's above the kittens.
+function makeEmotes(scene) {
+  const textures = {
+    heart: pixelSprite(
+      [".oo.oo.", "ohhoxxo", "ohxxxxo", ".oxxxo.", "..oxo..", "...o..."],
+      { o: "#7a1238", x: "#ff5c8a", h: "#ffd6e2" }
+    ),
+    z: pixelSprite(
+      ["xxxxx", "...x.", "..x..", ".x...", "xxxxx"],
+      { x: "#ffffff" }
+    ),
+  };
+  const pool = Array.from({ length: 24 }, () => {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
+    sprite.visible = false;
+    sprite.userData = { age: 0, life: 1, x: 0, y: 0, z: 0, sway: 0 };
+    scene.add(sprite);
+    return sprite;
+  });
+  let cursor = 0;
+  return {
+    spawn(kind, pos, size = 0.22) {
+      const sprite = pool[cursor];
+      cursor = (cursor + 1) % pool.length;
+      sprite.material.map = textures[kind];
+      sprite.material.needsUpdate = true;
+      sprite.visible = true;
+      Object.assign(sprite.userData, { age: 0, life: kind === "z" ? 2 : 1.4, x: pos.x, y: pos.y, z: pos.z, sway: Math.random() * 6, size, kind });
+    },
+    update(dt) {
+      for (const sprite of pool) {
+        if (!sprite.visible) continue;
+        const d = sprite.userData;
+        d.age += dt;
+        const t = d.age / d.life;
+        if (t >= 1) {
+          sprite.visible = false;
+          continue;
+        }
+        const drift = d.kind === "z" ? t * 0.35 : Math.sin(d.age * 5 + d.sway) * 0.05;
+        sprite.position.set(d.x + drift, d.y + d.age * (d.kind === "z" ? 0.28 : 0.45), d.z);
+        sprite.scale.setScalar(d.size * Math.min(1, t / 0.12) * (d.kind === "z" ? 0.7 + t * 0.6 : 1));
+        sprite.material.opacity = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
+      }
+    },
+  };
+}
+
+function easeInOut(t) {
+  return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+}
+
+// Inner arm leads, the hand trails it, and both fold back when perched.
+function flapDragon(critter, now, dt, sit) {
+  const data = critter.userData;
+  if (!data.wings) return;
+  const period = data.mood === "breath" ? 175 : data.mood === "barrel" ? 150 : 270;
+  const p = now / period + data.blinkOffset;
+  const inner = THREE.MathUtils.lerp(0.08 + Math.sin(p) * 0.58, 1.0 + Math.sin(now / 750 + data.baseY) * 0.04, sit);
+  const handZ = THREE.MathUtils.lerp(0.04 + Math.sin(p - 0.9) * 0.45, 0.4, sit);
+  const blend = Math.min(1, dt * 7);
+  for (const [i, s] of [-1, 1].entries()) {
+    easeJoint(data.wings[i], 0, s * 0.45 * sit, -s * inner, blend);
+    if (data.hands[i]) easeJoint(data.hands[i], 0, s * 2.1 * sit, -s * handZ, blend);
+  }
 }
 
 function makeCritter(scene, spec) {
@@ -1177,6 +1508,13 @@ function makeCritter(scene, spec) {
   const sky = Boolean(spec.sky);
   const baseY = sky ? 10.6 + hash(spec.x, spec.z) * 2.8 : 1.02;
   root.position.set(spec.x, baseY, spec.z);
+  if (sky) {
+    root.scale.setScalar(DRAGON_SCALE);
+    // Yaw, then pitch, then roll, so banking and tilts stay in the dragon's own frame.
+    root.rotation.order = "YXZ";
+  } else {
+    root.scale.setScalar(0.86 + hash(spec.z, spec.x) * 0.16);
+  }
   root.userData = {
     id: spec.id,
     heading: hash(spec.x, spec.z) * Math.PI * 2,
@@ -1196,17 +1534,31 @@ function makeCritter(scene, spec) {
     blinkOffset: hash(spec.x, spec.z) * 4.8,
     walkSpeed: sky ? 3.8 : 0.95,
     wings: parts.wings || null,
+    hands: parts.hands || [],
+    wingTips: parts.wingTips || [],
+    neck: parts.neck || null,
+    jaw: parts.jaw || null,
+    mouth: parts.mouth || null,
+    glows: parts.glows || [],
+    breathFx: sky ? makeBreath(scene, BREATH_COLORS[spec.id] || BREATH_COLORS.ember) : null,
+    charge: 0,
+    bank: 0,
+    lastHeading: null,
+    sparkDebt: 0,
+    fireDebt: 0,
+    emoteT: 0,
+    lookAt: null,
     torso: parts.torso || null,
     head: parts.head || null,
     eyes: parts.eyes || [],
     ears: parts.ears || [],
     tail: parts.tail || null,
     tailMid: parts.tailMid || null,
+    tailEnd: parts.tailEnd || null,
     tailTip: parts.tailTip || null,
     legs: parts.legs || [],
     knees: parts.knees || [],
     feet: parts.feet || [],
-    fire: parts.fire || null,
   };
   scene.add(root);
   return root;
@@ -1438,18 +1790,38 @@ function poseDragon(critter, now, dt, sit) {
       feet[i].rotation.x = toePitch - leg.rotation.x - knees[i].rotation.x;
     }
   }
+  const breathing = data.charge;
+  if (data.neck) {
+    // Upright and proud on the perch, stretched forward in flight, thrust out to breathe.
+    const neckX = THREE.MathUtils.lerp(THREE.MathUtils.lerp(0.28, -0.12, sit), 0.42, breathing) + Math.sin(now / 700 + data.baseY) * 0.04;
+    data.neck.rotation.x += (neckX - data.neck.rotation.x) * blend;
+    data.neck.rotation.y += ((sit ? Math.sin(now / 1500 + data.baseY) * 0.25 : 0) - data.neck.rotation.y) * blend;
+  }
   if (data.head) {
-    const lookY = sit ? Math.sin(now / 1100 + data.baseY) * 0.32 + Math.sin(now / 2400 + data.heading) * 0.12 : 0;
-    const lookX = sit ? -0.06 + Math.sin(now / 900 + data.baseY) * 0.1 : Math.sin(now / 640 + data.heading) * 0.05;
-    data.head.rotation.x += (lookX - data.head.rotation.x) * blend;
-    data.head.rotation.y += (lookY - data.head.rotation.y) * blend;
+    const lookY = sit ? Math.sin(now / 1100 + data.baseY) * 0.32 + Math.sin(now / 2400 + data.blinkOffset) * 0.12 : 0;
+    const lookX = sit ? -0.06 + Math.sin(now / 900 + data.baseY) * 0.1 : -0.2 + Math.sin(now / 640 + data.blinkOffset) * 0.05;
+    data.head.rotation.x += (THREE.MathUtils.lerp(lookX, -0.34, breathing) - data.head.rotation.x) * blend;
+    data.head.rotation.y += (lookY * (1 - breathing) - data.head.rotation.y) * blend;
   }
-  if (data.tail) {
-    data.tail.rotation.x += ((sit ? 0.22 + Math.sin(now / 520) * 0.06 : 0) - data.tail.rotation.x) * blend;
-    data.tail.rotation.y += ((1 - sit) * Math.sin(now / 260 + data.heading) * 0.28 + sit * Math.sin(now / 380 + data.baseY) * 0.22 - data.tail.rotation.y) * blend;
+  if (data.jaw) {
+    const open = THREE.MathUtils.lerp(0.05 + Math.max(0, Math.sin(now / 1900 + data.baseY)) ** 8 * 0.3, 0.62 + Math.sin(now / 60) * 0.05, breathing);
+    data.jaw.rotation.x += (open - data.jaw.rotation.x) * Math.min(1, dt * 12);
   }
-  if (data.tailMid) data.tailMid.rotation.y += (((1 - sit) * Math.sin(now / 220 + data.heading) * 0.18 + sit * Math.sin(now / 300) * 0.16) - data.tailMid.rotation.y) * blend;
-  if (data.tailTip) data.tailTip.rotation.y += (((1 - sit) * Math.sin(now / 180 + data.heading) * 0.22 + sit * Math.sin(now / 240) * 0.2) - data.tailTip.rotation.y) * blend;
+  for (const [i, g] of data.glows.entries()) {
+    g.mat.emissiveIntensity = g.base * (0.8 + Math.sin(now / 380 + i * 0.7) * 0.2) * (1 + breathing * 1.3);
+  }
+  // A travelling wave down the tail segments.
+  const sway = 1 - sit;
+  const tailWave = (node, k, amp, lift) => {
+    if (!node) return;
+    const y = sway * Math.sin(now / 300 + data.blinkOffset - k * 0.9) * amp + sit * Math.sin(now / 420 + data.baseY - k * 0.6) * amp * 0.8;
+    node.rotation.x += (lift - node.rotation.x) * blend;
+    node.rotation.y += (y - node.rotation.y) * blend;
+  };
+  tailWave(data.tail, 0, 0.24, sit ? 0.22 + Math.sin(now / 520) * 0.06 : 0.04);
+  tailWave(data.tailMid, 1, 0.22, sit ? 0.12 : 0.02);
+  tailWave(data.tailEnd, 2, 0.26, sit ? 0.18 : 0.02);
+  tailWave(data.tailTip, 3, 0.3, sit ? -0.3 : 0);
 }
 
 function easeJoint(node, rx, ry, rz, t) {
@@ -1600,13 +1972,31 @@ function poseCat(critter, now, dt) {
   easeJoint(data.torso, torsoX, 0, torsoZ, blend);
   if (data.torso) {
     const sitLow = data.mood === "sit" || data.mood === "regal" || data.mood === "knead" || data.mood === "loaf" || data.mood === "pet" || data.mood === "browse" || data.mood === "guard";
-    const wantY = sitLow ? 0.23 : 0.32;
+    const wantY = sitLow ? 0.2 : 0.27;
     data.torso.position.y += (wantY - data.torso.position.y) * blend;
+  }
+  // Curious kittens turn to watch the player, with a little head tilt.
+  const happy = data.mood === "pet" || data.mood === "nuzzle";
+  const napping = data.mood === "loaf";
+  if (data.lookAt && !napping && data.mood !== "swat" && data.mood !== "groom") {
+    const want = Math.atan2(data.lookAt.x - critter.position.x, data.lookAt.z - critter.position.z);
+    headY = THREE.MathUtils.clamp(wrapAngle(want - data.heading), -1, 1) * 0.9;
+    headX = Math.min(headX, -0.22);
+    headZ = Math.sin(now / 900 + data.blinkOffset) * 0.2;
+  }
+  if (napping) {
+    headX = 0.3;
+    headY = 0.35;
   }
   easeJoint(data.head, headX, headY, headZ, blend);
   const blinkPhase = (now / 1000 + data.blinkOffset) % 4.8;
-  const eyeOpen = blinkPhase < 0.16 ? 0.08 : data.mood === "pet" || data.mood === "nuzzle" ? 0.3 : 1;
-  for (const eye of data.eyes) eye.scale.y += (eyeOpen - eye.scale.y) * Math.min(1, dt * 24);
+  const eyeOpen = napping ? 0.08 : blinkPhase < 0.16 ? 0.08 : 1;
+  for (const eye of data.eyes) {
+    const { open, happy: smile } = eye.userData;
+    open.visible = !happy;
+    smile.visible = happy;
+    open.scale.y += (eyeOpen - open.scale.y) * Math.min(1, dt * 24);
+  }
   for (const [i, ear] of data.ears.entries()) {
     const twitch = Math.max(0, Math.sin(now / 680 + data.gait + i * 2)) ** 12;
     easeJoint(ear, twitch * 0.12, 0, (i ? 1 : -1) * twitch * 0.18, blend);
@@ -1616,9 +2006,11 @@ function poseCat(critter, now, dt) {
     easeJoint(leg, hips[i], 0, hipZ[i], blend);
   }
   const tailLift = data.mood === "loaf" || data.mood === "sit" ? 0.25 : 0.9;
-  easeJoint(data.tail, tail[0].x + tailLift, tail[0].y, 0, blend);
-  easeJoint(data.tailMid, tail[1].x, tail[1].y, 0, blend);
-  easeJoint(data.tailTip, tail[2].x + 0.6, tail[2].y, 0, blend);
+  // A question-mark curl when happy or curious.
+  const curl = happy || data.lookAt ? 0.75 : 0;
+  easeJoint(data.tail, tail[0].x + tailLift + curl * 0.25, tail[0].y, 0, blend);
+  easeJoint(data.tailMid, tail[1].x + curl * 0.2, tail[1].y, 0, blend);
+  easeJoint(data.tailTip, tail[2].x + 0.6 + curl, tail[2].y, 0, blend);
 }
 
 function pickCatMood(critter, cats, toys) {
@@ -1740,7 +2132,15 @@ function pickDragonMood(critter, dragons) {
       return;
     }
   }
-  if (roll < 0.72) {
+  if (roll < 0.52) {
+    critter.userData.mood = "barrel";
+    critter.userData.playWith = null;
+    critter.userData.moodT = 1.5;
+    critter.userData.rollTime = 1.5;
+    critter.userData.speed = 6.5;
+    return;
+  }
+  if (roll < 0.74) {
     critter.userData.mood = "breath";
     critter.userData.moodT = 1.6 + roll;
     critter.userData.breath = critter.userData.moodT;
@@ -1824,6 +2224,133 @@ function hideCard() {
   }, 280);
 }
 
+const BASE_FOV = 70;
+
+const SKY = {
+  top: 0x3f7fe0,
+  horizon: 0xb9d6ff,
+  sunDir: new THREE.Vector3(0.5, 0.72, 0.36).normalize(),
+};
+
+// Gradient dome plus a square sun, both parented to the camera position.
+function makeSky(scene) {
+  const group = new THREE.Group();
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(240, 24, 12),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+      uniforms: {
+        top: { value: new THREE.Color(SKY.top) },
+        horizon: { value: new THREE.Color(SKY.horizon) },
+      },
+      vertexShader: `
+        varying vec3 vDir;
+        void main() {
+          vDir = normalize(position);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 top;
+        uniform vec3 horizon;
+        varying vec3 vDir;
+        void main() {
+          float h = clamp(vDir.y, 0.0, 1.0);
+          gl_FragColor = vec4(mix(horizon, top, pow(h, 0.55)), 1.0);
+          #include <colorspace_fragment>
+        }
+      `,
+    })
+  );
+  dome.renderOrder = -2;
+  group.add(dome);
+
+  const sun = new THREE.Mesh(
+    new THREE.PlaneGeometry(22, 22),
+    new THREE.MeshBasicMaterial({ color: 0xfff6d8, fog: false, depthWrite: false })
+  );
+  const halo = new THREE.Mesh(
+    new THREE.PlaneGeometry(38, 38),
+    new THREE.MeshBasicMaterial({ color: 0xfff1c4, fog: false, depthWrite: false, transparent: true, opacity: 0.28 })
+  );
+  for (const [mesh, dist] of [[halo, 222], [sun, 220]]) {
+    mesh.position.copy(SKY.sunDir).multiplyScalar(dist);
+    mesh.lookAt(0, 0, 0);
+    mesh.renderOrder = -1;
+    group.add(mesh);
+  }
+  scene.add(group);
+  return group;
+}
+
+// A pixelated swirl filling the Make a Game portal, plus motes drifting out of it.
+function makePortalFx(scene) {
+  const swirl = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float time;
+      varying vec2 vUv;
+      void main() {
+        vec2 px = vec2(48.0, 64.0);
+        vec2 p = floor(vUv * px) / px;
+        vec2 c = (p - 0.5) * vec2(3.0, 4.0);
+        float r = length(c);
+        float a = atan(c.y, c.x);
+        float band = sin(a * 3.0 + r * 5.0 - time * 2.2) * 0.5 + 0.5;
+        float spark = fract(sin(dot(p, vec2(12.9898, 78.233)) + floor(time * 8.0)) * 43758.5453);
+        vec3 col = mix(vec3(0.12, 0.02, 0.32), vec3(0.42, 0.12, 0.95), band);
+        col = mix(col, vec3(0.86, 0.72, 1.0), step(0.96, spark) * 0.7 + smoothstep(0.8, 1.0, band) * 0.35);
+        gl_FragColor = vec4(col, 0.86);
+        #include <colorspace_fragment>
+      }
+    `,
+  });
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(3, 4), swirl);
+  sheet.position.set(MYSTERY.x + 0.5, 3, MYSTERY.z + 1.5);
+  scene.add(sheet);
+
+  const count = 36;
+  const mesh = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.08, 0.08, 0.08),
+    new THREE.MeshBasicMaterial({ color: 0xd9b8ff, transparent: true, opacity: 0.85, depthWrite: false }),
+    count
+  );
+  const motes = Array.from({ length: count }, (_, i) => ({
+    x: MYSTERY.x - 1 + hash(i, 3) * 3,
+    z: MYSTERY.z + 1 + (hash(i, 7) - 0.5) * 0.8,
+    speed: 0.5 + hash(i, 11) * 0.7,
+    phase: hash(i, 13) * 4,
+    drift: (hash(i, 17) - 0.5) * 0.9,
+  }));
+  scene.add(mesh);
+  const dummy = new THREE.Object3D();
+  return (now) => {
+    const t = now / 1000;
+    swirl.uniforms.time.value = t;
+    for (const [i, m] of motes.entries()) {
+      const life = (t * m.speed + m.phase) % 4;
+      dummy.position.set(m.x + 0.5 + Math.sin(t * 2 + i) * 0.06 + m.drift * life * 0.25, 1 + life, m.z + m.drift * life * 0.35);
+      dummy.rotation.set(t + i, t * 1.3, 0);
+      dummy.scale.setScalar(Math.max(0.05, 1 - life / 4));
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+}
+
 function failWorld(err) {
   console.error(err);
   const intro = $("#playIntro");
@@ -1843,32 +2370,62 @@ function startWorld() {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const coarse = window.matchMedia("(pointer: coarse)").matches;
 
+  const shadows = !coarse;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
   const stage = canvas.parentElement;
-  renderer.setClearColor(0x78a7ff, 1);
+  renderer.setClearColor(SKY.horizon, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = shadows;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x78a7ff, 90, 210);
+  scene.fog = new THREE.Fog(SKY.horizon, 70, 200);
 
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.08, 260);
+  const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.08, 260);
   camera.position.set(WORLD.spawn.x, WORLD.spawn.y, WORLD.spawn.z);
 
-  scene.add(new THREE.HemisphereLight(0x9ec8ff, 0x4a6b32, 0.95));
-  const sun = new THREE.DirectionalLight(0xfff3c4, 1.05);
-  sun.position.set(22, 34, 12);
+  scene.add(new THREE.HemisphereLight(0xb4d4ff, 0x4a6b32, 0.9));
+  const sun = new THREE.DirectionalLight(0xfff1c9, 1.25);
+  sun.position.copy(SKY.sunDir).multiplyScalar(60);
+  if (shadows) {
+    // One shadow map framed on the plaza; the far hills stay unshadowed.
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 140 });
+    sun.shadow.camera.updateProjectionMatrix();
+    sun.shadow.bias = -0.0006;
+    sun.shadow.normalBias = 0.03;
+  }
   scene.add(sun);
+  scene.add(sun.target);
+  const sky = makeSky(scene);
 
-  buildWorld(scene);
+  const { animated } = buildWorld(scene, shadows);
+  const portalFx = makePortalFx(scene);
 
   const orbs = GAMES.map((_, i) => makeOrb(scene, i));
   const ball = makeBall(scene);
   const catToys = makeCatToys(scene);
   const critters = CRITTERS.map((spec) => makeCritter(scene, spec));
+  if (shadows) {
+    for (const obj of [...orbs, ball, ...catToys, ...critters]) {
+      obj.traverse((node) => {
+        if (node.isMesh) node.castShadow = true;
+      });
+    }
+  }
   const cats = critters.filter((c) => !c.userData.sky);
   const dragons = critters.filter((c) => c.userData.sky);
   greetPerch(dragons);
+  const emotes = makeEmotes(scene);
+  // One shared light that follows whichever dragon is breathing.
+  const breathLight = new THREE.PointLight(0xffa12e, 0, 22, 1);
+  scene.add(breathLight);
+  const fxPos = new THREE.Vector3();
+  const fxDir = new THREE.Vector3();
+  const fxVel = new THREE.Vector3();
+  const fxJitter = new THREE.Vector3();
   let ballVel = new THREE.Vector3();
   let ballLive = false;
 
@@ -1882,6 +2439,11 @@ function startWorld() {
     yaw: 0,
     pitch: -0.08,
     grounded: false,
+    airTime: 0,
+    jumpBuffer: 0,
+    bob: 0,
+    bobAmp: 0,
+    stepLag: 0,
   };
 
   const keys = new Set();
@@ -2178,6 +2740,7 @@ function startWorld() {
     renderMap();
     if (coarse) {
       if (helpEl) helpEl.textContent = "Walk into a booth · or tap a game";
+      if (promptEl) promptEl.textContent = "Walk into a booth · or tap a game";
       bindPad();
     }
   }
@@ -2227,6 +2790,13 @@ function startWorld() {
     const extra = cat.userData.mood === "pet" ? 2.8 : 0;
     setCatMood(cat, "pet", { moodT: 6.4 + extra, attention: 6.4 + extra });
     faceToward(cat, player.x, player.z);
+    if (cat.userData.head) {
+      cat.userData.head.getWorldPosition(fxPos);
+      for (let i = 0; i < 3; i += 1) {
+        emotes.spawn("heart", fxPos.clone().add(new THREE.Vector3((i - 1) * 0.16, 0.3 + i * 0.05, 0)), 0.2);
+      }
+      cat.userData.emoteT = 0.6;
+    }
     if (promptEl) promptEl.textContent = `petting ${cat.userData.id}`;
     return true;
   }
@@ -2364,7 +2934,8 @@ function startWorld() {
     pointerDx = 0;
     pointerDy = 0;
 
-    const speed = arcadeOpen ? 0 : keys.has("ShiftLeft") ? 9.5 : 6.4;
+    const sprinting = !arcadeOpen && (keys.has("ShiftLeft") || keys.has("ShiftRight"));
+    const speed = arcadeOpen ? 0 : sprinting ? 9.5 : 6.4;
     let wishX = 0;
     let wishZ = 0;
     if (!arcadeOpen) {
@@ -2388,16 +2959,37 @@ function startWorld() {
     }
     const sin = Math.sin(player.yaw);
     const cos = Math.cos(player.yaw);
-    player.vx = (wishX * cos + wishZ * sin) * speed;
-    player.vz = (-wishX * sin + wishZ * cos) * speed;
+    // Ease toward the wished velocity: snappy on the ground, floaty in the air.
+    const grip = Math.min(1, dt * (player.grounded ? 16 : 5));
+    player.vx += ((wishX * cos + wishZ * sin) * speed - player.vx) * grip;
+    player.vz += ((-wishX * sin + wishZ * cos) * speed - player.vz) * grip;
     player.vy -= 22 * dt;
-    if (!arcadeOpen && keys.has("Space") && player.grounded) {
+    // Coyote time and a short jump buffer make ledges and hops forgiving.
+    player.airTime = player.grounded ? 0 : player.airTime + dt;
+    player.jumpBuffer = !arcadeOpen && keys.has("Space") ? 0.12 : Math.max(0, player.jumpBuffer - dt);
+    if (player.jumpBuffer > 0 && player.airTime < 0.1 && player.vy <= 0.5) {
       player.vy = 8.2;
       player.grounded = false;
+      player.airTime = 1;
+      player.jumpBuffer = 0;
     }
 
     const next = { x: player.x + player.vx * dt, y: player.y + player.vy * dt, z: player.z + player.vz * dt };
+    const wasGrounded = player.grounded;
     player.grounded = false;
+    // Hop up single-block ledges instead of stopping dead against them.
+    const stepY = Math.floor(player.y + 0.01) + 1;
+    if (
+      wasGrounded &&
+      blockedAt(next.x, player.y, next.z) &&
+      !blockedAt(next.x, stepY, next.z) &&
+      !blockedAt(player.x, stepY, player.z) &&
+      feetSolid(next.x, stepY - 0.02, next.z)
+    ) {
+      player.stepLag -= stepY - player.y;
+      player.y = stepY;
+      next.y = stepY;
+    }
     if (blockedAt(next.x, player.y, player.z)) next.x = player.x;
     if (blockedAt(next.x, player.y, next.z)) next.z = player.z;
     resolveFloor(next);
@@ -2406,10 +2998,29 @@ function startWorld() {
     player.z = THREE.MathUtils.clamp(next.z, -WORLD.size / 2 + 1, WORLD.size / 2 - 1);
     if (player.vy <= 0 && feetSolid(player.x, player.y - 0.08, player.z)) player.grounded = true;
 
-    camera.position.set(player.x, player.y + 1.55, player.z);
+    const planar = Math.hypot(player.vx, player.vz);
+    player.bobAmp += ((player.grounded ? Math.min(1, planar / 6.4) : 0) - player.bobAmp) * Math.min(1, dt * 8);
+    player.bob += planar * dt * 1.35;
+    player.stepLag *= Math.max(0, 1 - dt * 14);
+    camera.position.set(
+      player.x + Math.cos(player.bob) * 0.025 * player.bobAmp,
+      player.y + 1.55 + player.stepLag + Math.abs(Math.sin(player.bob)) * 0.06 * player.bobAmp,
+      player.z
+    );
     camera.rotation.order = "YXZ";
     camera.rotation.y = player.yaw;
     camera.rotation.x = player.pitch;
+    const wantFov = BASE_FOV + (sprinting && planar > 7 ? 8 : 0);
+    if (Math.abs(camera.fov - wantFov) > 0.05) {
+      camera.fov += (wantFov - camera.fov) * Math.min(1, dt * 7);
+      camera.updateProjectionMatrix();
+    }
+    sky.position.copy(camera.position);
+    // Follow the player in coarse steps so the shadow texels don't shimmer.
+    sun.target.position.set(Math.round(player.x / 8) * 8, 0, Math.round(player.z / 8) * 8);
+    sun.position.copy(SKY.sunDir).multiplyScalar(60).add(sun.target.position);
+    for (const { mat } of animated) mat.map.offset.set((now / 9000) % 1, Math.sin(now / 1600) * 0.04);
+    portalFx(now);
 
     for (const orb of orbs) {
       orb.position.y = orb.userData.baseY + Math.sin(now / 420 + orb.userData.phase) * 0.12;
@@ -2430,6 +3041,7 @@ function startWorld() {
       }
     }
 
+    let breathLevel = 0;
     for (const critter of critters) {
       const data = critter.userData;
       data.timer -= dt;
@@ -2542,29 +3154,48 @@ function startWorld() {
             data.heading += Math.PI * 0.55;
           }
         }
-        const flyTilt = Math.sin(now / 640 + data.heading) * 0.08;
+        const flyTilt = Math.sin(now / 640 + data.blinkOffset) * 0.08;
         const perchBob = landed ? Math.sin(now / 700 + data.baseY) * 0.03 : 0;
         critter.rotation.x += ((landed ? -0.2 + perchBob : THREE.MathUtils.lerp(flyTilt, -0.16, sit)) - critter.rotation.x) * Math.min(1, dt * 5);
-        if (data.wings) {
-          const perchFlap = 1.02 + Math.sin(now / 750 + data.baseY) * 0.05;
-          const flyFlap = 0.12 + Math.sin(now / (data.mood === "breath" ? 160 : 260) + data.heading) * 0.48;
-          const flap = landed ? perchFlap : THREE.MathUtils.lerp(flyFlap, perchFlap, sit);
-          data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 5);
-          data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 5);
-        }
+        // Bank into turns, and spin through the occasional barrel roll.
+        const turnRate = data.lastHeading == null ? 0 : wrapAngle(data.heading - data.lastHeading) / Math.max(dt, 0.001);
+        data.lastHeading = data.heading;
+        data.bank += (THREE.MathUtils.clamp(-turnRate * 0.3, -0.7, 0.7) * (1 - sit) - data.bank) * Math.min(1, dt * 3);
+        const spin = data.mood === "barrel" ? easeInOut(THREE.MathUtils.clamp(1 - data.moodT / data.rollTime, 0, 1)) * Math.PI * 2 : 0;
+        critter.rotation.z = data.bank + spin;
+        const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
+        data.charge += ((blasting ? 1 : 0) - data.charge) * Math.min(1, dt * 6);
+        flapDragon(critter, now, dt, sit);
         poseDragon(critter, now, dt, sit);
-        if (data.fire) {
-          const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
-          data.fire.visible = blasting;
-          if (blasting) {
-            for (const puff of data.fire.children) {
-              const wave = Math.sin(now / 70 + puff.userData.phase) * 0.08;
-              puff.position.x = wave;
-              puff.position.y = Math.cos(now / 90 + puff.userData.phase) * 0.06;
-              puff.scale.setScalar(0.85 + Math.abs(Math.sin(now / 80 + puff.userData.phase)) * 0.45);
-            }
+        critter.updateMatrixWorld(true);
+        const fx = data.breathFx;
+        if (fx && blasting && data.mouth && data.charge > 0.5) {
+          data.mouth.getWorldPosition(fxPos);
+          data.head.getWorldDirection(fxDir);
+          fxVel.set(Math.sin(data.heading), 0, Math.cos(data.heading)).multiplyScalar(data.speed);
+          data.fireDebt += dt * 60;
+          while (data.fireDebt >= 1) {
+            data.fireDebt -= 1;
+            fxJitter.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+            fx.emit(fxPos, fxJitter.clone().multiplyScalar(2.4).addScaledVector(fxDir, 12).add(fxVel), 0.8 + Math.random() * 0.35, 0.36 * DRAGON_SCALE, 0);
+          }
+          if (data.charge > breathLevel) {
+            breathLevel = data.charge;
+            breathLight.position.copy(fxPos).addScaledVector(fxDir, 3);
+            breathLight.color.copy(fx.color);
           }
         }
+        if (fx && !landed && data.wingTips.length) {
+          data.sparkDebt += dt * (data.mood === "barrel" ? 40 : 12);
+          while (data.sparkDebt >= 1) {
+            data.sparkDebt -= 1;
+            const tip = data.wingTips[Math.random() < 0.5 ? 0 : 1];
+            tip.getWorldPosition(fxPos);
+            fxJitter.set((Math.random() - 0.5) * 0.4, -0.3, (Math.random() - 0.5) * 0.4);
+            fx.emit(fxPos, fxJitter, 0.9, 0.13, 1);
+          }
+        }
+        fx?.update(dt);
       } else {
         critter.rotation.x = 0;
         critter.rotation.z = 0;
@@ -2574,10 +3205,22 @@ function startWorld() {
         else if (data.mood === "yarn" && toy && Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z) < 0.5) bob = Math.abs(Math.sin(now / 140)) * 0.06;
         else if (data.mood === "wander" || data.mood === "chase") bob = Math.abs(Math.sin(data.gait * 2)) * 0.03;
         critter.position.y = Math.max(floor, floor + bob);
+        const near = !arcadeOpen && Math.hypot(player.x - critter.position.x, player.z - critter.position.z) < 3.4;
+        data.lookAt = near ? player : null;
         poseCat(critter, now, dt);
+        data.emoteT -= dt;
+        const emote = data.mood === "pet" ? ["heart", 0.45] : data.mood === "nuzzle" ? ["heart", 1.1] : data.mood === "loaf" ? ["z", 1.3] : null;
+        if (emote && data.emoteT <= 0 && data.head) {
+          data.emoteT = emote[1];
+          data.head.getWorldPosition(fxPos);
+          fxPos.y += 0.32;
+          emotes.spawn(emote[0], fxPos, emote[0] === "z" ? 0.16 : 0.22);
+        }
       }
     }
 
+    breathLight.intensity += (breathLevel * 9 - breathLight.intensity) * Math.min(1, dt * 10);
+    emotes.update(dt);
     separateGroup(cats, 0.82);
     separateGroup(dragons.filter((d) => d.userData.mood !== "perch"), 4.6);
 
@@ -2636,6 +3279,8 @@ function startWorld() {
   if (reduced) {
     camera.position.set(0.5, 8, 20);
     camera.lookAt(0.5, 3, -6);
+    sky.position.copy(camera.position);
+    portalFx(0);
     renderer.render(scene, camera);
     renderMap();
     if (intro) {
