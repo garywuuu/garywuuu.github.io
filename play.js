@@ -890,10 +890,32 @@ function addSpike(parent, kind, start, end, radius, glow = 0) {
   return mesh;
 }
 
+const CAT_FUR_GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
+const catFurMaterials = new Map();
+
+// Batch the coat's small, overlapping tufts into one draw call per color/joint.
+function addCatFluff(parent, kind, tufts) {
+  if (!catFurMaterials.has(kind)) {
+    catFurMaterials.set(kind, new THREE.MeshLambertMaterial({ map: blockTexture(kind) }));
+  }
+  const fur = new THREE.InstancedMesh(CAT_FUR_GEOMETRY, catFurMaterials.get(kind), tufts.length);
+  const tuft = new THREE.Object3D();
+  tufts.forEach(([x, y, z, sx, sy, sz, rz = 0], i) => {
+    tuft.position.set(x, y, z);
+    tuft.scale.set(sx, sy, sz);
+    tuft.rotation.set(0, 0, rz);
+    tuft.updateMatrix();
+    fur.setMatrixAt(i, tuft.matrix);
+  });
+  fur.instanceMatrix.needsUpdate = true;
+  fur.computeBoundingSphere();
+  parent.add(fur);
+}
+
 function addCatLeg(parent, kind, sock, x, y, z) {
   const hip = addPivot(parent, x, y, z);
-  addBox(hip, kind, 0, -0.055, 0, 0.13, 0.15, 0.13);
-  addBox(hip, sock || kind, 0, -0.155, 0.025, 0.16, 0.09, 0.19);
+  addBox(hip, kind, 0, -0.055, 0, 0.18, 0.17, 0.18);
+  addBox(hip, sock || kind, 0, -0.155, 0.025, 0.19, 0.09, 0.21);
   return hip;
 }
 
@@ -905,14 +927,38 @@ function addCat(root, look) {
   const sock = look.sock || belly;
   const mark = look.mark || [];
   const torso = addPivot(root, 0, 0.32, 0);
-  addBox(torso, body, 0, 0, 0, 0.4, 0.3, 0.58);
-  addBox(torso, body, 0, 0.015, -0.08, 0.44, 0.22, 0.36);
-  addBox(torso, belly, 0, -0.12, 0.03, 0.3, 0.09, 0.46);
-  addBox(torso, belly, 0, 0.025, 0.28, 0.24, 0.25, 0.05);
+  addBox(torso, body, 0, 0, 0, 0.48, 0.34, 0.62);
+  addBox(torso, body, 0, 0.015, -0.08, 0.54, 0.29, 0.42);
+  addBox(torso, body, 0, 0.16, -0.04, 0.4, 0.16, 0.54);
+  addBox(torso, belly, 0, -0.145, 0.03, 0.38, 0.12, 0.5);
+  addBox(torso, belly, 0, 0.025, 0.29, 0.36, 0.32, 0.16);
+  const coatTufts = [];
+  for (const side of [-1, 1]) {
+    for (const [i, z] of [-0.23, -0.05, 0.13].entries()) {
+      coatTufts.push([side * 0.26, -0.075, z, 0.15, 0.2 - i * 0.015, 0.18, side * 0.18]);
+    }
+    coatTufts.push([side * 0.23, 0.1, 0.2, 0.17, 0.18, 0.2, side * -0.15]);
+    coatTufts.push([side * 0.18, 0.17, -0.2, 0.16, 0.16, 0.22, side * 0.12]);
+  }
+  addCatFluff(torso, body, coatTufts);
+  addCatFluff(torso, belly, [
+    [-0.15, -0.025, 0.33, 0.16, 0.24, 0.14, -0.2],
+    [0.15, -0.025, 0.33, 0.16, 0.24, 0.14, 0.2],
+    [0, -0.11, 0.35, 0.18, 0.19, 0.14],
+  ]);
 
   const head = addPivot(torso, 0, 0.12, 0.32);
-  addBox(head, body, 0, 0.04, 0.06, 0.44, 0.36, 0.36);
-  addBox(head, body, 0, 0, 0.08, 0.48, 0.23, 0.32);
+  addBox(head, body, 0, 0.04, 0.06, 0.46, 0.36, 0.36);
+  addBox(head, body, 0, 0, 0.08, 0.52, 0.26, 0.32);
+  addCatFluff(head, body, [-1, 1].flatMap((side) => [
+    [side * 0.245, -0.03, 0.115, 0.17, 0.22, 0.22, side * 0.12],
+    [side * 0.305, -0.055, 0.08, 0.13, 0.14, 0.19, side * 0.3],
+    [side * 0.21, -0.13, 0.06, 0.14, 0.15, 0.22, side * -0.18],
+  ]));
+  addCatFluff(head, muzzle, [
+    [-0.08, -0.13, 0.205, 0.15, 0.13, 0.13, -0.12],
+    [0.08, -0.13, 0.205, 0.15, 0.13, 0.13, 0.12],
+  ]);
   const eyes = [];
   const ears = [];
   for (const side of [-1, 1]) {
@@ -925,6 +971,10 @@ function addCat(root, look) {
     const ear = addPivot(head, side * 0.15, 0.2, 0.015);
     addSpike(ear, trim, [0, 0, 0], [side * 0.03, 0.22, -0.02], 0.105);
     addSpike(ear, look.inner || "pink", [0, 0.015, 0.054], [side * 0.02, 0.165, 0.018], 0.055);
+    addCatFluff(ear, trim, [
+      [side * 0.025, 0.195, -0.018, 0.035, 0.13, 0.045, side * -0.16],
+      [side * 0.075, 0.045, -0.005, 0.07, 0.1, 0.08, side * -0.25],
+    ]);
     ears.push(ear);
     for (const row of [-1, 1]) {
       addBox(head, "cream", side * 0.205, -0.055 + row * 0.024, 0.29, 0.15, 0.009, 0.009, { rz: side * row * 0.14, solid: true });
@@ -941,11 +991,23 @@ function addCat(root, look) {
   ];
 
   const tail = addPivot(torso, 0, 0.075, -0.3);
-  addBox(tail, look.tail || body, 0, 0, -0.14, 0.1, 0.1, 0.3);
+  const tailColor = look.tail || body;
+  const tipColor = look.tailTip || tailColor;
+  addBox(tail, tailColor, 0, 0, -0.14, 0.18, 0.18, 0.3);
   const tailMid = addPivot(tail, 0, 0, -0.28);
-  addBox(tailMid, look.tail || body, 0, 0, -0.1, 0.09, 0.09, 0.22);
+  addBox(tailMid, tailColor, 0, 0, -0.1, 0.24, 0.23, 0.25);
+  addCatFluff(tailMid, tailColor, [
+    [-0.115, 0, -0.09, 0.1, 0.17, 0.19, -0.18],
+    [0.115, 0, -0.09, 0.1, 0.17, 0.19, 0.18],
+    [0, 0.1, -0.08, 0.18, 0.1, 0.18],
+    [0, -0.1, -0.12, 0.18, 0.1, 0.18],
+  ]);
   const tailTip = addPivot(tailMid, 0, 0, -0.2);
-  addBox(tailTip, look.tailTip || look.tail || body, 0, 0, -0.06, 0.085, 0.085, 0.14);
+  addBox(tailTip, tipColor, 0, 0, -0.06, 0.19, 0.18, 0.18);
+  addCatFluff(tailTip, tipColor, [
+    [0, 0.01, -0.155, 0.13, 0.13, 0.09],
+    [0, 0.015, -0.205, 0.075, 0.075, 0.065],
+  ]);
   tail.rotation.x = 0.95;
   tailTip.rotation.x = 0.6;
 
@@ -954,8 +1016,8 @@ function addCat(root, look) {
     addBox(
       torso,
       m.kind,
-      side ? Math.sign(m.x) * 0.218 : m.x,
-      side ? m.y : Math.max(m.y, 0.158),
+      side ? Math.sign(m.x) * 0.277 : m.x,
+      side ? m.y : Math.max(m.y, 0.248),
       THREE.MathUtils.clamp(m.z, -0.22, 0.22),
       side ? Math.min(m.sx, 0.05) : m.sx,
       m.sy,
