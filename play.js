@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+const FONT_FAMILY = getComputedStyle(document.body).fontFamily;
+
 const WORLD = {
   size: 160,
   spawn: { x: 0.5, y: 1.2, z: 14.5 },
@@ -566,7 +568,7 @@ function makeSign(text, color, x, y, z, scaleX = 6.4, bg = "#3a2a18", rotY = 0) 
       ctx.fillRect(16, 16, 480, 96);
     }
     ctx.fillStyle = color;
-    ctx.font = `bold ${text.length > 12 ? 36 : 48}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.font = `bold ${text.length > 12 ? 36 : 48}px ${FONT_FAMILY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(text, 256, 68);
@@ -586,7 +588,7 @@ function coverFallback(item) {
   ctx.fillStyle = "#111111";
   ctx.fillRect(0, 0, 64, 96);
   ctx.fillStyle = "#f4efe6";
-  ctx.font = "bold 8px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.font = `bold 8px ${FONT_FAMILY}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(item.title.toUpperCase(), 32, 48);
@@ -644,7 +646,7 @@ function pixelateCover(image) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
     ctx.fillRect(0, boxH, canvas.width, labelH);
     ctx.fillStyle = image.dataset.labelColor || "#ffffff";
-    ctx.font = "bold 16px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = `bold 16px ${FONT_FAMILY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(image.dataset.label, 80, boxH + labelH / 2);
@@ -664,7 +666,7 @@ function makeShelfPlaque() {
     ctx.fillStyle = "#f0c14b";
     ctx.fillRect(8, 8, 496, 112);
     ctx.fillStyle = "#111111";
-    ctx.font = "bold 54px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = `bold 54px ${FONT_FAMILY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("FAVORITES", 256, 68);
@@ -732,7 +734,7 @@ function makeInstaplaySign(x = BANNER.x, y = BANNER.y, z = BANNER.z, scaleX = BA
     ctx.fillStyle = "#ff6600";
     ctx.fillRect(18, 38, 108, 52);
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 24px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = `bold 24px ${FONT_FAMILY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("YC S26", 72, 65);
@@ -745,7 +747,7 @@ function makeInstaplaySign(x = BANNER.x, y = BANNER.y, z = BANNER.z, scaleX = BA
     ctx.fill();
     ctx.fillRect(208, 36, 16, 56);
     ctx.fillStyle = "#111111";
-    ctx.font = "bold 38px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = `bold 38px ${FONT_FAMILY}`;
     ctx.textAlign = "left";
     ctx.fillText("INSTAPLAY", 240, 66);
   });
