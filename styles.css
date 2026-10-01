@@ -20,13 +20,16 @@ html {
   --muted: rgba(0, 0, 0, 0.65);
   --border: rgba(0, 0, 0, 0.16);
   --borderStrong: rgba(0, 0, 0, 0.28);
-  --max: 860px;
+  --max: 713px;
   --radius: 10px;
   --shadowOffset: 3px;
 }
 
 body {
   margin: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-family);
@@ -72,7 +75,6 @@ samp {
   z-index: 10;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--border);
 }
 
 .headerRow {
@@ -129,10 +131,6 @@ a.siteTitle:focus {
   padding: 44px 0;
   scroll-margin-top: 110px;
 }
-.section + .section {
-  border-top: 1px solid var(--border);
-}
-
 .sectionHeader {
   margin-bottom: 14px;
 }
@@ -561,15 +559,16 @@ body.paperOpen {
 }
 
 .siteFooter {
-  border-top: 1px solid var(--border);
+  margin-top: auto;
   padding: 18px 0;
 }
 .footerRow {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
   font-size: 13px;
+  text-align: right;
 }
 
 @media (prefers-reduced-motion: reduce) {
