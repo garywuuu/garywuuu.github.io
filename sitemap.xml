@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://wugary.com/</loc>
-    <lastmod>2026-08-15</lastmod>
+    <lastmod>2026-10-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://wugary.com/assets/images/profile.jpg</image:loc>
-      <image:title>Gary Wu</image:title>
-      <image:caption>Gary Wu portrait</image:caption>
-    </image:image>
   </url>
   <url>
     <loc>https://wugary.com/play/</loc>

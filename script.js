@@ -284,15 +284,6 @@
     }
   }
 
-  function matchPhotoToProse() {
-    const prose = document.querySelector(".aboutProse");
-    const photo = document.querySelector(".aboutPhoto");
-    if (prose && photo) {
-      const proseHeight = prose.offsetHeight;
-      photo.style.height = proseHeight + "px";
-    }
-  }
-
   async function main() {
     const yearNodes = $$("[data-year], #year");
     const year = String(new Date().getFullYear());
@@ -331,9 +322,6 @@
         if (needsExperience) setStatus("experienceStatus", "Failed to load data. Check the JSON files under data/.");
       }
     }
-
-    setTimeout(matchPhotoToProse, 50);
-    window.addEventListener("resize", matchPhotoToProse);
   }
 
   document.addEventListener("DOMContentLoaded", main);
