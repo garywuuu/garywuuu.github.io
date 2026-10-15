@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { createCatBrain } from "/assets/js/cat-brain.js?v=20261015-handwired";
+
+const decideCatMood = createCatBrain();
 
 const FONT_FAMILY = getComputedStyle(document.body).fontFamily;
 
@@ -1690,76 +1693,28 @@ function pickCatMood(critter, cats, toys) {
   const yarn = toys.filter((item) => item.userData.kind === "yarn");
   const posts = toys.filter((item) => item.userData.kind === "post" || item.userData.kind === "tree" || item.userData.kind === "wand");
   const stands = catStands();
-  if (roll < 0.18 && stands.length) {
-    const stand = stands[Math.floor(roll * stands.length * 11) % stands.length];
-    const mood = roll < 0.06 ? "scratch" : roll < 0.12 ? "browse" : "guard";
-    setCatMood(critter, mood, {
-      target: stand,
-      moodT: 5.4 + roll * 3,
-      speed: mood === "scratch" ? 1.35 : 1.15,
-    });
-    return;
-  }
-  if (roll < 0.26 && cats.length > 1) {
-    const pal = nearestOther(critter, cats);
-    if (pal) {
-      setCatMood(critter, "chase", { playWith: pal, moodT: 3.4 + roll * 2, speed: 2.15 });
-      return;
-    }
-  }
-  if (roll < 0.34 && yarn.length) {
-    setCatMood(critter, "yarn", {
-      target: yarn[Math.floor(roll * yarn.length * 8) % yarn.length],
-      moodT: 4 + roll * 2,
-      speed: 1.7,
-    });
-    return;
-  }
-  if (roll < 0.42 && posts.length) {
-    setCatMood(critter, "scratch", {
-      target: posts[Math.floor(roll * posts.length * 9) % posts.length],
-      moodT: 3.2 + roll,
-      speed: 1.25,
-    });
-    return;
-  }
-  if (roll < 0.4) {
-    setCatMood(critter, "knead", { moodT: 3.4 + roll * 2 });
-    return;
-  }
-  if (roll < 0.5) {
-    setCatMood(critter, "regal", { moodT: 3.8 + roll * 2 });
-    return;
-  }
-  if (roll < 0.58) {
-    setCatMood(critter, "swat", { moodT: 2.4 + roll, swatLeg: roll > 0.54 ? 1 : 0 });
-    return;
-  }
-  if (roll < 0.66) {
-    setCatMood(critter, "stretch", { moodT: 2.2 + roll });
-    return;
-  }
-  if (roll < 0.73) {
-    setCatMood(critter, "roll", { moodT: 2.6 + roll });
-    return;
-  }
-  if (roll < 0.8) {
-    setCatMood(critter, "pounce", { moodT: 2.1 + roll, speed: 0.4 });
-    return;
-  }
-  if (roll < 0.86) {
-    setCatMood(critter, "sit", { moodT: 2.6 + roll * 2 });
-    return;
-  }
-  if (roll < 0.91) {
-    setCatMood(critter, "loaf", { moodT: 2.8 + roll });
-    return;
-  }
-  if (roll < 0.96) {
-    setCatMood(critter, "groom", { moodT: 2.2 + roll });
-    return;
-  }
-  setCatMood(critter, "wander", { moodT: 2.4 + roll * 2.2, speed: critter.userData.walkSpeed });
+  const pal = nearestOther(critter, cats);
+  const decision = decideCatMood({
+    roll,
+    stand: stands.length > 0,
+    friend: Boolean(pal),
+    yarn: yarn.length > 0,
+    post: posts.length > 0,
+    walkSpeed: critter.userData.walkSpeed,
+  });
+  // Handwired chooses the behavior; the host resolves scene references.
+  const candidates = { stand: stands, yarn, post: posts }[decision.target];
+  const factor = { stand: 11, yarn: 8, post: 9 }[decision.target];
+  const target = candidates?.length
+    ? candidates[Math.floor(roll * candidates.length * factor) % candidates.length]
+    : null;
+  setCatMood(critter, decision.mood, {
+    target,
+    playWith: decision.target === "friend" ? pal : null,
+    moodT: decision.moodT,
+    speed: decision.speed,
+    ...(decision.mood === "swat" ? { swatLeg: decision.swatLeg } : {}),
+  });
 }
 
 function sendToPerch(critter, slot = 0, hold = 10) {

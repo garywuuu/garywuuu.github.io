@@ -1,0 +1,12 @@
+{
+  "name": "gary-handwired-cats",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild brain.ts --bundle --format=esm --target=es2020 --minify --legal-comments=inline --banner:js='/*! Uses Handwired by Cheng Lou (MIT). License: /cat-brain/vendor/handwired/LICENSE */' --outfile=../assets/js/cat-brain.js",
+    "test": "node --test brain.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}
