@@ -12,6 +12,7 @@ import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
 import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261015-world";
 import { makeFire } from "/assets/js/world/fire.js?v=20261015-world";
 import { makeAmbient } from "/assets/js/world/ambient.js?v=20261015-world";
+import { createMouseLookControls } from "/play-controls.js?v=20261015-mouse-look";
 
 const decideCatMood = createCatBrain();
 
@@ -1734,7 +1735,7 @@ function startWorld() {
   resize();
 
   function tryLock() {
-    canvas.requestPointerLock();
+    mouseLook.requestLock();
   }
 
   function bindPad() {
@@ -1912,6 +1913,7 @@ function startWorld() {
     hideCard();
     if (document.pointerLockElement) document.exitPointerLock();
     arcadeOpen = true;
+    mouseLook.stop();
     if (arcadeTitle) arcadeTitle.textContent = game.title;
     if (arcadeExternal) arcadeExternal.href = playUrl(game);
     if (frame && frame.dataset.gameId !== game.id) {
@@ -1994,12 +1996,22 @@ function startWorld() {
   enterWorld();
   window.setTimeout(dismissIntro, 3500);
   intro?.addEventListener("click", dismissIntro);
-  intro?.addEventListener("pointerdown", dismissIntro);
-  canvas?.addEventListener("pointerdown", dismissIntro, { once: true });
-
-  document.addEventListener("pointerlockchange", () => {
-    locked = document.pointerLockElement === canvas;
-    if (locked) dismissIntro();
+  const mouseLook = createMouseLookControls({
+    canvas,
+    intro,
+    isBlocked: () => arcadeOpen || reduced,
+    onActivate: dismissIntro,
+    onMove: (dx, dy) => { pointerDx += dx; pointerDy += dy; },
+    onLockChange: (isLocked) => {
+      locked = isLocked;
+      if (locked) dismissIntro();
+      else keys.clear();
+    },
+    onModeChange: (mode) => {
+      if (!helpEl || coarse) return;
+      const look = mode === "locked" ? "mouse look" : mode === "drag" ? "drag to look" : "click to capture mouse";
+      helpEl.textContent = `WASD walk · ${look} · space jump · walk in to play · 1–5 warp · Esc leave`;
+    },
   });
 
   const raycaster = new THREE.Raycaster();
@@ -2055,9 +2067,8 @@ function startWorld() {
   canvas.addEventListener("click", (e) => {
     dismissIntro();
     if (arcadeOpen) return;
-    const petted = tryPet(e.clientX, e.clientY);
-    if (!coarse) tryLock();
-    if (petted) return;
+    if (mouseLook.consumeDragClick()) return;
+    tryPet(e.clientX, e.clientY);
   });
 
   canvas.addEventListener("pointerdown", (e) => {
@@ -2080,12 +2091,6 @@ function startWorld() {
       last = performance.now();
       requestAnimationFrame(tick);
     }
-  });
-
-  document.addEventListener("mousemove", (e) => {
-    if (!locked || arcadeOpen) return;
-    pointerDx += e.movementX;
-    pointerDy += e.movementY;
   });
 
   document.addEventListener("keydown", (e) => {
