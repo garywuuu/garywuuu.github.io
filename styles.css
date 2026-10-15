@@ -77,7 +77,8 @@ samp {
   backdrop-filter: blur(6px);
 }
 
-.siteHeader > .container {
+.siteHeader > .container,
+.siteFooter > .container {
   max-width: none;
   padding-inline: clamp(18px, 4.5vw, 48px);
 }
