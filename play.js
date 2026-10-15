@@ -1,5 +1,17 @@
 import * as THREE from "three";
 import { createCatBrain } from "/assets/js/cat-brain.js?v=20261015-handwired";
+import { buildTileArray } from "/assets/js/world/textures.js?v=20261015-world";
+import { VoxelGrid, voxelMaterial, buildChunks } from "/assets/js/world/voxels.js?v=20261015-world";
+import { generateTerrain, SEA_Y } from "/assets/js/world/terrain.js?v=20261015-world";
+import { createEnvironment } from "/assets/js/world/env.js?v=20261015-world";
+import { makeHeightTexture, makeWaterMaterial, makeOcean } from "/assets/js/world/water.js?v=20261015-world";
+import { makeFoliage } from "/assets/js/world/foliage.js?v=20261015-world";
+import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
+import { buildCat, CAT_LOOKS, CAT_POSE } from "/assets/js/world/cats.js?v=20261015-world";
+import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
+import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261015-world";
+import { makeFire } from "/assets/js/world/fire.js?v=20261015-world";
+import { makeAmbient } from "/assets/js/world/ambient.js?v=20261015-world";
 import { createMouseLookControls } from "/play-controls.js?v=20261015-mouse-look";
 
 const decideCatMood = createCatBrain();
@@ -7,9 +19,14 @@ const decideCatMood = createCatBrain();
 const FONT_FAMILY = getComputedStyle(document.body).fontFamily;
 
 const WORLD = {
-  size: 160,
+  size: 288,
+  yMin: -14,
+  yMax: 64,
   spawn: { x: 0.5, y: 1.2, z: 14.5 },
 };
+
+// Scene-wide handles shared by the builders and the frame loop.
+const world = {};
 
 const PALETTE = {
   grass: 0x5d9c3d,
@@ -227,11 +244,11 @@ function inShelf(ix, iz) {
 }
 
 const MEDIA = [
-  { id: "dota", title: "Dota 2", kicker: "Game", body: "One more ancient.", x: -10.5, z: 17.4, art: "assets/images/covers/dota.jpg" },
-  { id: "valorant", title: "Valorant", kicker: "Game", body: "Aim, then aim again.", x: -9.5, z: 17.4, art: "assets/images/covers/valorant.png" },
-  { id: "minecraft", title: "Minecraft", kicker: "Game", body: "The reason this lobby is made of blocks.", x: -8.5, z: 17.4, art: "assets/images/covers/minecraft.jpg" },
-  { id: "inception", title: "Inception", kicker: "Movie", body: "A dream about building worlds.", x: -7.5, z: 17.4, art: "assets/images/covers/inception.jpg" },
-  { id: "oppenheimer", title: "Oppenheimer", kicker: "Movie", body: "I am become death, destroyer of worlds.", x: -6.5, z: 17.4, art: "assets/images/covers/oppenheimer.jpg" },
+  { id: "dota", title: "Dota 2", kicker: "Game", body: "One more ancient.", x: -10.5, z: 17.4, art: "/assets/images/covers/dota.jpg" },
+  { id: "valorant", title: "Valorant", kicker: "Game", body: "Aim, then aim again.", x: -9.5, z: 17.4, art: "/assets/images/covers/valorant.png" },
+  { id: "minecraft", title: "Minecraft", kicker: "Game", body: "The reason this lobby is made of blocks.", x: -8.5, z: 17.4, art: "/assets/images/covers/minecraft.jpg" },
+  { id: "inception", title: "Inception", kicker: "Movie", body: "A dream about building worlds.", x: -7.5, z: 17.4, art: "/assets/images/covers/inception.jpg" },
+  { id: "oppenheimer", title: "Oppenheimer", kicker: "Movie", body: "I am become death, destroyer of worlds.", x: -6.5, z: 17.4, art: "/assets/images/covers/oppenheimer.jpg" },
 ];
 
 const CRITTERS = [
@@ -245,6 +262,11 @@ const CRITTERS = [
   { id: "cow", x: -1.2, z: 11.4 },
   { id: "ginger", x: 3.8, z: 4.4 },
   { id: "spot", x: -5.6, z: 4.2 },
+  { id: "kitten", kitten: "tabby", slot: -0.42, x: -6.6, z: 6.4 },
+  { id: "kitten", kitten: "tabby", slot: 0.42, x: -5.8, z: 6.2 },
+  { id: "kitten", kitten: "calico", slot: 0.3, x: 2.6, z: 9.4 },
+  { id: "kitten", kitten: "void", slot: -0.35, x: -3.9, z: 4.8 },
+  { id: "kitten", kitten: "siamese", slot: 0.38, x: 8.6, z: 6 },
   { id: "ember", x: -18, z: -6, sky: true },
   { id: "frost", x: 16, z: 4, sky: true },
   { id: "night", x: 4, z: -18, sky: true },
@@ -279,28 +301,6 @@ function inRect(x, z, x0, z0, x1, z1) {
   return x >= x0 && x <= x1 && z >= z0 && z <= z1;
 }
 
-function reserved(ix, iz) {
-  return (
-    inRect(ix, iz, -24, -24, 25, 26) ||
-    boothAt(ix, iz) ||
-    pageAt(ix, iz) ||
-    inRect(ix, iz, -3, -20, 4, -13) ||
-    inRect(ix, iz, -22, -12, -15, -5) ||
-    inShelf(ix, iz)
-  );
-}
-
-function groundH(ix, iz) {
-  if (inRect(ix, iz, -22, -16, 23, 20)) return 0;
-  const n =
-    Math.sin(ix * 0.09) * 3.2 +
-    Math.cos(iz * 0.07) * 2.8 +
-    Math.sin((ix + iz) * 0.045) * 2.4 +
-    Math.cos(ix * 0.021 - iz * 0.018) * 3.6 +
-    hash(ix, iz) * 1.4;
-  return Math.max(0, Math.min(14, Math.floor(n + 2)));
-}
-
 function boothAt(ix, iz) {
   return BOOTHS.find((b) => inRect(ix, iz, b.x0, b.z0, b.x1, b.z1));
 }
@@ -317,30 +317,14 @@ function isDoor(ix, iy, iz, page) {
   return false;
 }
 
-function treeHere(ix, iz) {
-  if (reserved(ix, iz)) return false;
-  return hash(ix, iz) > 0.955;
-}
-
 function pondAt(ix, iz) {
   return inRect(ix, iz, 16, -22, 24, -16);
 }
 
-function blockAt(x, y, z) {
-  const ix = Math.floor(x);
-  const iy = Math.floor(y);
-  const iz = Math.floor(z);
-
-  if (iy < 0) return iy < -2 ? "stoneDark" : "stone";
-  if (iy > 18) return null;
-
-  if (iy >= 14 && iy <= 16 && !inRect(ix, iz, -16, -16, 17, 16)) {
-    const cx = Math.floor(ix / 5);
-    const cz = Math.floor(iz / 6);
-    if (hash(cx, cz) > 0.72 && Math.abs(ix - cx * 5) < 2 + hash(cx + 3, cz) && Math.abs(iz - cz * 6) < 1 + hash(cx, cz + 2)) {
-      return "cloud";
-    }
-  }
+// Plaza structures layered over the generated island. Returns a kind, null
+// for carved air, or undefined to keep the terrain underneath.
+function plazaBlock(ix, iy, iz) {
+  if (iy < 0 || iy > 18) return undefined;
 
   if (inRect(ix, iz, -3, -20, 4, -13) && iy <= 10) {
     if (iy === 0) return "ink";
@@ -424,50 +408,41 @@ function blockAt(x, y, z) {
     return null;
   }
 
-  const gh = groundH(ix, iz);
-
-  if (iy <= gh) {
-    if (iy === gh) {
-      if (inRect(ix, iz, -20, -12, 24, 16)) {
-        if (iz <= 2 && iz >= -12) return (ix + iz) % 2 === 0 ? "stone" : "cobble";
-        if (Math.abs(ix) <= 1) return "cobble";
-        if (iz >= 2 && iz <= 16 && Math.abs(ix) <= 2) return "cobble";
-        if (iz >= 6 && iz <= 12 && (ix <= -13 || ix >= 13)) return "dirt";
-      }
-      if ((ix + iz) % 6 === 0 && inRect(ix, iz, -16, -12, 17, 3)) return "gold";
-      return hash(ix, iz) > 0.82 ? "grassDark" : "grass";
+  if (iy === 0) {
+    if (inRect(ix, iz, -20, -12, 24, 16)) {
+      if (iz <= 2 && iz >= -12) return (ix + iz) % 2 === 0 ? "stone" : "cobble";
+      if (Math.abs(ix) <= 1) return "cobble";
+      if (iz >= 2 && iz <= 16 && Math.abs(ix) <= 2) return "cobble";
+      if (iz >= 6 && iz <= 12 && (ix <= -13 || ix >= 13)) return "path";
     }
-    if (iy === gh - 1) return "dirt";
-    return "stone";
+    if ((ix + iz) % 6 === 0 && inRect(ix, iz, -16, -12, 17, 3)) return "gold";
+    if (inRect(ix, iz, 7, 17, 9, 26) || inRect(ix, iz, -1, -26, 2, -21)) return "path";
+    return undefined;
   }
 
   if (iy === 1 && ix % 6 === 0 && (ix + iz) % 6 === 0 && inRect(ix, iz, -16, -12, 17, 3) && !boothAt(ix, iz) && !pageAt(ix, iz)) {
     return "gold";
   }
 
-  if (treeHere(ix, iz)) {
-    if (iy > gh && iy <= gh + 4) return "wood";
-  }
+  return undefined;
+}
 
-  if (iy >= gh + 3 && iy <= gh + 6) {
-    for (let dx = -2; dx <= 2; dx += 1) {
-      for (let dz = -2; dz <= 2; dz += 1) {
-        if (!treeHere(ix + dx, iz + dz)) continue;
-        const crown = Math.abs(dx) + Math.abs(dz);
-        if (iy === gh + 6 && crown > 1) continue;
-        if (iy === gh + 3 && crown > 2) continue;
-        if (dx === 0 && dz === 0 && iy <= gh + 4) continue;
-        return "leaf";
-      }
-    }
-  }
+let GRID = null;
 
-  return null;
+function blockAt(x, y, z) {
+  return GRID ? GRID.kind(Math.floor(x), Math.floor(y), Math.floor(z)) : null;
 }
 
 function solidAt(x, y, z) {
-  const kind = blockAt(x, y, z);
-  return Boolean(kind) && kind !== "water" && kind !== "cloud" && kind !== "glass" && kind !== "portal";
+  if (!GRID) return false;
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  if (ix < GRID.x0 || iz < GRID.z0 || ix >= GRID.x0 + GRID.sx || iz >= GRID.z0 + GRID.sz) return false;
+  return GRID.solid(ix, Math.floor(y), iz);
+}
+
+function groundH(ix, iz) {
+  return GRID ? Math.max(GRID.surface(ix, iz), -12) : 0;
 }
 
 function colorFor(kind) {
@@ -771,43 +746,33 @@ function makeInstaplaySign(x = BANNER.x, y = BANNER.y, z = BANNER.z, scaleX = BA
   return group;
 }
 
-function buildWorld(scene) {
-  const groups = {};
-  for (const key of Object.keys(PALETTE)) groups[key] = { positions: [] };
-
+function buildWorld(scene, renderer, shared, quality) {
+  const t0 = performance.now();
   const half = WORLD.size / 2;
-  for (let x = -half; x < half; x += 1) {
-    for (let z = -half; z < half; z += 1) {
-      const gh = groundH(x + 0.5, z + 0.5);
-      const yMax = Math.min(24, Math.max(gh + 7, 11));
-      for (let y = 0; y <= yMax; y += 1) {
-        const kind = blockAt(x + 0.5, y + 0.5, z + 0.5);
-        if (!kind || !groups[kind]) continue;
-        groups[kind].positions.push(x + 0.5, y + 0.5, z + 0.5);
-      }
-    }
-  }
+  GRID = new VoxelGrid(-half, WORLD.yMin, -half, WORLD.size, WORLD.yMax - WORLD.yMin, WORLD.size);
+  const { features, foliage } = generateTerrain(GRID, { plaza: plazaBlock });
+  const t1 = performance.now();
 
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  for (const [kind, data] of Object.entries(groups)) {
-    const count = data.positions.length / 3;
-    if (!count) continue;
-    const mat = new THREE.MeshLambertMaterial({
-      map: blockTexture(kind),
-      transparent: kind === "glass" || kind === "water" || kind === "portal",
-      opacity: kind === "glass" ? 0.55 : kind === "water" ? 0.78 : kind === "portal" ? 0.72 : 1,
-      depthWrite: kind !== "glass" && kind !== "portal",
-    });
-    const mesh = new THREE.InstancedMesh(geo, mat, count);
-    mesh.receiveShadow = true;
-    const dummy = new THREE.Object3D();
-    for (let i = 0; i < count; i += 1) {
-      dummy.position.set(data.positions[i * 3], data.positions[i * 3 + 1], data.positions[i * 3 + 2]);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-    scene.add(mesh);
-  }
+  const tiles = buildTileArray(renderer);
+  const voxelMat = voxelMaterial(tiles, shared);
+  const glassMat = voxelMaterial(tiles, shared, { transparent: true });
+  const voxels = buildChunks(GRID, voxelMat, glassMat, { shadows: quality.shadows });
+  scene.add(voxels);
+  const t2 = performance.now();
+
+  const plants = makeFoliage(quality.lite ? foliage.filter((_, i) => i % 3 === 0) : foliage, tiles, shared);
+  scene.add(plants);
+
+  const heightTex = makeHeightTexture(GRID);
+  world.stats = {
+    gen: Math.round(t1 - t0),
+    mesh: Math.round(t2 - t1),
+    faces: voxels.userData.faces,
+    plants: foliage.length,
+  };
+  world.features = features;
+  world.tiles = tiles;
+  world.heightTex = heightTex;
 
   scene.add(makeInstaplaySign());
   for (const booth of BOOTHS) {
@@ -872,383 +837,35 @@ function addBox(parent, kind, x, y, z, sx, sy, sz, extra = {}) {
   return mesh;
 }
 
-function addPivot(parent, x, y, z) {
-  const g = new THREE.Group();
-  g.position.set(x, y, z);
-  parent.add(g);
-  return g;
-}
-
-// Four-sided points keep ears, horns, and spines in the world's angular style.
-function addSpike(parent, kind, start, end, radius, glow = 0) {
-  const a = new THREE.Vector3(...start);
-  const b = new THREE.Vector3(...end);
-  const direction = b.clone().sub(a);
-  const mesh = new THREE.Mesh(
-    new THREE.ConeGeometry(radius, direction.length(), 4),
-    new THREE.MeshLambertMaterial({ color: colorFor(kind), emissive: colorFor(kind), emissiveIntensity: glow })
-  );
-  mesh.position.copy(a.add(b).multiplyScalar(0.5));
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-  parent.add(mesh);
-  return mesh;
-}
-
-const CAT_FUR_GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
-const catFurMaterials = new Map();
-
-// Batch the coat's small, overlapping tufts into one draw call per color/joint.
-function addCatFluff(parent, kind, tufts) {
-  if (!catFurMaterials.has(kind)) {
-    catFurMaterials.set(kind, new THREE.MeshLambertMaterial({ map: blockTexture(kind) }));
-  }
-  const fur = new THREE.InstancedMesh(CAT_FUR_GEOMETRY, catFurMaterials.get(kind), tufts.length);
-  const tuft = new THREE.Object3D();
-  tufts.forEach(([x, y, z, sx, sy, sz, rz = 0], i) => {
-    tuft.position.set(x, y, z);
-    tuft.scale.set(sx, sy, sz);
-    tuft.rotation.set(0, 0, rz);
-    tuft.updateMatrix();
-    fur.setMatrixAt(i, tuft.matrix);
-  });
-  fur.instanceMatrix.needsUpdate = true;
-  fur.computeBoundingSphere();
-  parent.add(fur);
-}
-
-function addCatLeg(parent, kind, sock, x, y, z) {
-  const hip = addPivot(parent, x, y, z);
-  addBox(hip, kind, 0, -0.055, 0, 0.18, 0.17, 0.18);
-  addBox(hip, sock || kind, 0, -0.155, 0.025, 0.19, 0.09, 0.21);
-  return hip;
-}
-
-function addCat(root, look) {
-  const body = look.body;
-  const trim = look.trim;
-  const belly = look.belly;
-  const muzzle = look.muzzle;
-  const sock = look.sock || belly;
-  const mark = look.mark || [];
-  const torso = addPivot(root, 0, 0.32, 0);
-  addBox(torso, body, 0, 0, 0, 0.48, 0.34, 0.62);
-  addBox(torso, body, 0, 0.015, -0.08, 0.54, 0.29, 0.42);
-  addBox(torso, body, 0, 0.16, -0.04, 0.4, 0.16, 0.54);
-  addBox(torso, belly, 0, -0.145, 0.03, 0.38, 0.12, 0.5);
-  addBox(torso, belly, 0, 0.025, 0.29, 0.36, 0.32, 0.16);
-  const coatTufts = [];
-  for (const side of [-1, 1]) {
-    for (const [i, z] of [-0.23, -0.05, 0.13].entries()) {
-      coatTufts.push([side * 0.26, -0.075, z, 0.15, 0.2 - i * 0.015, 0.18, side * 0.18]);
-    }
-    coatTufts.push([side * 0.23, 0.1, 0.2, 0.17, 0.18, 0.2, side * -0.15]);
-    coatTufts.push([side * 0.18, 0.17, -0.2, 0.16, 0.16, 0.22, side * 0.12]);
-  }
-  addCatFluff(torso, body, coatTufts);
-  addCatFluff(torso, belly, [
-    [-0.15, -0.025, 0.33, 0.16, 0.24, 0.14, -0.2],
-    [0.15, -0.025, 0.33, 0.16, 0.24, 0.14, 0.2],
-    [0, -0.11, 0.35, 0.18, 0.19, 0.14],
-  ]);
-
-  const head = addPivot(torso, 0, 0.12, 0.32);
-  addBox(head, body, 0, 0.04, 0.06, 0.46, 0.36, 0.36);
-  addBox(head, body, 0, 0, 0.08, 0.52, 0.26, 0.32);
-  addCatFluff(head, body, [-1, 1].flatMap((side) => [
-    [side * 0.245, -0.03, 0.115, 0.17, 0.22, 0.22, side * 0.12],
-    [side * 0.305, -0.055, 0.08, 0.13, 0.14, 0.19, side * 0.3],
-    [side * 0.21, -0.13, 0.06, 0.14, 0.15, 0.22, side * -0.18],
-  ]));
-  addCatFluff(head, muzzle, [
-    [-0.08, -0.13, 0.205, 0.15, 0.13, 0.13, -0.12],
-    [0.08, -0.13, 0.205, 0.15, 0.13, 0.13, 0.12],
-  ]);
-  const eyes = [];
-  const ears = [];
-  for (const side of [-1, 1]) {
-    addBox(head, muzzle, side * 0.062, -0.065, 0.252, 0.13, 0.095, 0.09);
-    const eye = addPivot(head, side * 0.112, 0.068, 0.247);
-    addBox(eye, look.eye || "lime", 0, 0, 0, 0.09, 0.105, 0.022, { solid: true });
-    addBox(eye, "black", 0, 0, 0.015, 0.063, 0.085, 0.012, { solid: true });
-    addBox(eye, "white", -0.015, 0.025, 0.024, 0.025, 0.025, 0.01, { solid: true, glow: 0.3, emissive: 0xffffff });
-    eyes.push(eye);
-    const ear = addPivot(head, side * 0.15, 0.2, 0.015);
-    addSpike(ear, trim, [0, 0, 0], [side * 0.03, 0.22, -0.02], 0.105);
-    addSpike(ear, look.inner || "pink", [0, 0.015, 0.054], [side * 0.02, 0.165, 0.018], 0.055);
-    addCatFluff(ear, trim, [
-      [side * 0.025, 0.195, -0.018, 0.035, 0.13, 0.045, side * -0.16],
-      [side * 0.075, 0.045, -0.005, 0.07, 0.1, 0.08, side * -0.25],
-    ]);
-    ears.push(ear);
-    for (const row of [-1, 1]) {
-      addBox(head, "cream", side * 0.205, -0.055 + row * 0.024, 0.29, 0.15, 0.009, 0.009, { rz: side * row * 0.14, solid: true });
-    }
-    addBox(head, "black", side * 0.02, -0.1, 0.303, 0.035, 0.012, 0.009, { rz: side * 0.3, solid: true });
-  }
-  addBox(head, look.nose || "pink", 0, -0.042, 0.31, 0.044, 0.03, 0.027, { solid: true });
-
-  const legs = [
-    addCatLeg(torso, look.leg || body, sock, -0.125, -0.1, 0.2),
-    addCatLeg(torso, look.leg || body, sock, 0.125, -0.1, 0.2),
-    addCatLeg(torso, look.leg || body, sock, -0.125, -0.1, -0.2),
-    addCatLeg(torso, look.leg || body, sock, 0.125, -0.1, -0.2),
-  ];
-
-  const tail = addPivot(torso, 0, 0.075, -0.3);
-  const tailColor = look.tail || body;
-  const tipColor = look.tailTip || tailColor;
-  addBox(tail, tailColor, 0, 0, -0.14, 0.18, 0.18, 0.3);
-  const tailMid = addPivot(tail, 0, 0, -0.28);
-  addBox(tailMid, tailColor, 0, 0, -0.1, 0.24, 0.23, 0.25);
-  addCatFluff(tailMid, tailColor, [
-    [-0.115, 0, -0.09, 0.1, 0.17, 0.19, -0.18],
-    [0.115, 0, -0.09, 0.1, 0.17, 0.19, 0.18],
-    [0, 0.1, -0.08, 0.18, 0.1, 0.18],
-    [0, -0.1, -0.12, 0.18, 0.1, 0.18],
-  ]);
-  const tailTip = addPivot(tailMid, 0, 0, -0.2);
-  addBox(tailTip, tipColor, 0, 0, -0.06, 0.19, 0.18, 0.18);
-  addCatFluff(tailTip, tipColor, [
-    [0, 0.01, -0.155, 0.13, 0.13, 0.09],
-    [0, 0.015, -0.205, 0.075, 0.075, 0.065],
-  ]);
-  tail.rotation.x = 0.95;
-  tailTip.rotation.x = 0.6;
-
-  for (const m of mark) {
-    const side = Math.abs(m.x) > 0.04;
-    addBox(
-      torso,
-      m.kind,
-      side ? Math.sign(m.x) * 0.277 : m.x,
-      side ? m.y : Math.max(m.y, 0.248),
-      THREE.MathUtils.clamp(m.z, -0.22, 0.22),
-      side ? Math.min(m.sx, 0.05) : m.sx,
-      m.sy,
-      m.sz,
-      { layer: 1 }
-    );
-  }
-  return { torso, head, eyes, ears, legs, tail, tailMid, tailTip };
-}
-
-function blackOr(look) {
-  return look.pupil || "black";
-}
-
-function pinkOr(look) {
-  return look.inner || "pink";
-}
-
-function whiteOr(look) {
-  return look.shine || "white";
-}
-
-function addFire(root, glow) {
-  const fire = new THREE.Group();
-  fire.position.set(0, 0.02, 1.18);
-  fire.visible = false;
-  const kinds = [glow, "orange", "gold", glow];
-  for (let i = 0; i < 5; i += 1) {
-    const kind = kinds[i % kinds.length];
-    const puff = addBox(fire, kind, 0, 0, 0.18 + i * 0.3, 0.1 + i * 0.05, 0.1 + i * 0.04, 0.22, {
-      glow: 1.15 - i * 0.14,
-      emissive: colorFor(kind),
-    });
-    puff.userData.phase = i;
-  }
-  root.add(fire);
-  return fire;
-}
-
-function addDragonLeg(root, look, x, y, z, hind) {
-  const hip = addPivot(root, x, y, z);
-  addBox(hip, look.body, 0, -0.18, 0.02, hind ? 0.2 : 0.18, hind ? 0.42 : 0.36, hind ? 0.22 : 0.18);
-  const knee = addPivot(hip, 0, hind ? -0.38 : -0.32, 0.02);
-  addBox(knee, look.trim, 0, -0.22, 0.04, hind ? 0.16 : 0.14, hind ? 0.46 : 0.4, hind ? 0.16 : 0.14);
-  const foot = addPivot(knee, 0, hind ? -0.44 : -0.38, 0.04);
-  addBox(foot, look.trim, 0, -0.04, 0.14, hind ? 0.22 : 0.2, 0.08, hind ? 0.32 : 0.28);
-  addBox(foot, look.glow, -0.07, -0.05, 0.28, 0.05, 0.04, 0.1, { glow: 0.55, emissive: colorFor(look.glow) });
-  addBox(foot, look.glow, 0.07, -0.05, 0.28, 0.05, 0.04, 0.1, { glow: 0.55, emissive: colorFor(look.glow) });
-  addBox(foot, look.glow, 0, -0.05, 0.32, 0.05, 0.04, 0.12, { glow: 0.7, emissive: colorFor(look.glow) });
-  return { hip, knee, foot };
-}
-
-function addDragonWing(root, look, side) {
-  const s = side < 0 ? -1 : 1;
-  const wing = addPivot(root, 0.42 * s, 0.48, 0.35);
-  // A swept leading edge and scalloped trailing edge read clearly from below.
-  const outline = [[0, 0], [0.95, 0.58], [2.85, -0.16], [2.08, -0.55], [1.66, -1.42], [1.06, -0.96], [0.66, -1.5], [0.3, -0.88], [0, -0.65]];
-  const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x * s, z)));
-  const geometry = new THREE.ShapeGeometry(shape);
-  geometry.rotateX(Math.PI / 2);
-  const membrane = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-    color: colorFor(look.wing),
-    emissive: colorFor(look.glow),
-    emissiveIntensity: 0.14,
-    side: THREE.DoubleSide,
-  }));
-  wing.add(membrane);
-  const knuckle = [0.95 * s, 0.025, 0.58];
-  for (const tip of [[0, 0, 0], [2.85 * s, 0, -0.16], [1.66 * s, 0, -1.42], [0.66 * s, 0, -1.5]]) {
-    const a = new THREE.Vector3(...knuckle);
-    const b = new THREE.Vector3(...tip);
-    const direction = b.clone().sub(a);
-    const rib = addBox(wing, look.body, 0, 0, 0, 0.075, direction.length(), 0.075, { solid: true });
-    rib.position.copy(a.add(b).multiplyScalar(0.5));
-    rib.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-  }
-  addSpike(wing, look.trim, knuckle, [1.02 * s, 0.16, 0.94], 0.12);
-  addSpike(wing, look.glow, [2.4 * s, 0.015, 0.02], [3.02 * s, 0.015, -0.23], 0.065, 0.55);
-  return wing;
-}
-
-function addDragon(root, look) {
-  const body = look.body;
-  const trim = look.trim;
-  const glow = look.glow;
-  const under = bellyOr(look);
-  addBox(root, body, 0, 0.28, 0.34, 0.94, 0.62, 1.16);
-  addBox(root, body, 0, 0.25, -0.48, 0.68, 0.48, 0.94);
-  for (let i = 0; i < 5; i += 1) {
-    addBox(root, under, 0, -0.015, 0.73 - i * 0.3, 0.55 - i * 0.035, 0.13, 0.24);
-    addSpike(root, i % 2 ? trim : glow, [0, 0.57 - i * 0.02, 0.65 - i * 0.34], [0, 1.02 - i * 0.07, 0.43 - i * 0.34], 0.13 - i * 0.012, i % 2 ? 0 : 0.4);
-  }
-  addBox(root, glow, 0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
-  addBox(root, glow, -0.4, 0.22, 0.22, 0.08, 0.08, 0.7, { glow: 0.35, emissive: colorFor(glow) });
-
-  const head = addPivot(root, 0, 0.38, 1.08);
-  addBox(head, body, 0, 0.08, 0.18, 0.42, 0.34, 0.58);
-  addBox(head, body, 0, 0.16, 0.61, 0.58, 0.36, 0.58);
-  addBox(head, body, 0, 0.06, 0.98, 0.38, 0.19, 0.48);
-  addBox(head, look.jaw || trim, 0, -0.105, 0.93, 0.34, 0.09, 0.5);
-  addBox(head, glow, 0, -0.044, 1.07, 0.28, 0.035, 0.28, { solid: true, glow: 0.85, emissive: colorFor(glow) });
-  for (const side of [-1, 1]) {
-    addBox(head, amberOr(look), side * 0.21, 0.205, 0.914, 0.13, 0.065, 0.03, { solid: true, glow: 1, emissive: colorFor(glow) });
-    addBox(head, blackOr(look), side * 0.21, 0.205, 0.936, 0.025, 0.062, 0.014, { solid: true });
-    addBox(head, trim, side * 0.21, 0.26, 0.895, 0.21, 0.055, 0.12, { rz: side * 0.2 });
-    addBox(head, "black", side * 0.105, 0.125, 1.22, 0.065, 0.03, 0.018, { solid: true });
-    addSpike(head, trim, [side * 0.22, 0.28, 0.45], [side * 0.44, 0.85, -0.15], 0.16);
-    addSpike(head, glow, [side * 0.39, 0.72, -0.02], [side * 0.5, 0.98, -0.32], 0.065, 0.65);
-    addSpike(head, trim, [side * 0.27, 0.05, 0.54], [side * 0.52, 0.14, 0.12], 0.13);
-    for (const z of [0.85, 1.12]) addSpike(head, whiteOr(look), [side * 0.15, -0.015, z], [side * 0.15, -0.14, z + 0.025], 0.035);
-  }
-
-  const legs = [
-    addDragonLeg(root, look, -0.34, 0.08, 0.52, false),
-    addDragonLeg(root, look, 0.34, 0.08, 0.52, false),
-    addDragonLeg(root, look, -0.32, 0.1, -0.52, true),
-    addDragonLeg(root, look, 0.32, 0.1, -0.52, true),
-  ];
-
-  const tail = addPivot(root, 0, 0.28, -0.96);
-  addBox(tail, body, 0, 0.02, -0.32, 0.28, 0.22, 0.7);
-  addSpike(tail, trim, [0, 0.12, -0.2], [0, 0.43, -0.42], 0.1);
-  const tailMid = addPivot(tail, 0, 0.02, -0.68);
-  addBox(tailMid, body, 0, 0, -0.28, 0.2, 0.16, 0.56);
-  addSpike(tailMid, trim, [0, 0.08, -0.2], [0, 0.31, -0.38], 0.08);
-  const tailTip = addPivot(tailMid, 0, 0, -0.56);
-  addBox(tailTip, trim, 0, 0.02, -0.22, 0.16, 0.12, 0.46);
-  addSpike(tailTip, glow, [0, 0.02, -0.38], [0, 0.02, -0.95], 0.22, 0.65);
-
-  const left = addDragonWing(root, look, -1);
-  const right = addDragonWing(root, look, 1);
-  return {
-    wings: [left, right],
-    head,
-    tail,
-    tailMid,
-    tailTip,
-    legs: legs.map((leg) => leg.hip),
-    knees: legs.map((leg) => leg.knee),
-    feet: legs.map((leg) => leg.foot),
-    fire: addFire(head, glow),
-  };
-}
-
-function amberOr(look) {
-  return look.eye || "amber";
-}
-
-function bellyOr(look) {
-  return look.under || look.trim;
-}
+let critterMaterial = null;
 
 function makeCritter(scene, spec) {
   const root = new THREE.Group();
   let parts = { wings: null, tail: null, legs: [] };
-  const cats = {
-    tuxedo: {
-      body: "black", trim: "black", belly: "white", muzzle: "white", sock: "white", eye: "lime", tailTip: "white",
-      mark: [
-        { kind: "white", x: -0.07, y: 0.12, z: 0.08, sx: 0.08, sy: 0.04, sz: 0.08 },
-        { kind: "white", x: 0.07, y: 0.12, z: 0.02, sx: 0.08, sy: 0.04, sz: 0.08 },
-      ],
-    },
-    tabby: {
-      body: "orange", trim: "wood", belly: "cream", muzzle: "cream", sock: "cream", eye: "lime", tail: "orange",
-      mark: [
-        { kind: "wood", x: 0, y: 0.12, z: 0.04, sx: 0.06, sy: 0.03, sz: 0.4 },
-        { kind: "wood", x: 0, y: 0.14, z: 0.42, sx: 0.1, sy: 0.03, sz: 0.08 },
-      ],
-    },
-    calico: {
-      body: "cream", trim: "orange", belly: "white", muzzle: "white", sock: "white", eye: "lime",
-      mark: [
-        { kind: "orange", x: -0.1, y: 0.04, z: 0.1, sx: 0.1, sy: 0.1, sz: 0.16 },
-        { kind: "black", x: 0.1, y: 0.02, z: -0.14, sx: 0.1, sy: 0.1, sz: 0.14 },
-      ],
-    },
-    siamese: {
-      body: "cream", trim: "wood", belly: "white", muzzle: "wood", sock: "wood", eye: "blue", tail: "wood", tailTip: "wood", leg: "cream",
-    },
-    void: {
-      body: "black", trim: "black", belly: "ink", muzzle: "black", sock: "ink", eye: "lime",
-    },
-    cream: {
-      body: "cream", trim: "gold", belly: "white", muzzle: "white", sock: "white", eye: "lime",
-    },
-    gray: {
-      body: "stone", trim: "stoneDark", belly: "cream", muzzle: "cream", sock: "cream", eye: "lime",
-    },
-    cow: {
-      body: "white", trim: "black", belly: "white", muzzle: "white", sock: "white", eye: "lime", tailTip: "black",
-      mark: [
-        { kind: "black", x: -0.08, y: 0.04, z: 0.1, sx: 0.12, sy: 0.1, sz: 0.16 },
-        { kind: "black", x: 0.1, y: 0.02, z: -0.16, sx: 0.12, sy: 0.1, sz: 0.14 },
-      ],
-    },
-    ginger: {
-      body: "gold", trim: "orange", belly: "cream", muzzle: "cream", sock: "cream", eye: "lime",
-    },
-    spot: {
-      body: "white", trim: "black", belly: "white", muzzle: "white", sock: "white", eye: "lime",
-      mark: [
-        { kind: "black", x: -0.08, y: 0.04, z: 0.04, sx: 0.1, sy: 0.08, sz: 0.12 },
-        { kind: "black", x: 0.1, y: 0.02, z: -0.12, sx: 0.08, sy: 0.08, sz: 0.1 },
-      ],
-    },
-  };
-  const dragons = {
-    ember: { body: "red", trim: "gold", wing: "orange", membrane: "emberGlow", glow: "emberGlow", eye: "amber", jaw: "ink", under: "gold" },
-    frost: { body: "cyan", trim: "white", wing: "cloud", membrane: "frostGlow", glow: "frostGlow", eye: "white", jaw: "blue", under: "cloud" },
-    night: { body: "obsidian", trim: "portal", wing: "ink", membrane: "nightGlow", glow: "nightGlow", eye: "portal", jaw: "black", under: "ink" },
-    jade: { body: "leaf", trim: "gold", wing: "grassDark", membrane: "jadeGlow", glow: "jadeGlow", eye: "amber", jaw: "wood", under: "gold" },
-  };
-  if (cats[spec.id]) {
-    parts = addCat(root, cats[spec.id]);
-  } else if (dragons[spec.id]) {
-    parts = addDragon(root, dragons[spec.id]);
+  if (spec.kitten) {
+    // Kittens: mom's coat, smaller, with an even bigger head.
+    parts = buildCat(root, CAT_LOOKS[spec.kitten], critterMaterial);
+    root.scale.setScalar(0.56);
+    parts.head.scale.setScalar(1.2);
+  } else if (CAT_LOOKS[spec.id]) {
+    parts = buildCat(root, CAT_LOOKS[spec.id], critterMaterial);
+  } else if (DRAGON_LOOKS[spec.id]) {
+    parts = buildDragon(root, DRAGON_LOOKS[spec.id], critterMaterial);
+    root.rotation.order = "YXZ";
   } else {
-    parts = addCat(root, cats.void);
+    parts = buildCat(root, CAT_LOOKS.void, critterMaterial);
   }
   const sky = Boolean(spec.sky);
-  const baseY = sky ? 10.6 + hash(spec.x, spec.z) * 2.8 : 1.02;
+  const baseY = sky ? 15 + hash(spec.x, spec.z) * 7 : 1.02;
   root.position.set(spec.x, baseY, spec.z);
   root.userData = {
-    id: spec.id,
+    id: spec.kitten ? `${spec.kitten} kitten` : spec.id,
+    kitten: spec.kitten || null,
+    slot: spec.slot || 0,
+    kittenOf: null,
+    emoteT: hash(spec.z, spec.x) * 1.5,
     heading: hash(spec.x, spec.z) * Math.PI * 2,
-    speed: sky ? 3.8 : 0.95,
+    speed: sky ? 7 : 0.95,
     timer: 1 + hash(spec.z, spec.x) * 2,
     sky,
     hop: !sky && (spec.id === "spot" || spec.id === "cream"),
@@ -1262,7 +879,14 @@ function makeCritter(scene, spec) {
     attention: 0,
     gait: hash(spec.x, spec.z) * Math.PI * 2,
     blinkOffset: hash(spec.x, spec.z) * 4.8,
-    walkSpeed: sky ? 3.8 : 0.95,
+    walkSpeed: sky ? 7 : 0.95,
+    look: DRAGON_LOOKS[spec.id] || null,
+    neck: parts.neck || null,
+    jaw: parts.jaw || null,
+    mouth: parts.mouth || null,
+    bank: 0,
+    prevHeading: null,
+    climb: 0,
     wings: parts.wings || null,
     torso: parts.torso || null,
     head: parts.head || null,
@@ -1274,7 +898,6 @@ function makeCritter(scene, spec) {
     legs: parts.legs || [],
     knees: parts.knees || [],
     feet: parts.feet || [],
-    fire: parts.fire || null,
   };
   scene.add(root);
   return root;
@@ -1282,7 +905,7 @@ function makeCritter(scene, spec) {
 
 function roamOk(x, z, mode = "walk", y = null, allowBanner = false) {
   if (mode === "sky") {
-    if (x <= -42 || x >= 42 || z <= -32 || z >= 32) return false;
+    if (Math.hypot(x, z - 4) > 112) return false;
     if (!allowBanner && y != null && hitsBanner(x, y, z)) return false;
     return true;
   }
@@ -1489,11 +1112,11 @@ function poseDragon(critter, now, dt, sit) {
   const feet = data.feet || [];
   const flap = Math.sin(now / 180 + data.heading);
   // +Z faces the head; positive hip pitch tucks the legs back toward the tail.
-  const flyHipX = [1.05 + flap * 0.08, 1.05 + flap * 0.08, 1.28 + flap * 0.06, 1.28 + flap * 0.06];
+  const flyHipX = [1.25 + flap * 0.08, 1.25 + flap * 0.08, 1.4 + flap * 0.06, 1.4 + flap * 0.06];
   const sitHipX = [0.22, 0.22, 0.98, 0.98];
   const flyHipZ = [-0.08, 0.08, -0.1, 0.1];
   const sitHipZ = [-0.06, 0.06, -0.18, 0.18];
-  const flyKneeX = [-0.85, -0.85, -1.02, -1.02];
+  const flyKneeX = [-0.6, -0.6, -0.9, -0.9];
   const sitKneeX = [0.28, 0.28, -0.78, -0.78];
   for (const [i, leg] of legs.entries()) {
     if (!leg) continue;
@@ -1506,9 +1129,15 @@ function poseDragon(critter, now, dt, sit) {
       feet[i].rotation.x = toePitch - leg.rotation.x - knees[i].rotation.x;
     }
   }
+  if (data.neck) {
+    // Neck stretches forward in flight and rises proudly when perched.
+    const neckX = THREE.MathUtils.lerp(0.42 + Math.sin(now / 700 + data.heading) * 0.05, -0.12 + Math.sin(now / 1500 + data.baseY) * 0.06, sit);
+    data.neck.rotation.x += (neckX - data.neck.rotation.x) * blend;
+    data.neck.rotation.y += ((sit ? Math.sin(now / 1900 + data.baseY) * 0.25 : 0) - data.neck.rotation.y) * blend;
+  }
   if (data.head) {
     const lookY = sit ? Math.sin(now / 1100 + data.baseY) * 0.32 + Math.sin(now / 2400 + data.heading) * 0.12 : 0;
-    const lookX = sit ? -0.06 + Math.sin(now / 900 + data.baseY) * 0.1 : Math.sin(now / 640 + data.heading) * 0.05;
+    const lookX = sit ? 0.18 + Math.sin(now / 900 + data.baseY) * 0.1 : -0.3 + Math.sin(now / 640 + data.heading) * 0.05;
     data.head.rotation.x += (lookX - data.head.rotation.x) * blend;
     data.head.rotation.y += (lookY - data.head.rotation.y) * blend;
   }
@@ -1551,20 +1180,24 @@ function poseCat(critter, now, dt) {
   ];
 
   if (data.mood === "sit" || data.mood === "regal") {
-    torsoX = data.mood === "regal" ? -0.02 : 0.02;
-    hips[0] = 0.12;
-    hips[1] = 0.12;
-    hips[2] = -1.18;
-    hips[3] = -1.18;
+    // Upright sit: chest raised, front legs straight, haunches folded.
+    torsoX = data.mood === "regal" ? -0.42 : -0.34;
+    hips[0] = -torsoX;
+    hips[1] = -torsoX;
+    hips[2] = -1.25;
+    hips[3] = -1.25;
     tail = data.mood === "regal"
       ? [{ x: 0.55, y: 0.15 }, { x: 0.35, y: 0.1 }, { x: 0.2, y: 0.05 }]
       : [{ x: 0.18, y: 0.08 }, { x: 0.12, y: 0.06 }, { x: 0.08, y: 0.04 }];
-    headX = data.mood === "regal" ? -0.04 : 0.02;
+    headX = (data.mood === "regal" ? 0.3 : 0.38) + Math.sin(now / 2200 + data.blinkOffset) * 0.06;
+    headZ = Math.sin(now / 3100 + data.blinkOffset * 2) * 0.12;
   } else if (data.mood === "loaf") {
-    hips[0] = 0.55;
-    hips[1] = 0.55;
-    hips[2] = -0.95;
-    hips[3] = -0.95;
+    // Paws tucked away, chin down: a sleepy bread loaf.
+    hips[0] = 1.35;
+    hips[1] = 1.35;
+    hips[2] = -1.35;
+    hips[3] = -1.35;
+    headX = 0.12 + Math.sin(now / 1600) * 0.03;
     tail = [{ x: 0.15, y: 0 }, { x: 0.1, y: 0 }, { x: 0.05, y: 0 }];
   } else if (data.mood === "knead") {
     const a = (Math.sin(now / 120) + 1) * 0.5;
@@ -1668,16 +1301,16 @@ function poseCat(critter, now, dt) {
   easeJoint(data.torso, torsoX, 0, torsoZ, blend);
   if (data.torso) {
     const sitLow = data.mood === "sit" || data.mood === "regal" || data.mood === "knead" || data.mood === "loaf" || data.mood === "pet" || data.mood === "browse" || data.mood === "guard";
-    const wantY = sitLow ? 0.23 : 0.32;
+    const wantY = data.mood === "loaf" ? CAT_POSE.loafY : sitLow ? CAT_POSE.sitY : CAT_POSE.standY;
     data.torso.position.y += (wantY - data.torso.position.y) * blend;
   }
   easeJoint(data.head, headX, headY, headZ, blend);
   const blinkPhase = (now / 1000 + data.blinkOffset) % 4.8;
-  const eyeOpen = blinkPhase < 0.16 ? 0.08 : data.mood === "pet" || data.mood === "nuzzle" ? 0.3 : 1;
+  const eyeOpen = blinkPhase < 0.16 ? 0.08 : data.mood === "loaf" ? 0.1 : data.mood === "pet" || data.mood === "nuzzle" ? 0.3 : 1;
   for (const eye of data.eyes) eye.scale.y += (eyeOpen - eye.scale.y) * Math.min(1, dt * 24);
   for (const [i, ear] of data.ears.entries()) {
     const twitch = Math.max(0, Math.sin(now / 680 + data.gait + i * 2)) ** 12;
-    easeJoint(ear, twitch * 0.12, 0, (i ? 1 : -1) * twitch * 0.18, blend);
+    easeJoint(ear, twitch * 0.12, 0, (i ? 1 : -1) * (twitch * 0.18 - 0.12), blend);
   }
   for (const [i, leg] of data.legs.entries()) {
     if (!leg) continue;
@@ -1718,8 +1351,21 @@ function pickCatMood(critter, cats, toys) {
   });
 }
 
-function sendToPerch(critter, slot = 0, hold = 10) {
-  const perch = bannerPerch(slot);
+function nestPerch() {
+  const nest = world.features?.peak;
+  if (!nest?.perchY) return null;
+  return { x: nest.x + 0.5, y: nest.perchY + 0.86, z: nest.z + 2.1, nest: true };
+}
+
+const DRAGON_TOUR = () => {
+  const f = world.features || {};
+  const spots = [{ x: 0, z: 6 }, { x: 0, z: 40 }, { x: -30, z: -10 }, { x: 30, z: 20 }];
+  for (const k of ["lighthouse", "torii", "windmill", "peak"]) if (f[k]) spots.push({ x: f[k].x, z: f[k].z });
+  return spots;
+};
+
+function sendToPerch(critter, slot = 0, hold = 10, spot = null) {
+  const perch = spot || bannerPerch(slot);
   critter.userData.mood = "perch";
   critter.userData.playWith = null;
   critter.userData.target = perch;
@@ -1746,6 +1392,12 @@ function greetPerch(dragons) {
 function pickDragonMood(critter, dragons) {
   const roll = hash(critter.position.x * 5, critter.position.z + critter.userData.timer);
   const perched = dragons.filter((other) => other !== critter && other.userData.mood === "perch");
+  const nest = nestPerch();
+  const nestTaken = dragons.some((other) => other !== critter && other.userData.mood === "perch" && other.userData.target?.nest);
+  if (roll < 0.1 && nest && !nestTaken) {
+    sendToPerch(critter, 0, 12 + roll * 30, nest);
+    return;
+  }
   if (roll < 0.22 && perched.length === 0) {
     sendToPerch(critter, Math.floor(roll * 20), 8.5 + roll * 4);
     return;
@@ -1765,6 +1417,17 @@ function pickDragonMood(critter, dragons) {
     critter.userData.moodT = 1.6 + roll;
     critter.userData.breath = critter.userData.moodT;
     critter.userData.speed = 2.4;
+    return;
+  }
+  if (roll < 0.88) {
+    // Sightseeing: glide out to a landmark and circle back.
+    const spots = DRAGON_TOUR();
+    const spot = spots[Math.floor(hash(roll * 31, critter.userData.baseY) * spots.length) % spots.length];
+    critter.userData.mood = "tour";
+    critter.userData.playWith = null;
+    critter.userData.target = { x: spot.x + (roll - 0.8) * 20, z: spot.z };
+    critter.userData.moodT = 22;
+    critter.userData.speed = 9;
     return;
   }
   critter.userData.mood = "wander";
@@ -1863,32 +1526,148 @@ function startWorld() {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const coarse = window.matchMedia("(pointer: coarse)").matches;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+  const params = new URLSearchParams(window.location.search);
+  const lite = coarse || params.has("lite");
+  const quality = {
+    lite,
+    shadows: !lite,
+    shadowSize: 2048,
+    bloom: !lite,
+  };
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, lite ? 1 : 1.25));
   const stage = canvas.parentElement;
-  renderer.setClearColor(0x78a7ff, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x78a7ff, 90, 210);
 
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.08, 260);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.08, 1200);
   camera.position.set(WORLD.spawn.x, WORLD.spawn.y, WORLD.spawn.z);
 
-  scene.add(new THREE.HemisphereLight(0x9ec8ff, 0x4a6b32, 0.95));
-  const sun = new THREE.DirectionalLight(0xfff3c4, 1.05);
-  sun.position.set(22, 34, 12);
-  scene.add(sun);
+  const timeParam = params.get("time");
+  const env = createEnvironment({
+    scene,
+    renderer,
+    camera,
+    quality,
+    startTime: timeParam != null ? Number(timeParam) : 0.14,
+  });
+  if (timeParam != null && params.has("freeze")) env.state.frozen = true;
 
-  buildWorld(scene);
+  buildWorld(scene, renderer, env.shared, quality);
+
+  const ocean = makeOcean(makeWaterMaterial(env.sky.uniforms, world.heightTex, GRID, SEA_Y), SEA_Y);
+  scene.add(ocean);
+  const pondMat = makeWaterMaterial(env.sky.uniforms, world.heightTex, GRID, 0.86);
+  const pond = new THREE.Mesh(new THREE.PlaneGeometry(7, 5), pondMat);
+  pond.rotation.x = -Math.PI / 2;
+  pond.position.set(20.5, 0.86, -18.5);
+  scene.add(pond);
+  const waters = [ocean.material, pondMat];
 
   const orbs = GAMES.map((_, i) => makeOrb(scene, i));
   const ball = makeBall(scene);
   const catToys = makeCatToys(scene);
+  critterMaterial = voxMaterial(env.shared);
   const critters = CRITTERS.map((spec) => makeCritter(scene, spec));
   const cats = critters.filter((c) => !c.userData.sky);
   const dragons = critters.filter((c) => c.userData.sky);
   greetPerch(dragons);
+  for (const kit of cats) {
+    if (kit.userData.kitten) kit.userData.kittenOf = cats.find((c) => c.userData.id === kit.userData.kitten) || null;
+  }
+  const emotes = makeEmotes(scene);
+  const fire = makeFire(scene, quality.lite ? 400 : 900);
+  fire.setSize(window.innerHeight * renderer.getPixelRatio());
+  const ambient = makeAmbient({ scene, features: world.features, groundH, shared: env.shared, material: critterMaterial, quality });
+  ambient.setSize(window.innerHeight * renderer.getPixelRatio());
+  const firePos = new THREE.Vector3();
+  const fireDir = new THREE.Vector3();
+  const adultCats = cats.filter((c) => !c.userData.kitten);
+  const kittens = cats.filter((c) => c.userData.kitten);
+  const KITTEN_PLAY = ["sit", "swat", "groom", "sit", "pounce", "roll", "loaf"];
+  const MOM_MOVING = new Set(["wander", "chase", "yarn", "scratch", "pounce", "circle", "nuzzle"]);
+  function updateKitten(kit, now, dt) {
+    const data = kit.userData;
+    const mom = data.kittenOf;
+    data.timer -= dt;
+    data.moodT -= dt;
+    if (data.mood === "pet" && data.moodT > 0) {
+      faceToward(kit, player.x, player.z);
+      if (Math.hypot(player.x - kit.position.x, player.z - kit.position.z) > 2.8) data.moodT = 0;
+    } else {
+      const aim = playPoint(mom, data.slot, 0.62);
+      const dist = Math.hypot(aim.x - kit.position.x, aim.z - kit.position.z);
+      if (dist > 5) {
+        kit.position.x = aim.x;
+        kit.position.z = aim.z;
+      } else if (dist > (MOM_MOVING.has(mom.userData.mood) ? 0.2 : 0.45)) {
+        data.mood = dist > 1.4 ? "chase" : "wander";
+        data.speed = Math.min(2.8, 0.7 + dist * 1.1);
+        stepToward(kit, aim.x, aim.z, dt, "walk");
+      } else {
+        if (data.timer <= 0 || data.mood === "wander" || data.mood === "chase") {
+          const napping = mom.userData.mood === "loaf" || mom.userData.mood === "sit";
+          const pick = napping && Math.random() < 0.5 ? "loaf" : KITTEN_PLAY[Math.floor(Math.random() * KITTEN_PLAY.length)];
+          data.mood = pick;
+          data.moodT = 3;
+          data.swatLeg = Math.random() < 0.5 ? 0 : 1;
+          data.timer = 2 + Math.random() * 3.5;
+        }
+        if (data.mood === "pounce" && data.moodT < 0.7) data.moodT = 3;
+        if (data.mood !== "loaf") faceToward(kit, mom.position.x, mom.position.z);
+      }
+    }
+    kit.rotation.y = data.heading;
+    const floor = groundY(kit.position.x, kit.position.z);
+    const hop = data.mood === "chase" || data.mood === "wander" ? Math.abs(Math.sin(data.gait)) * 0.05 : 0;
+    kit.position.y = floor + hop;
+    poseCat(kit, now, dt);
+  }
+  const headPos = new THREE.Vector3();
+  function emoteAbove(cat, kind, lift = 0.32, opts = {}) {
+    (cat.userData.head || cat).getWorldPosition(headPos);
+    emotes.spawn(kind, headPos.x, headPos.y + lift * cat.scale.y, headPos.z, opts);
+  }
+  if (params.has("dragondemo")) {
+    // Screenshot lineup: hovering, banking, fire-breathing and perched.
+    const spots = [
+      { x: -4, y: 6.5, z: 2, mood: "tour", heading: 0.6 },
+      { x: 4.5, y: 5.5, z: 3, mood: "breath", heading: -0.9 },
+      { x: 0, y: 1.9, z: -1, mood: "perch", heading: 0.15 },
+      { x: -1, y: 9.5, z: -6, mood: "tour", heading: 2.2, turn: 0.9 },
+    ];
+    dragons.forEach((d, i) => {
+      const spot = spots[i % spots.length];
+      d.position.set(spot.x, spot.y, spot.z);
+      d.userData.baseY = spot.y;
+      d.userData.heading = spot.heading;
+      d.userData.demo = spot.mood;
+      d.userData.demoTurn = spot.turn || 0;
+      d.userData.target = spot.mood === "perch" ? { x: spot.x, y: spot.y, z: spot.z } : null;
+    });
+  }
+  if (params.has("catdemo")) {
+    // Screenshot lineup: every coat in a different mood, facing the camera.
+    const moods = ["sit", "wander", "loaf", "pet", "regal", "knead", "sit", "groom", "wander", "stretch"];
+    const adults = cats.filter((c) => !c.userData.kitten);
+    const kits = cats.filter((c) => c.userData.kitten);
+    adults.forEach((cat, i) => {
+      cat.position.x = -1.75 + (i % 5) * 0.88;
+      cat.position.z = 10.2 - Math.floor(i / 5) * 1.1;
+      cat.userData.demo = moods[i % moods.length];
+      cat.userData.heading = 0;
+    });
+    const kitMoods = ["sit", "loaf", "pet", "wander", "swat"];
+    kits.forEach((cat, i) => {
+      cat.position.x = -1.3 + i * 0.68;
+      cat.position.z = 11.2;
+      cat.userData.demo = kitMoods[i % kitMoods.length];
+      cat.userData.kittenOf = null;
+      cat.userData.heading = 0;
+    });
+  }
   let ballVel = new THREE.Vector3();
   let ballLive = false;
 
@@ -1915,6 +1694,10 @@ function startWorld() {
   let last = performance.now();
   let arcadeOpen = false;
   let activeGame = 0;
+
+  // ?cam=x,y,z,yaw,pitch pins the camera for screenshots.
+  const camParam = new URLSearchParams(window.location.search).get("cam");
+  const debugCam = camParam ? camParam.split(",").map(Number) : null;
 
   const intro = $("#playIntro");
   const promptEl = $("#playPrompt");
@@ -1944,6 +1727,9 @@ function startWorld() {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
+    env.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
+    fire.setSize(h * renderer.getPixelRatio());
+    ambient.setSize(h * renderer.getPixelRatio());
   }
   window.addEventListener("resize", resize);
   resize();
@@ -2258,6 +2044,7 @@ function startWorld() {
     const extra = cat.userData.mood === "pet" ? 2.8 : 0;
     setCatMood(cat, "pet", { moodT: 6.4 + extra, attention: 6.4 + extra });
     faceToward(cat, player.x, player.z);
+    for (let i = 0; i < 3; i += 1) emoteAbove(cat, "heart", 0.3 + i * 0.08, { vy: 0.5 + i * 0.15, size: 0.22 });
     if (promptEl) promptEl.textContent = `petting ${cat.userData.id}`;
     return true;
   }
@@ -2376,6 +2163,27 @@ function startWorld() {
     }
   }
 
+  let camLag = 0;
+  let fpsFrames = 0;
+  let fpsStart = performance.now();
+  renderer.info.autoReset = false;
+  function frameStats(now) {
+    fpsFrames += 1;
+    if (now - fpsStart < 1000) return;
+    window.__playStats = {
+      ...world.stats,
+      fps: Math.round((fpsFrames * 1000) / (now - fpsStart)),
+      calls: renderer.info.render.calls,
+      tris: renderer.info.render.triangles,
+      time: Number(env.state.time.toFixed(3)),
+      x: Math.round(player.x),
+      z: Math.round(player.z),
+      y: Number(player.y.toFixed(2)),
+    };
+    fpsFrames = 0;
+    fpsStart = now;
+  }
+
   function tick(now) {
     const dt = Math.min(0.033, (now - last) / 1000);
     last = now;
@@ -2414,26 +2222,56 @@ function startWorld() {
     const cos = Math.cos(player.yaw);
     player.vx = (wishX * cos + wishZ * sin) * speed;
     player.vz = (-wishX * sin + wishZ * cos) * speed;
-    player.vy -= 22 * dt;
+    // Swimming: buoyant, slower, and Space paddles up.
+    const swimming = player.y < SEA_Y - 0.45;
+    if (swimming) {
+      player.vx *= 0.6;
+      player.vz *= 0.6;
+      // Float with eyes just above the surface; Space paddles up, C dives.
+      const lift = keys.has("Space") || touch.jump ? 6 : keys.has("KeyC") ? -6 : player.y < SEA_Y - 1.25 ? 3 : -1.5;
+      player.vy += lift * dt;
+      player.vy *= Math.exp(-dt * 2.5);
+      player.vy = Math.min(player.vy, 3.2);
+    } else {
+      player.vy -= 22 * dt;
+    }
     if (!arcadeOpen && keys.has("Space") && player.grounded) {
       player.vy = 8.2;
       player.grounded = false;
     }
 
+    const wasGrounded = player.grounded || swimming;
     const next = { x: player.x + player.vx * dt, y: player.y + player.vy * dt, z: player.z + player.vz * dt };
     player.grounded = false;
-    if (blockedAt(next.x, player.y, player.z)) next.x = player.x;
-    if (blockedAt(next.x, player.y, next.z)) next.z = player.z;
+    // Walk up single blocks without jumping, like stairs.
+    const stepUp = (nx, nz) => {
+      if (!wasGrounded) return false;
+      const up = Math.floor(player.y + 0.05) + 1;
+      if (up - player.y > 1.1 || blockedAt(nx, up, nz) || !feetSolid(nx, up - 0.05, nz)) return false;
+      camLag -= up - player.y;
+      player.y = up;
+      next.y = Math.max(next.y, up);
+      return true;
+    };
+    if (blockedAt(next.x, player.y, player.z) && !stepUp(next.x, player.z)) next.x = player.x;
+    if (blockedAt(next.x, player.y, next.z) && !stepUp(next.x, next.z)) next.z = player.z;
     resolveFloor(next);
     player.x = THREE.MathUtils.clamp(next.x, -WORLD.size / 2 + 1, WORLD.size / 2 - 1);
-    player.y = Math.max(0.2, next.y);
+    player.y = Math.max(WORLD.yMin + 2, next.y);
     player.z = THREE.MathUtils.clamp(next.z, -WORLD.size / 2 + 1, WORLD.size / 2 - 1);
     if (player.vy <= 0 && feetSolid(player.x, player.y - 0.08, player.z)) player.grounded = true;
+    camLag *= Math.exp(-dt * 14);
 
-    camera.position.set(player.x, player.y + 1.55, player.z);
+    const bob = swimming ? Math.sin(now / 420) * 0.06 : 0;
+    camera.position.set(player.x, player.y + 1.55 + camLag + bob, player.z);
     camera.rotation.order = "YXZ";
     camera.rotation.y = player.yaw;
     camera.rotation.x = player.pitch;
+    if (debugCam) {
+      camera.position.set(debugCam[0], debugCam[1], debugCam[2]);
+      camera.rotation.y = debugCam[3];
+      camera.rotation.x = debugCam[4];
+    }
 
     for (const orb of orbs) {
       orb.position.y = orb.userData.baseY + Math.sin(now / 420 + orb.userData.phase) * 0.12;
@@ -2456,6 +2294,37 @@ function startWorld() {
 
     for (const critter of critters) {
       const data = critter.userData;
+      if (!data.sky) {
+        // Floating emotes: hearts while petted, Zs while napping.
+        data.emoteT -= dt;
+        if (data.emoteT <= 0) {
+          if (data.mood === "pet") {
+            emoteAbove(critter, "heart");
+            data.emoteT = 0.55 + Math.random() * 0.3;
+          } else if (data.mood === "loaf") {
+            emoteAbove(critter, "z", 0.26, { vy: 0.28, vx: 0.05, size: 0.16, life: 2.4 });
+            data.emoteT = 1.3;
+          } else if (data.mood === "knead" || data.mood === "nuzzle") {
+            emoteAbove(critter, "heart", 0.3, { size: 0.15 });
+            data.emoteT = 1.6;
+          } else if (data.mood === "yarn" || data.mood === "pounce") {
+            emoteAbove(critter, "sparkle", 0.26, { size: 0.16, life: 0.9 });
+            data.emoteT = 1.1;
+          } else data.emoteT = 0.5;
+        }
+      }
+      if (data.demo && !data.sky) {
+        data.mood = data.demo;
+        data.moodT = 99;
+        critter.rotation.y = data.heading;
+        critter.position.y = groundY(critter.position.x, critter.position.z);
+        poseCat(critter, now, dt);
+        continue;
+      }
+      if (data.kittenOf) {
+        updateKitten(critter, now, dt);
+        continue;
+      }
       data.timer -= dt;
       data.moodT -= dt;
       if (data.moodT <= 0) {
@@ -2467,7 +2336,11 @@ function startWorld() {
       const pal = data.playWith;
       const toy = data.target;
       if (data.cool > 0) data.cool -= dt;
-      if (data.mood === "chase" && pal) {
+      if (data.demo) {
+        data.mood = data.demo;
+        data.moodT = 99;
+        data.heading += (data.demoTurn || 0) * dt;
+      } else if (data.mood === "chase" && pal) {
         const gap = data.sky ? 5.4 : 1.35;
         const side = data.sky ? 1.8 : 0.55;
         const aim = playPoint(pal, side, gap);
@@ -2492,6 +2365,9 @@ function startWorld() {
           faceToward(critter, look.x, look.z);
           if (data.mood === "browse" || data.mood === "guard") data.speed = 0;
         }
+      } else if (data.mood === "tour" && toy) {
+        stepToward(critter, toy.x, toy.z, dt, mode);
+        if (Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z) < 6) data.moodT = Math.min(data.moodT, 2.5);
       } else if (data.mood === "perch" && toy) {
         const dist = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z, toy.y - critter.position.y);
         const pull = Math.min(1, dt * (dist > 6 ? 1.6 : 3.4));
@@ -2552,9 +2428,15 @@ function startWorld() {
         const sit = perch ? THREE.MathUtils.clamp(1 - dist / 5.5, 0, 1) : 0;
         const landed = perch && dist < 0.55;
         const swoop = data.mood === "chase" || data.mood === "circle";
-        let wantY = data.baseY + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
-        if (perch) wantY = THREE.MathUtils.lerp(data.target.y + 3.2, data.target.y, sit);
-        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (2.2 + sit * 3));
+        // Stay well above whatever terrain is underneath (and just ahead).
+        const ahead = groundH(Math.floor(critter.position.x + Math.sin(data.heading) * 6), Math.floor(critter.position.z + Math.cos(data.heading) * 6));
+        const below = groundH(Math.floor(critter.position.x), Math.floor(critter.position.z));
+        const clearance = data.demo ? -99 : Math.max(ahead, below) + 7;
+        let wantY = Math.max(data.baseY, clearance) + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
+        if (perch) wantY = THREE.MathUtils.lerp(Math.max(data.target.y + 3.2, clearance), data.target.y, sit);
+        const prevY = critter.position.y;
+        critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (1.6 + sit * 3));
+        data.climb += ((critter.position.y - prevY) / Math.max(dt, 1e-3) - data.climb) * Math.min(1, dt * 4);
         if (landed) {
           critter.position.x += (data.target.x - critter.position.x) * Math.min(1, dt * 8);
           critter.position.y += (data.target.y - critter.position.y) * Math.min(1, dt * 8);
@@ -2566,28 +2448,48 @@ function startWorld() {
             data.heading += Math.PI * 0.55;
           }
         }
-        const flyTilt = Math.sin(now / 640 + data.heading) * 0.08;
+        // Bank into turns and pitch with the climb.
+        if (data.prevHeading == null) data.prevHeading = data.heading;
+        let turn = data.heading - data.prevHeading;
+        turn = Math.atan2(Math.sin(turn), Math.cos(turn)) / Math.max(dt, 1e-3);
+        data.prevHeading = data.heading;
+        const bankWant = landed ? 0 : THREE.MathUtils.clamp(-turn * 0.45, -0.75, 0.75) * (1 - sit);
+        data.bank += (bankWant - data.bank) * Math.min(1, dt * 3);
+        critter.rotation.z = data.bank;
+        const flyTilt = THREE.MathUtils.clamp(-data.climb * 0.07, -0.4, 0.4) + Math.sin(now / 640 + data.heading) * 0.05;
         const perchBob = landed ? Math.sin(now / 700 + data.baseY) * 0.03 : 0;
-        critter.rotation.x += ((landed ? -0.2 + perchBob : THREE.MathUtils.lerp(flyTilt, -0.16, sit)) - critter.rotation.x) * Math.min(1, dt * 5);
+        critter.rotation.x += ((landed ? -0.12 + perchBob : THREE.MathUtils.lerp(flyTilt, -0.16, sit)) - critter.rotation.x) * Math.min(1, dt * 5);
         if (data.wings) {
-          const perchFlap = 1.02 + Math.sin(now / 750 + data.baseY) * 0.05;
-          const flyFlap = 0.12 + Math.sin(now / (data.mood === "breath" ? 160 : 260) + data.heading) * 0.48;
-          const flap = landed ? perchFlap : THREE.MathUtils.lerp(flyFlap, perchFlap, sit);
-          data.wings[0].rotation.z += (flap - data.wings[0].rotation.z) * Math.min(1, dt * 5);
-          data.wings[1].rotation.z += (-flap - data.wings[1].rotation.z) * Math.min(1, dt * 5);
-        }
-        poseDragon(critter, now, dt, sit);
-        if (data.fire) {
-          const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
-          data.fire.visible = blasting;
-          if (blasting) {
-            for (const puff of data.fire.children) {
-              const wave = Math.sin(now / 70 + puff.userData.phase) * 0.08;
-              puff.position.x = wave;
-              puff.position.y = Math.cos(now / 90 + puff.userData.phase) * 0.06;
-              puff.scale.setScalar(0.85 + Math.abs(Math.sin(now / 80 + puff.userData.phase)) * 0.45);
+          // Shoulder flaps; the elbow lags behind so the tip whips through.
+          const slow = data.mood === "breath" ? 150 : data.mood === "tour" && data.climb < 0.5 ? 340 : 230;
+          const glide = data.mood === "tour" && data.climb < 0.3 ? 0.45 + Math.sin(now / 2600 + data.baseY) * 0.35 : 1;
+          const p = now / slow + data.baseY;
+          const flyShoulder = 0.05 + Math.sin(p) * 0.6 * glide;
+          const flyElbow = Math.sin(p - 1.1) * 0.5 * glide - 0.05;
+          const k = Math.min(1, dt * 8);
+          for (const [i, w] of data.wings.entries()) {
+            const s = i ? -1 : 1;
+            const elbow = w.userData.elbow;
+            const shZ = THREE.MathUtils.lerp(flyShoulder, -0.55, sit);
+            const shY = THREE.MathUtils.lerp(0, -0.55, sit);
+            const elZ = THREE.MathUtils.lerp(flyElbow, 1.35 + Math.sin(now / 900 + data.baseY) * 0.05, sit);
+            const elY = THREE.MathUtils.lerp(0, -0.9, sit);
+            w.rotation.z += (s * shZ - w.rotation.z) * k;
+            w.rotation.y += (s * shY - w.rotation.y) * k;
+            if (elbow) {
+              elbow.rotation.z += (s * elZ - elbow.rotation.z) * k;
+              elbow.rotation.y += (s * elY - elbow.rotation.y) * k;
             }
           }
+        }
+        poseDragon(critter, now, dt, sit);
+        const blasting = data.mood === "breath" || (data.mood === "chase" && data.moodT < 1.2);
+        if (data.jaw) data.jaw.rotation.x += ((blasting ? 0.55 : 0.04) - data.jaw.rotation.x) * Math.min(1, dt * 10);
+        if (blasting && data.mouth && fire) {
+          data.mouth.getWorldPosition(firePos);
+          data.mouth.getWorldDirection(fireDir);
+          fireDir.y -= 0.12;
+          fire.emit(firePos, fireDir.normalize(), data.look.fire, 4, 9, 0.34);
         }
       } else {
         critter.rotation.x = 0;
@@ -2602,7 +2504,11 @@ function startWorld() {
       }
     }
 
-    separateGroup(cats, 0.82);
+    separateGroup(adultCats, 0.82);
+    separateGroup(kittens, 0.34);
+    emotes.update(dt);
+    fire.update(dt);
+    ambient.update(dt, player, env);
     separateGroup(dragons.filter((d) => d.userData.mood !== "perch"), 4.6);
 
     if (ballLive) {
@@ -2653,14 +2559,31 @@ function startWorld() {
       }
     }
 
-    renderer.render(scene, camera);
+    env.update(dt, player);
+    if (camera.position.y < SEA_Y - 0.05) {
+      // Underwater: thick blue-green murk.
+      scene.fog.color.setRGB(0.08, 0.32, 0.42).multiplyScalar(0.4 + env.state.light * 0.6);
+      scene.fog.near = 0.5;
+      scene.fog.far = 26;
+      renderer.setClearColor(scene.fog.color, 1);
+    } else {
+      scene.fog.near = 110;
+      scene.fog.far = 430;
+    }
+    ocean.position.x = Math.round(camera.position.x / 8) * 8;
+    ocean.position.z = Math.round(camera.position.z / 8) * 8;
+    for (const mat of waters) mat.uniforms.uLight.value = env.state.light;
+    renderer.info.reset();
+    env.render();
+    frameStats(now, dt);
     if (running) requestAnimationFrame(tick);
   }
 
   if (reduced) {
     camera.position.set(0.5, 8, 20);
     camera.lookAt(0.5, 3, -6);
-    renderer.render(scene, camera);
+    env.update(0, player);
+    env.render();
     renderMap();
     if (intro) {
       const lead = intro.querySelector(".playIntroLead");
