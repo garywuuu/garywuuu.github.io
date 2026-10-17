@@ -27,19 +27,65 @@ export const DRAGON_LOOKS = {
   },
 };
 
-function leg(root, look, material, x, y, z, hind) {
-  const hip = joint(root, x, y, z);
-  const s = hind ? 1.15 : 1;
-  attach(hip, new VoxPart()
-    .box(0, -0.16 * s, 0.02, 0.22 * s, 0.4 * s, 0.26 * s, look.body)
-    .box(Math.sign(x) * 0.02, -0.06, 0.02, 0.24 * s, 0.18, 0.28 * s, look.dark), material);
-  const knee = joint(hip, 0, -0.34 * s, 0.02);
-  attach(knee, new VoxPart().box(0, -0.2 * s, 0.03, 0.15 * s, 0.42 * s, 0.16 * s, look.dark), material);
-  const foot = joint(knee, 0, -0.4 * s, 0.04);
-  const f = new VoxPart().box(0, -0.04, 0.1, 0.22 * s, 0.09, 0.3 * s, look.dark);
-  for (const cx of [-0.075, 0, 0.075]) f.spike([cx * s, -0.05, 0.22 * s], [cx * s, -0.09, 0.36 * s], 0.035, look.horn);
-  attach(foot, f, material);
-  return { hip, knee, foot };
+// Clawed foot: a pad, three splayed toes with hooked claws, and a dewclaw.
+function foot(part, look, w) {
+  part.box(0, -0.035, 0.04, w, 0.08, w * 0.9, look.dark);
+  for (const t of [-1, 0, 1]) {
+    const ang = t * 0.32;
+    const len = t ? 0.17 : 0.2;
+    const cx = Math.sin(ang) * len * 0.5 + t * w * 0.3;
+    const cz = 0.06 + Math.cos(ang) * len * 0.5 + w * 0.3;
+    part.box(cx, -0.045, cz, 0.065, 0.06, len, look.dark, { ry: ang });
+    const tx = cx + Math.sin(ang) * len * 0.5;
+    const tz = cz + Math.cos(ang) * len * 0.5;
+    part.spike([tx, -0.03, tz - 0.02], [tx + Math.sin(ang) * 0.09, -0.085, tz + Math.cos(ang) * 0.09], 0.03, look.horn);
+  }
+  part.spike([0, -0.03, -w * 0.4], [0, -0.07, -w * 0.4 - 0.12], 0.028, look.horn);
+}
+
+// Hind leg: a heavy haunch, a lean shin with a heel spur, then the foot.
+function hindLeg(root, look, material, side) {
+  const hip = joint(root, side * 0.44, 0.16, -0.48);
+  const thigh = new VoxPart();
+  thigh.box(0, -0.1, 0, 0.3, 0.38, 0.52, look.body);
+  thigh.box(0, -0.34, 0.03, 0.22, 0.24, 0.3, look.body);
+  thigh.box(side * 0.152, -0.02, -0.02, 0.012, 0.16, 0.3, look.dark, { rx: 0.25 });
+  thigh.box(0, -0.47, 0.05, 0.18, 0.08, 0.2, look.dark);
+  attach(hip, thigh, material);
+  const knee = joint(hip, 0, -0.5, 0.05);
+  const shin = new VoxPart();
+  shin.box(0, -0.14, 0, 0.17, 0.3, 0.2, look.body);
+  shin.box(0, -0.38, 0, 0.13, 0.24, 0.14, look.body);
+  shin.box(0, -0.1, -0.11, 0.08, 0.16, 0.04, look.dark);
+  shin.spike([0, -0.46, -0.06], [0, -0.38, -0.24], 0.04, look.horn);
+  attach(knee, shin, material);
+  const ankle = joint(knee, 0, -0.52, 0.0);
+  const f = new VoxPart();
+  foot(f, look, 0.22);
+  attach(ankle, f, material);
+  return { hip, knee, foot: ankle };
+}
+
+// Foreleg: shoulder plate, upper arm, a forearm with an elbow spike, paw.
+function foreLeg(root, look, material, side) {
+  const hip = joint(root, side * 0.44, 0.08, 0.6);
+  const arm = new VoxPart();
+  arm.box(0, -0.06, 0, 0.26, 0.3, 0.34, look.body);
+  arm.box(0, -0.3, -0.02, 0.19, 0.26, 0.22, look.body);
+  arm.box(side * 0.132, 0.0, -0.02, 0.012, 0.12, 0.22, look.dark, { rx: 0.25 });
+  arm.spike([0, -0.4, -0.1], [0, -0.36, -0.28], 0.045, look.horn);
+  attach(hip, arm, material);
+  const knee = joint(hip, 0, -0.44, -0.02);
+  const fore = new VoxPart();
+  fore.box(0, -0.12, 0, 0.15, 0.26, 0.17, look.body);
+  fore.box(0, -0.33, 0.01, 0.12, 0.2, 0.13, look.body);
+  fore.box(0, -0.42, 0.02, 0.14, 0.05, 0.15, look.dark);
+  attach(knee, fore, material);
+  const wrist = joint(knee, 0, -0.46, 0.02);
+  const f = new VoxPart();
+  foot(f, look, 0.19);
+  attach(wrist, f, material);
+  return { hip, knee, foot: wrist };
 }
 
 function wing(root, look, material, side) {
@@ -128,10 +174,10 @@ export function buildDragon(root, look, material) {
   attach(jaw, j, material);
 
   const legs = [
-    leg(root, look, material, -0.38, 0.08, 0.56, false),
-    leg(root, look, material, 0.38, 0.08, 0.56, false),
-    leg(root, look, material, -0.36, 0.12, -0.52, true),
-    leg(root, look, material, 0.36, 0.12, -0.52, true),
+    foreLeg(root, look, material, -1),
+    foreLeg(root, look, material, 1),
+    hindLeg(root, look, material, -1),
+    hindLeg(root, look, material, 1),
   ];
 
   const tail = joint(root, 0, 0.32, -0.86);
