@@ -9,7 +9,7 @@ import { makeFoliage } from "/assets/js/world/foliage.js?v=20261015-world";
 import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
 import { buildCat, CAT_LOOKS, CAT_POSE } from "/assets/js/world/cats.js?v=20261015-world";
 import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
-import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261015-world";
+import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261017-legs";
 import { makeFire } from "/assets/js/world/fire.js?v=20261015-world";
 import { makeAmbient } from "/assets/js/world/ambient.js?v=20261015-world";
 import { createMouseLookControls } from "/play-controls.js?v=20261015-mouse-look";
@@ -1112,12 +1112,16 @@ function poseDragon(critter, now, dt, sit) {
   const feet = data.feet || [];
   const flap = Math.sin(now / 180 + data.heading);
   // +Z faces the head; positive hip pitch tucks the legs back toward the tail.
-  const flyHipX = [1.25 + flap * 0.08, 1.25 + flap * 0.08, 1.4 + flap * 0.06, 1.4 + flap * 0.06];
-  const sitHipX = [0.22, 0.22, 0.98, 0.98];
-  const flyHipZ = [-0.08, 0.08, -0.1, 0.1];
-  const sitHipZ = [-0.06, 0.06, -0.18, 0.18];
-  const flyKneeX = [-0.6, -0.6, -0.9, -0.9];
-  const sitKneeX = [0.28, 0.28, -0.78, -0.78];
+  // Standing: forelegs angle back then forward at the wrist; hind thighs
+  // reach forward to the knee and the shins slope back, like a big cat.
+  // Flying: everything folds up tight under the belly.
+  const shift = Math.sin(now / 1700 + data.baseY) * 0.04;
+  const flyHipX = [0.95 + flap * 0.08, 0.95 + flap * 0.08, 1.15 + flap * 0.06, 1.15 + flap * 0.06];
+  const sitHipX = [0.32 + shift, 0.32 - shift, -0.62 - shift, -0.62 + shift];
+  const flyHipZ = [-0.06, 0.06, -0.08, 0.08];
+  const sitHipZ = [-0.04, 0.04, -0.06, 0.06];
+  const flyKneeX = [-1.5, -1.5, 1.2, 1.2];
+  const sitKneeX = [-0.58, -0.58, 1.0, 1.0];
   for (const [i, leg] of legs.entries()) {
     if (!leg) continue;
     easeJoint(leg, THREE.MathUtils.lerp(flyHipX[i], sitHipX[i], sit), 0, THREE.MathUtils.lerp(flyHipZ[i], sitHipZ[i], sit), blend);
@@ -1125,7 +1129,7 @@ function poseDragon(critter, now, dt, sit) {
     if (feet[i] && knees[i]) {
       // Compensate for the current joints, including during landing, so the
       // claws face forward instead of rotating along with the folded legs.
-      const toePitch = THREE.MathUtils.lerp(0.1, 0.2, sit);
+      const toePitch = THREE.MathUtils.lerp(i < 2 ? 0.9 : -0.7, 0.12, sit);
       feet[i].rotation.x = toePitch - leg.rotation.x - knees[i].rotation.x;
     }
   }
@@ -1630,12 +1634,22 @@ function startWorld() {
     (cat.userData.head || cat).getWorldPosition(headPos);
     emotes.spawn(kind, headPos.x, headPos.y + lift * cat.scale.y, headPos.z, opts);
   }
-  if (params.has("dragondemo")) {
+  if (params.get("dragondemo") === "perch") {
+    // Every dragon standing in a row, side-on to a camera on +z.
+    dragons.forEach((d, i) => {
+      d.position.set(-6.6 + i * 4.4, 1.86, 3);
+      d.userData.baseY = 1.86;
+      d.userData.heading = Math.PI / 2;
+      d.userData.demo = "perch";
+      d.userData.target = { x: d.position.x, y: 1.86, z: 3 };
+    });
+    for (const cat of cats) cat.visible = false;
+  } else if (params.has("dragondemo")) {
     // Screenshot lineup: hovering, banking, fire-breathing and perched.
     const spots = [
       { x: -4, y: 6.5, z: 2, mood: "tour", heading: 0.6 },
       { x: 4.5, y: 5.5, z: 3, mood: "breath", heading: -0.9 },
-      { x: 0, y: 1.9, z: -1, mood: "perch", heading: 0.15 },
+      { x: 0, y: 1.86, z: -1, mood: "perch", heading: 0.15 },
       { x: -1, y: 9.5, z: -6, mood: "tour", heading: 2.2, turn: 0.9 },
     ];
     dragons.forEach((d, i) => {
