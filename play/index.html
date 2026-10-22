@@ -173,6 +173,16 @@
         <div class="playCardActions" id="playCardActions"></div>
       </aside>
 
+      <div class="playReader" id="playReader" hidden role="dialog" aria-modal="true" aria-labelledby="playReaderTitle">
+        <article class="playReaderSheet">
+          <button type="button" class="playReaderClose" id="playReaderClose" aria-label="Back to the room">×</button>
+          <p class="playKicker" id="playReaderKicker"></p>
+          <h2 id="playReaderTitle"></h2>
+          <div class="playReaderBody" id="playReaderBody"></div>
+          <div class="playReaderActions" id="playReaderActions"></div>
+        </article>
+      </div>
+
       <div class="arcadeOverlay" id="arcadeOverlay" hidden>
         <div class="arcadeShell">
           <div class="arcadeBar">
@@ -210,7 +220,7 @@
         }
       }
     </script>
-    <script type="module" src="/play.js?v=20261017-legs"></script>
+    <script type="module" src="/play.js?v=20261022-rooms"></script>
     <script src="/script.js?v=20261001-no-photo"></script>
   </body>
 </html>

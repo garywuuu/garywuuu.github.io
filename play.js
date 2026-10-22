@@ -10,6 +10,7 @@ import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
 import { buildCat, CAT_LOOKS, CAT_POSE } from "/assets/js/world/cats.js?v=20261015-world";
 import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
 import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261017-legs";
+import { loadRoomContent, buildRooms } from "/assets/js/world/rooms.js?v=20261022-rooms";
 import { makeFire } from "/assets/js/world/fire.js?v=20261015-world";
 import { makeAmbient } from "/assets/js/world/ambient.js?v=20261015-world";
 import { createMouseLookControls } from "/play-controls.js?v=20261015-mouse-look";
@@ -136,10 +137,11 @@ const BOOTHS = STALLS.map((game) => ({
   doorZ: game.z + 1,
 }));
 
+// Walk-in houses. Their exhibits live in world/rooms.js.
 const PAGES = [
-  { id: "about", title: "About", href: "/", x0: -21, x1: -14, z0: 6, z1: 13, wall: "plank", roof: "wood", door: "east" },
-  { id: "research", title: "Research", href: "/research/", x0: 14, x1: 21, z0: 6, z1: 13, wall: "stone", roof: "stoneDark", door: "west" },
-  { id: "experience", title: "Experience", href: "/experience/", x0: -5, x1: 6, z0: 18, z1: 24, wall: "ink", roof: "gold", door: "north" },
+  { id: "about", title: "About", href: "/", x0: -21, x1: -14, z0: 6, z1: 13, wall: "plank", roof: "wood", trim: "spruceLog", base: "cobble", rug: "red", door: "east", chimney: true },
+  { id: "research", title: "Research", href: "/research/", x0: 14, x1: 21, z0: 6, z1: 13, wall: "stone", roof: "stoneDark", trim: "stoneDark", base: "mossy", rug: "blue", door: "west" },
+  { id: "experience", title: "Experience", href: "/experience/", x0: -5, x1: 6, z0: 18, z1: 24, wall: "ink", roof: "gold", trim: "gold", base: "obsidian", rug: "magentaDark", door: "north" },
 ];
 
 const POIS = [
@@ -184,8 +186,8 @@ const POIS = [
     kicker: "Gary Wu",
     body: "SF. Harvard CS. Trying to solve fun.",
     href: "/",
-    action: "page",
-    actionLabel: "Open about",
+    action: "house",
+    actionLabel: "Open full page",
     x: -14.2,
     z: 9.5,
     r: 2.4,
@@ -196,8 +198,8 @@ const POIS = [
     kicker: "Papers",
     body: "Fairness, federated learning, encrypted inference, LLM routing.",
     href: "/research/?from=game",
-    action: "page",
-    actionLabel: "Open research",
+    action: "house",
+    actionLabel: "Open full page",
     x: 14.2,
     z: 9.5,
     r: 2.4,
@@ -208,8 +210,8 @@ const POIS = [
     kicker: "Work",
     body: "Instaplay, Salesforce, Verita, Teradata, Alpaca.",
     href: "/experience/?from=game",
-    action: "page",
-    actionLabel: "Open experience",
+    action: "house",
+    actionLabel: "Open full page",
     x: 0.5,
     z: 18.4,
     r: 2.6,
@@ -309,12 +311,54 @@ function pageAt(ix, iz) {
   return PAGES.find((p) => inRect(ix, iz, p.x0, p.z0, p.x1, p.z1));
 }
 
-function isDoor(ix, iy, iz, page) {
-  if (iy < 1 || iy > 2) return false;
+function isDoor(ix, iy, iz, page, top = 3) {
+  if (iy < 1 || iy > top) return false;
   if (page.door === "east" && ix === page.x1 && iz >= page.z0 + 2 && iz <= page.z1 - 2) return true;
   if (page.door === "west" && ix === page.x0 && iz >= page.z0 + 2 && iz <= page.z1 - 2) return true;
   if (page.door === "north" && iz === page.z0 && ix >= -1 && ix <= 2) return true;
   return false;
+}
+
+// A house: stone base course, log corners, clerestory windows, a lit door
+// frame and a stepped hip roof that stays hollow so the room feels tall.
+function houseBlock(page, ix, iy, iz) {
+  const { x0, x1, z0, z1 } = page;
+  const wall = ix === x0 || ix === x1 || iz === z0 || iz === z1;
+  const corner = (ix === x0 || ix === x1) && (iz === z0 || iz === z1);
+  if (iy === 0) {
+    if (wall) return page.base;
+    const rug = ix > x0 + 1 && ix < x1 - 1 && iz > z0 + 1 && iz < z1 - 1;
+    return rug ? page.rug : "plank";
+  }
+  if (iy <= 6) {
+    if (!wall) {
+      // Hanging lanterns light the room (one more in long rooms).
+      const w = x1 - x0;
+      const lx = w > 9 ? [x0 + Math.round(w * 0.3), x1 - Math.round(w * 0.3)] : [Math.floor((x0 + x1) / 2)];
+      if (iy === 6 && lx.includes(ix) && iz === Math.floor((z0 + z1) / 2)) return "lantern";
+      return null;
+    }
+    if (corner) return "spruceLog";
+    if (isDoor(ix, iy, iz, page)) return null;
+    if (iy === 6) return page.trim;
+    if (isDoor(ix, iy - 1, iz, page) && iy === 4) return page.trim;
+    // Door-side lanterns, one block out from the opening.
+    if (iy === 3 && (isDoor(ix + 1, 1, iz, page) || isDoor(ix - 1, 1, iz, page) || isDoor(ix, 1, iz + 1, page) || isDoor(ix, 1, iz - 1, page))) return "lantern";
+    if (iy === 1) return page.base;
+    if (iy === 5) return (ix + iz) % 2 === 0 ? "glass" : page.trim;
+    return page.wall;
+  }
+  if (page.chimney && ix === x0 + 1 && iz === z0 + 1) return iy === 12 ? null : "brick";
+  const k = iy - 7;
+  const rx0 = x0 + k;
+  const rx1 = x1 - k;
+  const rz0 = z0 + k;
+  const rz1 = z1 - k;
+  if (rx0 > rx1 || rz0 > rz1) return undefined;
+  if (ix < rx0 || ix > rx1 || iz < rz0 || iz > rz1) return null;
+  const rim = ix === rx0 || ix === rx1 || iz === rz0 || iz === rz1;
+  const top = rx1 - rx0 <= 1 || rz1 - rz0 <= 1;
+  return rim || top ? page.roof : null;
 }
 
 function pondAt(ix, iz) {
@@ -371,19 +415,7 @@ function plazaBlock(ix, iy, iz) {
   }
 
   const page = pageAt(ix, iz);
-  if (page && iy <= 6) {
-    const wall = ix === page.x0 || ix === page.x1 || iz === page.z0 || iz === page.z1;
-    const midX = Math.floor((page.x0 + page.x1) / 2);
-    const midZ = Math.floor((page.z0 + page.z1) / 2);
-    if (iy === 0) return "plank";
-    if (iy === 5 && wall) return page.roof;
-    if (iy === 6 && ix > page.x0 && ix < page.x1 && iz > page.z0 && iz < page.z1) return page.roof;
-    if (wall && iy <= 4) {
-      if (isDoor(ix, iy, iz, page)) return null;
-      return page.wall;
-    }
-    if (iy > 0 && iy < 5) return null;
-  }
+  if (page && iy <= 12) return houseBlock(page, ix, iy, iz);
 
   if (inShelf(ix, iz) && iy <= 4) {
     if (iy === 0) return "plank";
@@ -785,13 +817,13 @@ function buildWorld(scene, renderer, shared, quality) {
     const doorLo = page.z0 + 2;
     const doorHi = page.z1 - 2;
     const doorZ = (doorLo + doorHi + 1) / 2;
-    const width = 6.4;
+    const width = 5.2;
     const pose =
       page.door === "east"
-        ? { x: page.x1 + 1.22, y: 4.55, z: doorZ, rotY: Math.PI / 2 }
+        ? { x: page.x1 + 1.22, y: 5.8, z: doorZ, rotY: Math.PI / 2 }
         : page.door === "west"
-          ? { x: page.x0 - 0.22, y: 4.55, z: doorZ, rotY: -Math.PI / 2 }
-          : { x: 1, y: 4.55, z: page.z0 - 0.22, rotY: Math.PI };
+          ? { x: page.x0 - 0.22, y: 5.8, z: doorZ, rotY: -Math.PI / 2 }
+          : { x: 1, y: 5.8, z: page.z0 - 0.22, rotY: Math.PI };
     scene.add(makeSign(page.title.toUpperCase(), "#ffffff", pose.x, pose.y, pose.z, width, "#111111", pose.rotY));
   }
   scene.add(makeShelfPlaque());
@@ -1560,6 +1592,10 @@ function startWorld() {
   if (timeParam != null && params.has("freeze")) env.state.frozen = true;
 
   buildWorld(scene, renderer, env.shared, quality);
+  let rooms = null;
+  loadRoomContent().then((content) => {
+    rooms = buildRooms(scene, content, { font: FONT_FAMILY, renderer });
+  });
 
   const ocean = makeOcean(makeWaterMaterial(env.sky.uniforms, world.heightTex, GRID, SEA_Y), SEA_Y);
   scene.add(ocean);
@@ -1696,6 +1732,12 @@ function startWorld() {
     pitch: -0.08,
     grounded: false,
   };
+  // ?spawn=x,z,yaw,pitch drops the player somewhere specific (handy for testing).
+  const spawnParam = params.get("spawn")?.split(",").map(Number);
+  if (spawnParam?.length >= 2 && spawnParam.every(Number.isFinite)) {
+    [player.x, player.z, player.yaw = 0, player.pitch = -0.08] = spawnParam;
+    player.y = 1.2;
+  }
 
   const keys = new Set();
   const touch = { forward: false, back: false, left: false, right: false, look: false, jx: 0, jz: 0 };
@@ -1965,6 +2007,11 @@ function startWorld() {
   }
 
   function useNearby() {
+    const exhibit = lookExhibitAt();
+    if (exhibit) {
+      openReader(exhibit.userData.reader);
+      return;
+    }
     const poi = poiNear(player.x, player.z);
     if (!poi) return;
     if (poi.action === "serve") {
@@ -1984,12 +2031,167 @@ function startWorld() {
       openArcade(poi.gameIndex ?? 0);
       return;
     }
-    if (poi.action === "page" && poi.href) {
-      window.location.href = poi.href;
-      return;
-    }
     showCard(poi, () => {});
   }
+
+  // Reader: the in-world view of a house exhibit.
+  let readerOpen = false;
+  const reader = $("#playReader");
+
+  function insideHouse() {
+    return pageAt(Math.floor(player.x), Math.floor(player.z));
+  }
+
+  function lookExhibitAt(maxDist = 3.8) {
+    if (!rooms || !insideHouse()) return null;
+    raycaster.setFromCamera(lookNdc, camera);
+    const hit = raycaster.intersectObjects(rooms.exhibits, true)[0];
+    if (!hit || hit.distance > maxDist) return null;
+    let obj = hit.object;
+    while (obj && !obj.userData.reader) obj = obj.parent;
+    return obj;
+  }
+
+  function openReader(data) {
+    if (!reader) return;
+    hideCard();
+    if (document.pointerLockElement) document.exitPointerLock();
+    mouseLook.stop();
+    keys.clear();
+    readerOpen = true;
+    reader.dataset.theme = data.theme;
+    $("#playReaderKicker").textContent = data.kicker;
+    $("#playReaderTitle").textContent = data.title;
+    const body = $("#playReaderBody");
+    body.innerHTML = "";
+    for (const text of data.body || []) {
+      const p = document.createElement("p");
+      p.textContent = text;
+      body.append(p);
+    }
+    if (data.bullets?.length) {
+      const ul = document.createElement("ul");
+      for (const text of data.bullets) {
+        const li = document.createElement("li");
+        li.textContent = text;
+        ul.append(li);
+      }
+      body.append(ul);
+    }
+    if (data.tags?.length) {
+      const tags = document.createElement("div");
+      tags.className = "playReaderTags";
+      for (const tag of data.tags) {
+        const span = document.createElement("span");
+        span.textContent = tag;
+        tags.append(span);
+      }
+      body.append(tags);
+    }
+    const actions = $("#playReaderActions");
+    actions.innerHTML = "";
+    if (data.doc) {
+      const read = document.createElement("button");
+      read.type = "button";
+      read.className = "playCta";
+      read.textContent = "Read the paper";
+      read.addEventListener("click", () => showDoc(data.doc, data.title));
+      actions.append(read);
+    }
+    const links = [...(data.links || []), ...(data.page ? [data.page] : [])];
+    links.forEach(([label, href], i) => {
+      const a = document.createElement("a");
+      a.className = i === 0 && !data.doc ? "playCta" : "playCta small";
+      a.textContent = label;
+      a.href = href;
+      if (/^https?:|\.pdf$/i.test(href)) {
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      }
+      actions.append(a);
+    });
+    reader.classList.remove("isDoc");
+    reader.hidden = false;
+    $("#playReaderClose")?.focus();
+    if (promptEl) promptEl.textContent = "Esc or E · back to the room";
+  }
+
+  // Swap the summary for the paper itself, rendered page by page with pdf.js
+  // so it reads the same in every browser (iframes show one page on iOS).
+  const PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/";
+  let pdfjs = null;
+  let docToken = 0;
+
+  async function showDoc(href, title) {
+    const token = ++docToken;
+    const body = $("#playReaderBody");
+    body.innerHTML = "";
+    const pages = document.createElement("div");
+    pages.className = "playReaderDoc";
+    pages.setAttribute("aria-label", title);
+    pages.tabIndex = 0;
+    const status = document.createElement("p");
+    status.className = "playReaderDocStatus";
+    status.textContent = "Loading paper…";
+    pages.append(status);
+    body.append(pages);
+    const actions = $("#playReaderActions");
+    actions.innerHTML = "";
+    const open = document.createElement("a");
+    open.className = "playCta small";
+    open.textContent = "Open in new tab";
+    open.href = href;
+    open.target = "_blank";
+    open.rel = "noopener noreferrer";
+    actions.append(open);
+    reader.classList.add("isDoc");
+    pages.focus();
+    if (promptEl) promptEl.textContent = "Scroll to read · Esc · back to the room";
+    try {
+      if (!pdfjs) {
+        pdfjs = await import(`${PDFJS}pdf.min.mjs`);
+        pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.mjs`;
+      }
+      const pdf = await pdfjs.getDocument(href).promise;
+      if (token !== docToken) return;
+      status.remove();
+      const width = pages.clientWidth - 24;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      for (let n = 1; n <= pdf.numPages; n += 1) {
+        const page = await pdf.getPage(n);
+        if (token !== docToken) return;
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: (width / base.width) * dpr });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = `${width}px`;
+        pages.append(canvas);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      }
+    } catch (err) {
+      console.warn(err);
+      if (token === docToken) status.textContent = "Couldn't load the paper here. Open it in a new tab instead.";
+    }
+  }
+
+  function closeReader(relock) {
+    if (!readerOpen) return;
+    readerOpen = false;
+    if (reader) {
+      reader.hidden = true;
+      reader.classList.remove("isDoc");
+      $("#playReaderBody").innerHTML = "";
+    }
+    docToken += 1;
+    lastPoi = null;
+    if (relock && !coarse) tryLock();
+  }
+
+  $("#playReaderClose")?.addEventListener("click", () => closeReader(true));
+  reader?.addEventListener("click", (e) => {
+    if (e.target === reader) closeReader(true);
+  });
 
   function enterWorld() {
     if (promptEl) promptEl.hidden = false;
@@ -2013,7 +2215,7 @@ function startWorld() {
   const mouseLook = createMouseLookControls({
     canvas,
     intro,
-    isBlocked: () => arcadeOpen || reduced,
+    isBlocked: () => arcadeOpen || readerOpen || reduced,
     onActivate: dismissIntro,
     onMove: (dx, dy) => { pointerDx += dx; pointerDy += dy; },
     onLockChange: (isLocked) => {
@@ -2073,14 +2275,19 @@ function startWorld() {
     } else {
       lookNdc.set(0, 0);
     }
-    const cat = lookCatAt();
+    const exhibit = lookExhibitAt();
+    const cat = exhibit ? null : lookCatAt();
     lookNdc.set(0, 0);
+    if (exhibit) {
+      openReader(exhibit.userData.reader);
+      return true;
+    }
     return cat ? petCat(cat) : false;
   }
 
   canvas.addEventListener("click", (e) => {
     dismissIntro();
-    if (arcadeOpen) return;
+    if (arcadeOpen || readerOpen) return;
     if (mouseLook.consumeDragClick()) return;
     tryPet(e.clientX, e.clientY);
   });
@@ -2108,6 +2315,13 @@ function startWorld() {
   });
 
   document.addEventListener("keydown", (e) => {
+    if (readerOpen) {
+      if (e.code === "Escape" || e.code === "KeyE") {
+        e.preventDefault();
+        closeReader(false);
+      }
+      return;
+    }
     if (arcadeOpen) {
       if (e.code === "Escape") {
         e.preventDefault();
@@ -2202,7 +2416,8 @@ function startWorld() {
     const dt = Math.min(0.033, (now - last) / 1000);
     last = now;
 
-    if (!arcadeOpen) {
+    const paused = arcadeOpen || readerOpen;
+    if (!paused) {
       player.yaw -= pointerDx * 0.0022;
       player.pitch -= pointerDy * 0.0022;
     }
@@ -2210,10 +2425,10 @@ function startWorld() {
     pointerDx = 0;
     pointerDy = 0;
 
-    const speed = arcadeOpen ? 0 : keys.has("ShiftLeft") ? 9.5 : 6.4;
+    const speed = paused ? 0 : keys.has("ShiftLeft") ? 9.5 : 6.4;
     let wishX = 0;
     let wishZ = 0;
-    if (!arcadeOpen) {
+    if (!paused) {
       if (keys.has("KeyW")) wishZ -= 1;
       if (keys.has("KeyS")) wishZ += 1;
       if (keys.has("KeyA")) wishX -= 1;
@@ -2249,7 +2464,7 @@ function startWorld() {
     } else {
       player.vy -= 22 * dt;
     }
-    if (!arcadeOpen && keys.has("Space") && player.grounded) {
+    if (!paused && keys.has("Space") && player.grounded) {
       player.vy = 8.2;
       player.grounded = false;
     }
@@ -2547,16 +2762,26 @@ function startWorld() {
     } else if (!arcadeOpen && poi?.action === "create" && poi.id !== lastAutoGame) {
       lastAutoGame = poi.id;
       openCreate();
-    } else if (!arcadeOpen && poi?.action === "page" && poi.href && poi.id !== lastAutoGame) {
-      lastAutoGame = poi.id;
-      window.location.href = poi.href;
-    } else if (!poi || (poi.action !== "embed" && poi.action !== "page" && poi.action !== "create")) {
+    } else if (!poi || (poi.action !== "embed" && poi.action !== "create")) {
       if (lastAutoGame && !arcadeOpen) lastAutoGame = null;
     }
 
-    if (!arcadeOpen && promptEl) {
+    if (!paused && promptEl) {
       const lookCat = lookCatAt();
-      if (lookCat) {
+      const exhibit = lookCat ? null : lookExhibitAt();
+      const house = insideHouse();
+      if (exhibit) {
+        const key = `ex:${exhibit.userData.reader.title}`;
+        if (key !== lastPoi) {
+          lastPoi = key;
+          promptEl.textContent = `E or click · read “${exhibit.userData.reader.title}”`;
+        }
+      } else if (house && !lookCat) {
+        if (lastPoi !== `house:${house.id}`) {
+          lastPoi = `house:${house.id}`;
+          promptEl.textContent = `${house.title} · look at a frame to read it`;
+        }
+      } else if (lookCat) {
         lastPoi = `cat:${lookCat.userData.id}`;
         promptEl.textContent = lookCat.userData.mood === "pet"
           ? `Click · keep petting ${lookCat.userData.id}`
@@ -2564,7 +2789,7 @@ function startWorld() {
       } else if (poi && poi.id !== lastPoi) {
         lastPoi = poi.id;
         promptEl.textContent =
-          poi.action === "embed" || poi.action === "page" || poi.action === "create"
+          poi.action === "embed" || poi.action === "house" || poi.action === "create"
             ? `Walk in · ${poi.title}`
             : `E · ${poi.title}`;
       } else if (!poi && lastPoi) {
@@ -2574,6 +2799,7 @@ function startWorld() {
     }
 
     env.update(dt, player);
+    rooms?.update(env.state.light);
     if (camera.position.y < SEA_Y - 0.05) {
       // Underwater: thick blue-green murk.
       scene.fog.color.setRGB(0.08, 0.32, 0.42).multiplyScalar(0.4 + env.state.light * 0.6);
