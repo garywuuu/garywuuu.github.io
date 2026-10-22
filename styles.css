@@ -865,6 +865,163 @@ html:has(.playPage),
   gap: 8px;
 }
 
+.playReader {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(12, 9, 6, 0.48);
+  pointer-events: auto;
+}
+
+.playReader[hidden] {
+  display: none;
+}
+
+.playReaderSheet {
+  --fg: #1b1b1b;
+  --bg: #f4efe6;
+  --accent: #8a5a2a;
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 26px 28px 22px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 4px solid #1b1b1b;
+  box-shadow:
+    4px 0 0 var(--accent),
+    -4px 0 0 var(--accent),
+    0 4px 0 var(--accent),
+    0 -4px 0 var(--accent),
+    8px 0 0 #1b1b1b,
+    -8px 0 0 #1b1b1b,
+    0 8px 0 #1b1b1b,
+    0 -8px 0 #1b1b1b;
+  animation: playReaderIn 0.18s steps(3, end);
+}
+
+.playReader[data-theme="research"] .playReaderSheet {
+  --bg: #f6f1e6;
+  --accent: #2f5d8a;
+}
+
+.playReader[data-theme="experience"] .playReaderSheet {
+  --fg: #f4efe6;
+  --bg: #15121f;
+  --accent: #f0c14b;
+}
+
+.playReaderSheet .playKicker {
+  padding-right: 28px;
+  color: var(--accent);
+}
+
+.playReaderSheet h2 {
+  margin: 0 0 14px;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.playReaderBody p,
+.playReaderBody li {
+  margin: 0 0 12px;
+  line-height: 1.65;
+}
+
+.playReaderBody ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.playReaderTags {
+  margin: 0 0 12px;
+}
+
+.playReaderTags span {
+  display: inline-block;
+  margin: 0 6px 6px 0;
+  padding: 2px 8px;
+  border: 2px solid var(--accent);
+  font-size: 12px;
+}
+
+.playReaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.playReaderActions .playCta {
+  margin: 0;
+  border-radius: 0;
+}
+
+.playReader.isDoc .playReaderSheet {
+  display: flex;
+  flex-direction: column;
+  width: min(1000px, 100%);
+  height: calc(100% - 24px);
+  padding: 18px 20px 16px;
+}
+
+.playReader.isDoc .playReaderSheet h2 {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.playReader.isDoc .playReaderBody {
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 10px;
+}
+
+.playReaderDoc {
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px;
+  border: 2px solid #1b1b1b;
+  background: #3b3f45;
+  outline: none;
+}
+
+.playReaderDoc canvas {
+  display: block;
+  margin: 0 auto 12px;
+  background: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.playReaderDocStatus {
+  margin: 24px 0;
+  color: #f4efe6;
+  text-align: center;
+}
+
+.playReaderClose {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes playReaderIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
 .arcadeOverlay {
   position: absolute;
   inset: 0;
