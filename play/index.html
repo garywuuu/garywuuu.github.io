@@ -123,6 +123,23 @@
       }
     </script>
 
+    <script>
+      // Generate the island in a worker while everything else downloads;
+      // play.js picks it up. Up here so it doesn't wait on the stylesheet.
+      window.worldgen = new Promise((resolve, reject) => {
+        const worker = new Worker("/assets/js/world/worldgen-worker.js?v=20261026-worker", { type: "module" });
+        worker.onmessage = (e) => {
+          resolve(e.data);
+          worker.terminate();
+        };
+        worker.onerror = (e) => {
+          e.preventDefault();
+          reject(new Error("worldgen worker failed"));
+        };
+      });
+      // play.js handles a failure by generating on the main thread.
+      window.worldgen.catch(() => {});
+    </script>
     <link rel="stylesheet" href="/styles.css?v=20261015-footer" />
     <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg?v=20261001-circle" />
     <script type="importmap">
@@ -133,8 +150,9 @@
         }
       }
     </script>
-    <!-- Fetch three.js and its post-processing chain up front, in parallel,
-         instead of discovering each file one import at a time. -->
+    <!-- Fetch three.js, its post-processing chain and play.js's own modules up
+         front, in parallel, instead of discovering each file one import at a
+         time. tests/play-preload.test.mjs keeps the local list in sync. -->
     <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/build/three.module.min.js" />
     <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/EffectComposer.js" />
     <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/RenderPass.js" />
@@ -146,6 +164,25 @@
     <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/shaders/CopyShader.js" />
     <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/shaders/LuminosityHighPassShader.js" />
     <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/shaders/OutputShader.js" />
+    <link rel="modulepreload" href="/assets/js/cat-brain.js?v=20261015-handwired" />
+    <link rel="modulepreload" href="/assets/js/world/ambient.js?v=20261015-world" />
+    <link rel="modulepreload" href="/assets/js/world/blocks.js?v=20261026-worker" />
+    <link rel="modulepreload" href="/assets/js/world/cats.js?v=20261015-world" />
+    <link rel="modulepreload" href="/assets/js/world/dragons.js?v=20261017-legs" />
+    <link rel="modulepreload" href="/assets/js/world/emotes.js?v=20261015-world" />
+    <link rel="modulepreload" href="/assets/js/world/env.js?v=20261026-perf" />
+    <link rel="modulepreload" href="/assets/js/world/fire.js?v=20261015-world" />
+    <link rel="modulepreload" href="/assets/js/world/foliage.js?v=20261026-worker" />
+    <link rel="modulepreload" href="/assets/js/world/noise.js?v=20261015-world" />
+    <link rel="modulepreload" href="/assets/js/world/plaza.js?v=20261026-worker" />
+    <link rel="modulepreload" href="/assets/js/world/rooms.js?v=20261022-rooms" />
+    <link rel="modulepreload" href="/assets/js/world/sky.js?v=20261015-world" />
+    <link rel="modulepreload" href="/assets/js/world/terrain.js?v=20261026-worker" />
+    <link rel="modulepreload" href="/assets/js/world/textures.js?v=20261026-worker" />
+    <link rel="modulepreload" href="/assets/js/world/voxels.js?v=20261026-worker" />
+    <link rel="modulepreload" href="/assets/js/world/voxkit.js?v=20261015-world" />
+    <link rel="modulepreload" href="/assets/js/world/water.js?v=20261015-world" />
+    <link rel="modulepreload" href="/play-controls.js?v=20261015-mouse-look" />
   </head>
 
   <body class="playPage">
@@ -233,7 +270,7 @@
       </noscript>
     </main>
 
-    <script type="module" src="/play.js?v=20261026-perf"></script>
+    <script type="module" src="/play.js?v=20261026-worker"></script>
     <script src="/script.js?v=20261001-no-photo"></script>
   </body>
 </html>

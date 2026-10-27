@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { TILE } from "./textures.js?v=20261015-world";
+import { TILE } from "./textures.js?v=20261026-worker";
 
 // Crossed-quad grass and flowers, instanced, swaying in the wind.
 
