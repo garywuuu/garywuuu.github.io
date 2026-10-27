@@ -757,7 +757,6 @@ html:has(.playPage),
 }
 
 .playPrompt,
-.playStats,
 .playHelp {
   position: absolute;
   color: #fff;
@@ -771,16 +770,10 @@ html:has(.playPage),
   font-size: 15px;
 }
 
-.playStats {
-  right: 18px;
-  top: 18px;
-  font-size: 13px;
-}
-
 .gameMap {
   position: absolute;
   right: 18px;
-  top: 46px;
+  top: 18px;
   display: grid;
   gap: 6px;
   pointer-events: auto;
@@ -1246,6 +1239,15 @@ html:has(.playPage),
   touch-action: none;
 }
 
+@media (pointer: coarse) {
+  /* Keep the prompt clear of the touch stick. */
+  .playPrompt {
+    bottom: 136px;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+  }
+}
+
 @media (max-width: 720px) {
   .playPad {
     left: 12px;
@@ -1282,10 +1284,6 @@ html:has(.playPage),
   }
   .arcadeBar {
     flex-direction: column;
-  }
-  .playStats {
-    top: auto;
-    bottom: 18px;
   }
   .gameMap {
     top: auto;
