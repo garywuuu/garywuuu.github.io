@@ -4,7 +4,7 @@ import { VoxelGrid } from "/assets/js/world/blocks.js?v=20261026-worker";
 import { buildTileArray, voxelMaterial, buildChunks } from "/assets/js/world/voxels.js?v=20261026-worker";
 import { SEA_Y } from "/assets/js/world/terrain.js?v=20261026-worker";
 import { WORLD, GAMES, MYSTERY, STALLS, BOOTHS, PAGES, SHELF, inShelf, boothAt, pageAt } from "/assets/js/world/plaza.js?v=20261026-worker";
-import { createEnvironment } from "/assets/js/world/env.js?v=20261026-perf";
+import { createEnvironment } from "/assets/js/world/env.js?v=20261026-shafts";
 import { makeHeightTexture, makeWaterMaterial, makeOcean } from "/assets/js/world/water.js?v=20261015-world";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
 import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
@@ -2565,7 +2565,8 @@ async function startWorld() {
 
     env.update(dt, player);
     rooms?.update(env.state.light);
-    if (camera.position.y < SEA_Y - 0.05) {
+    env.state.underwater = camera.position.y < SEA_Y - 0.05;
+    if (env.state.underwater) {
       // Underwater: thick blue-green murk.
       scene.fog.color.setRGB(0.08, 0.32, 0.42).multiplyScalar(0.4 + env.state.light * 0.6);
       scene.fog.near = 0.5;
