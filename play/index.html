@@ -140,7 +140,7 @@
       // play.js handles a failure by generating on the main thread.
       window.worldgen.catch(() => {});
     </script>
-    <link rel="stylesheet" href="/styles.css?v=20261015-footer" />
+    <link rel="stylesheet" href="/styles.css?v=20261026-hud" />
     <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg?v=20261001-circle" />
     <script type="importmap">
       {
@@ -170,7 +170,8 @@
     <link rel="modulepreload" href="/assets/js/world/cats.js?v=20261015-world" />
     <link rel="modulepreload" href="/assets/js/world/dragons.js?v=20261017-legs" />
     <link rel="modulepreload" href="/assets/js/world/emotes.js?v=20261015-world" />
-    <link rel="modulepreload" href="/assets/js/world/env.js?v=20261026-perf" />
+    <link rel="modulepreload" href="/assets/js/world/atmosphere.js?v=20261026-shafts" />
+    <link rel="modulepreload" href="/assets/js/world/env.js?v=20261026-shafts" />
     <link rel="modulepreload" href="/assets/js/world/fire.js?v=20261015-world" />
     <link rel="modulepreload" href="/assets/js/world/foliage.js?v=20261026-worker" />
     <link rel="modulepreload" href="/assets/js/world/noise.js?v=20261015-world" />
@@ -216,9 +217,6 @@
 
         <div class="crosshair" id="crosshair" hidden></div>
         <div class="playPrompt" id="playPrompt" hidden>Walk into a colored booth · or press 1–5</div>
-        <div class="playStats" id="playStats" hidden>
-          <span id="orbCount">Pick a booth</span>
-        </div>
         <nav class="gameMap" id="gameMap" hidden aria-label="Instaplay games"></nav>
         <div class="playHelp" id="playHelp" hidden>WASD walk · mouse look · space jump · walk in to play · 1–5 warp · Esc leave</div>
       </div>
@@ -270,7 +268,7 @@
       </noscript>
     </main>
 
-    <script type="module" src="/play.js?v=20261026-worker"></script>
+    <script type="module" src="/play.js?v=20261026-hud"></script>
     <script src="/script.js?v=20261001-no-photo"></script>
   </body>
 </html>

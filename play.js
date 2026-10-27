@@ -4,7 +4,7 @@ import { VoxelGrid } from "/assets/js/world/blocks.js?v=20261026-worker";
 import { buildTileArray, voxelMaterial, buildChunks } from "/assets/js/world/voxels.js?v=20261026-worker";
 import { SEA_Y } from "/assets/js/world/terrain.js?v=20261026-worker";
 import { WORLD, GAMES, MYSTERY, STALLS, BOOTHS, PAGES, SHELF, inShelf, boothAt, pageAt } from "/assets/js/world/plaza.js?v=20261026-worker";
-import { createEnvironment } from "/assets/js/world/env.js?v=20261026-perf";
+import { createEnvironment } from "/assets/js/world/env.js?v=20261026-shafts";
 import { makeHeightTexture, makeWaterMaterial, makeOcean } from "/assets/js/world/water.js?v=20261015-world";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
 import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
@@ -1519,10 +1519,8 @@ async function startWorld() {
 
   const intro = $("#playIntro");
   const promptEl = $("#playPrompt");
-  const statsEl = $("#playStats");
   const helpEl = $("#playHelp");
   const crosshair = $("#crosshair");
-  const orbCount = $("#orbCount");
   const mapEl = $("#gameMap");
   const overlay = $("#arcadeOverlay");
   const frame = $("#arcadeFrame");
@@ -1685,6 +1683,8 @@ async function startWorld() {
     openArcade(gameIndex);
   }
 
+  // Game list for reduced motion, where the world holds still and walking
+  // to a booth isn't an option.
   function renderMap(activeIndex = -1) {
     if (!mapEl) return;
     mapEl.innerHTML = "";
@@ -1742,9 +1742,8 @@ async function startWorld() {
     document.querySelector(".playPad")?.setAttribute("hidden", "true");
     document.querySelector(".playLook")?.setAttribute("hidden", "true");
     renderPicks();
-    renderMap(activeGame);
+    if (reduced) renderMap(activeGame);
     if (promptEl) promptEl.textContent = `Playing ${game.title}`;
-    if (orbCount) orbCount.textContent = game.title;
   }
 
   function closeArcade() {
@@ -1957,12 +1956,12 @@ async function startWorld() {
 
   function enterWorld() {
     if (promptEl) promptEl.hidden = false;
-    if (statsEl) statsEl.hidden = false;
     if (helpEl) helpEl.hidden = false;
     if (crosshair) crosshair.hidden = false;
-    renderMap();
     if (coarse) {
-      if (helpEl) helpEl.textContent = "Walk into a booth · or tap a game";
+      // The stick and E button explain themselves; skip the keyboard hints.
+      if (helpEl) helpEl.hidden = true;
+      if (promptEl) promptEl.textContent = "Walk into a booth to play";
       bindPad();
     }
   }
@@ -2559,13 +2558,14 @@ async function startWorld() {
             : `E · ${poi.title}`;
       } else if (!poi && lastPoi) {
         lastPoi = null;
-        promptEl.textContent = "Walk into a colored booth · or click a cat";
+        promptEl.textContent = coarse ? "Walk into a booth · or tap a cat" : "Walk into a colored booth · or click a cat";
       }
     }
 
     env.update(dt, player);
     rooms?.update(env.state.light);
-    if (camera.position.y < SEA_Y - 0.05) {
+    env.state.underwater = camera.position.y < SEA_Y - 0.05;
+    if (env.state.underwater) {
       // Underwater: thick blue-green murk.
       scene.fog.color.setRGB(0.08, 0.32, 0.42).multiplyScalar(0.4 + env.state.light * 0.6);
       scene.fog.near = 0.5;
