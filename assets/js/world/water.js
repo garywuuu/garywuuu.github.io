@@ -2,7 +2,12 @@ import * as THREE from "three";
 import { SKY_FN } from "./sky.js?v=20261015-world";
 
 // Ocean and pond surfaces. Depth comes from a terrain heightmap so shallows
-// turn turquoise and the shoreline gets animated foam.
+// turn turquoise and the shoreline gets animated foam. The ocean can also
+// mirror the island (see makeReflection); otherwise water reflects the sky
+// gradient.
+
+// Objects on this layer show up in the ocean's reflection.
+export const REFLECT_LAYER = 1;
 
 export function makeHeightTexture(grid) {
   const data = new Uint8Array(grid.sx * grid.sz);
@@ -19,6 +24,110 @@ export function makeHeightTexture(grid) {
   return tex;
 }
 
+// Planar mirror for the ocean: a second, third-resolution render of the
+// REFLECT_LAYER objects from a camera flipped below the sea surface, with an
+// oblique near plane so nothing under the water leaks in. Adapted from
+// three's Reflector, which keeps the reflection camera right-handed.
+//
+// An occlusion query on the sea surface skips the mirror render whenever no
+// water made it to the screen last time (most views from the plaza).
+export function makeReflection({ renderer, scene, camera, y, surface }) {
+  const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+  const virtual = new THREE.PerspectiveCamera();
+  virtual.layers.set(REFLECT_LAYER);
+  const matrix = new THREE.Matrix4();
+  const normal = new THREE.Vector3(0, 1, 0);
+  const origin = new THREE.Vector3();
+  const camPos = new THREE.Vector3();
+  const view = new THREE.Vector3();
+  const look = new THREE.Vector3();
+  const lookAt = new THREE.Vector3();
+  const rotation = new THREE.Matrix4();
+  const plane = new THREE.Plane();
+  const clip = new THREE.Vector4();
+  const q = new THREE.Vector4();
+
+  const gl = renderer.getContext();
+  const queries = [];
+  let query = null;
+  let drawn = false;
+  let seaVisible = true;
+  surface.onBeforeRender = () => {
+    drawn = true;
+    if (queries.length > 3) return;
+    query = gl.createQuery();
+    gl.beginQuery(gl.ANY_SAMPLES_PASSED_CONSERVATIVE, query);
+  };
+  surface.onAfterRender = () => {
+    if (!query) return;
+    gl.endQuery(gl.ANY_SAMPLES_PASSED_CONSERVATIVE);
+    queries.push(query);
+    query = null;
+  };
+
+  function pollVisibility() {
+    if (!drawn) seaVisible = false;
+    drawn = false;
+    while (queries.length && gl.getQueryParameter(queries[0], gl.QUERY_RESULT_AVAILABLE)) {
+      const done = queries.shift();
+      seaVisible = gl.getQueryParameter(done, gl.QUERY_RESULT) > 0;
+      gl.deleteQuery(done);
+    }
+  }
+
+  function setSize(width, height) {
+    target.setSize(Math.max(1, Math.round(width / 3)), Math.max(1, Math.round(height / 3)));
+  }
+
+  // Returns false (and skips the render) when the camera is under the sea
+  // or no sea is in view.
+  function update() {
+    pollVisibility();
+    camera.updateMatrixWorld();
+    camPos.setFromMatrixPosition(camera.matrixWorld);
+    origin.set(camPos.x, y, camPos.z);
+    if (camPos.y <= y || !seaVisible) return false;
+
+    view.subVectors(origin, camPos).reflect(normal).negate().add(origin);
+    rotation.extractRotation(camera.matrixWorld);
+    look.set(0, 0, -1).applyMatrix4(rotation).add(camPos);
+    lookAt.subVectors(origin, look).reflect(normal).negate().add(origin);
+    virtual.position.copy(view);
+    virtual.up.set(0, 1, 0).applyMatrix4(rotation).reflect(normal);
+    virtual.lookAt(lookAt);
+    virtual.far = camera.far;
+    virtual.updateMatrixWorld();
+    virtual.projectionMatrix.copy(camera.projectionMatrix);
+
+    // World position -> reflection texture coordinates.
+    matrix.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1);
+    matrix.multiply(virtual.projectionMatrix).multiply(virtual.matrixWorldInverse);
+
+    // Oblique near plane at the water surface.
+    plane.setFromNormalAndCoplanarPoint(normal, origin).applyMatrix4(virtual.matrixWorldInverse);
+    clip.set(plane.normal.x, plane.normal.y, plane.normal.z, plane.constant);
+    const e = virtual.projectionMatrix.elements;
+    q.set((Math.sign(clip.x) + e[8]) / e[0], (Math.sign(clip.y) + e[9]) / e[5], -1, (1 + e[10]) / e[14]);
+    clip.multiplyScalar(2 / clip.dot(q));
+    e[2] = clip.x;
+    e[6] = clip.y;
+    e[10] = clip.z + 1 - 0.003;
+    e[14] = clip.w;
+
+    // Reuse this frame's shadow map rather than rendering it again.
+    const autoShadows = renderer.shadowMap.autoUpdate;
+    const previous = renderer.getRenderTarget();
+    renderer.shadowMap.autoUpdate = false;
+    renderer.setRenderTarget(target);
+    renderer.render(scene, virtual);
+    renderer.setRenderTarget(previous);
+    renderer.shadowMap.autoUpdate = autoShadows;
+    return true;
+  }
+
+  return { texture: target.texture, matrix, setSize, update };
+}
+
 export function makeWaterMaterial(skyUniforms, heightTex, grid, surfaceY) {
   const uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog]);
   Object.assign(uniforms, skyUniforms, {
@@ -29,6 +138,9 @@ export function makeWaterMaterial(skyUniforms, heightTex, grid, surfaceY) {
     uLight: { value: 1 },
     uDeep: { value: new THREE.Color(0x0f3f7a) },
     uShallow: { value: new THREE.Color(0x3cc7c0) },
+    uReflection: { value: null },
+    uReflectMatrix: { value: new THREE.Matrix4() },
+    uMirror: { value: 0 },
   });
   return new THREE.ShaderMaterial({
     uniforms,
@@ -36,10 +148,13 @@ export function makeWaterMaterial(skyUniforms, heightTex, grid, surfaceY) {
     fog: true,
     vertexShader: `
 #include <fog_pars_vertex>
+uniform mat4 uReflectMatrix;
 varying vec3 vWorld;
+varying vec4 vMirrorUv;
 void main() {
   vec4 w = modelMatrix * vec4(position, 1.0);
   vWorld = w.xyz;
+  vMirrorUv = uReflectMatrix * w;
   vec4 mvPosition = viewMatrix * w;
   gl_Position = projectionMatrix * mvPosition;
   #include <fog_vertex>
@@ -53,7 +168,10 @@ uniform float uSurface;
 uniform float uLight;
 uniform vec3 uDeep;
 uniform vec3 uShallow;
+uniform sampler2D uReflection;
+uniform float uMirror;
 varying vec3 vWorld;
+varying vec4 vMirrorUv;
 
 float vnoise(vec2 p) {
   vec2 i = floor(p);
@@ -88,6 +206,11 @@ void main() {
   vec3 r = reflect(-v, n);
   r.y = abs(r.y);
   vec3 refl = skyGradient(r);
+  if (uMirror > 0.0) {
+    // The mirrored island, wobbled by the same blocky wave normals.
+    vec2 mirrorUv = vMirrorUv.xy / vMirrorUv.w + n.xz * 0.045;
+    refl = mix(refl, texture2D(uReflection, mirrorUv).rgb, uMirror);
+  }
   float shallow = smoothstep(0.0, 5.0, depth);
   vec3 body = mix(uShallow, uDeep, shallow) * uLight;
   vec3 col = mix(body, refl, clamp(fres * 0.85, 0.0, 1.0));
