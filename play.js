@@ -4,7 +4,7 @@ import { VoxelGrid } from "/assets/js/world/blocks.js?v=20261026-worker";
 import { buildTileArray, voxelMaterial, buildChunks } from "/assets/js/world/voxels.js?v=20261026-worker";
 import { SEA_Y } from "/assets/js/world/terrain.js?v=20261026-worker";
 import { WORLD, GAMES, MYSTERY, STALLS, BOOTHS, PAGES, SHELF, inShelf, boothAt, pageAt } from "/assets/js/world/plaza.js?v=20261026-worker";
-import { createEnvironment } from "/assets/js/world/env.js?v=20261026-shafts";
+import { createEnvironment } from "/assets/js/world/env.js?v=20261027-split";
 import { makeHeightTexture, makeWaterMaterial, makeOcean, makeReflection, REFLECT_LAYER } from "/assets/js/world/water.js?v=20261026-mirror";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
 import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
@@ -1311,7 +1311,7 @@ async function loadWorld() {
   } catch (err) {
     console.warn("worldgen worker failed, generating on the main thread", err);
   }
-  const { generateWorld } = await import("/assets/js/world/worldgen.js?v=20261026-worker");
+  const { generateWorld } = await import("/assets/js/world/worldgen.js?v=20261027-split");
   return { ...generateWorld(), worker: false };
 }
 
@@ -1336,6 +1336,9 @@ async function startWorld() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, lite ? 1 : 1.25));
   const stage = canvas.parentElement;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // Reading back every shader's log stalls the first frame on the GPU
+  // process (~50ms); only do it when debugging with ?debug.
+  renderer.debug.checkShaderErrors = params.has("debug");
 
   const scene = new THREE.Scene();
 
