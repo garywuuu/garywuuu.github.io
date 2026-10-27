@@ -173,10 +173,22 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
     sky.mesh.position.copy(camera.position);
   }
 
+  // Build every shader before the first frame, including ones for things off
+  // screen, so turning around never stalls. Programs depend on the render
+  // target (the composer's buffer skips tone mapping), so compile against the
+  // one the scene really draws into. With KHR_parallel_shader_compile the GPU
+  // links them in the background instead of freezing the page.
+  function compile() {
+    renderer.setRenderTarget(composer ? composer.readBuffer : null);
+    const ready = renderer.compileAsync(scene, camera);
+    renderer.setRenderTarget(null);
+    return ready;
+  }
+
   function render() {
     if (composer) composer.render();
     else renderer.render(scene, camera);
   }
 
-  return { shared, state, sky, clouds, sun, hemi, update, render, setSize };
+  return { shared, state, sky, clouds, sun, hemi, update, compile, render, setSize };
 }

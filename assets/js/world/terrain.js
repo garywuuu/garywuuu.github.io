@@ -31,7 +31,8 @@ export function coastRadius(x, z) {
 // Smooth, un-rounded terrain height.
 export function rawHeight(x, z) {
   const r = Math.hypot(x, z * 1.04);
-  const coast = smoothstep(coastRadius(x, z) + 8, coastRadius(x, z) - 26, r);
+  const shore = coastRadius(x, z);
+  const coast = smoothstep(shore + 8, shore - 26, r);
   const hills = 3.2 + fbm(x * 0.017, z * 0.017, 4, 11) * 7.5 + fbm(x * 0.07, z * 0.07, 2, 12) * 1.2;
   const m = mountainMask(x, z);
   const peaks = m * (6 + ridged(x * 0.021, z * 0.021, 5, 21) * 42 + smoothstep(-60, -110, z) * 10);

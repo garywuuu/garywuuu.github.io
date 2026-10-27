@@ -42,13 +42,9 @@ export function noise2(x, z, seed = 0) {
   const z0 = Math.floor(z);
   const fx = x - x0;
   const fz = z - z0;
-  const g = (ix, iz) => {
-    const a = ihash(ix, iz, seed) * Math.PI * 2;
-    return [Math.cos(a), Math.sin(a)];
-  };
   const dot = (ix, iz, dx, dz) => {
-    const v = g(ix, iz);
-    return v[0] * dx + v[1] * dz;
+    const a = ihash(ix, iz, seed) * Math.PI * 2;
+    return Math.cos(a) * dx + Math.sin(a) * dz;
   };
   const u = smooth(fx);
   const v = smooth(fz);
