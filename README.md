@@ -22,7 +22,7 @@ Open `/play/`. A pixel greeting fades after a few seconds. Click the world to lo
 - The middle stall is a 3-wide nether portal. Walk in to open Instaplay create.
 - Games load from `instaplay.ai/embed/g/{shortId}`. Make a Game goes to `instaplay.ai/create`.
 - Tower sign is YC S26 beside the white Instaplay wordmark and red icon
-- HUD map or keys 1–5 warp to a booth
+- Keys 1–5 warp to a booth (with reduced motion, a game list stands in for walking)
 - About / Research / Experience buildings are labeled. Walk in to open that page; use **Play** in the navigation to return.
 - Esc or **Leave cabinet** returns to the voxel world
 

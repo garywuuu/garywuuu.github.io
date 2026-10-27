@@ -36,22 +36,46 @@ function smooth(t) {
   return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
+function gradient(out, i, ix, iz, seed) {
+  const a = ihash(ix, iz, seed) * Math.PI * 2;
+  out[i] = Math.cos(a);
+  out[i + 1] = Math.sin(a);
+}
+
+// Corner gradients of the last lattice cell each seed sampled. Neighboring
+// samples nearly always share a cell, so this skips most of the trig.
+const CELLS = new Map();
+
+function cellFor(x0, z0, seed) {
+  let cell = CELLS.get(seed);
+  if (!cell) {
+    cell = { x0: NaN, z0: NaN, g: new Float64Array(8) };
+    CELLS.set(seed, cell);
+  }
+  if (cell.x0 !== x0 || cell.z0 !== z0) {
+    cell.x0 = x0;
+    cell.z0 = z0;
+    gradient(cell.g, 0, x0, z0, seed);
+    gradient(cell.g, 2, x0 + 1, z0, seed);
+    gradient(cell.g, 4, x0, z0 + 1, seed);
+    gradient(cell.g, 6, x0 + 1, z0 + 1, seed);
+  }
+  return cell.g;
+}
+
 // Gradient noise in roughly [-1, 1].
 export function noise2(x, z, seed = 0) {
   const x0 = Math.floor(x);
   const z0 = Math.floor(z);
   const fx = x - x0;
   const fz = z - z0;
-  const dot = (ix, iz, dx, dz) => {
-    const a = ihash(ix, iz, seed) * Math.PI * 2;
-    return Math.cos(a) * dx + Math.sin(a) * dz;
-  };
+  const g = cellFor(x0, z0, seed);
   const u = smooth(fx);
   const v = smooth(fz);
-  const a = dot(x0, z0, fx, fz);
-  const b = dot(x0 + 1, z0, fx - 1, fz);
-  const c = dot(x0, z0 + 1, fx, fz - 1);
-  const d = dot(x0 + 1, z0 + 1, fx - 1, fz - 1);
+  const a = g[0] * fx + g[1] * fz;
+  const b = g[2] * (fx - 1) + g[3] * fz;
+  const c = g[4] * fx + g[5] * (fz - 1);
+  const d = g[6] * (fx - 1) + g[7] * (fz - 1);
   return (a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v) * 1.414;
 }
 

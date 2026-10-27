@@ -5,8 +5,10 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { makeSky, makeClouds } from "./sky.js?v=20261015-world";
+import { AtmospherePass } from "./atmosphere.js?v=20261026-shafts";
 
-// Day/night cycle: sky, sun and moon light, fog, shadows, and bloom.
+// Day/night cycle: sky, sun and moon light, fog, shadows, light shafts,
+// mist, and bloom.
 
 const KEYS = [
   // elevation, zenith, horizon, sun color, sun intensity, hemi sky, hemi ground, hemi intensity, glow boost
@@ -103,9 +105,17 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
 
   let composer = null;
   let bloom = null;
+  let atmosphere = null;
   if (quality.bloom) {
     composer = new EffectComposer(renderer);
+    // The atmosphere pass reads scene depth; the scene renders into either
+    // buffer depending on the frame.
+    for (const target of [composer.renderTarget1, composer.renderTarget2]) {
+      target.depthTexture = new THREE.DepthTexture(target.width, target.height);
+    }
     composer.addPass(new RenderPass(scene, camera));
+    atmosphere = new AtmospherePass(camera);
+    composer.addPass(atmosphere);
     bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.55, 1.15);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
@@ -119,6 +129,7 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
     sunDir: new THREE.Vector3(),
     night: 0,
     light: 1,
+    underwater: false,
   };
 
   function setSize(w, h) {
@@ -170,6 +181,19 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
     }
     sun.position.copy(sun.target.position).addScaledVector(lightDir, 120);
 
+    if (atmosphere) {
+      // Rays are strongest with the sun low; morning and evening are mistier.
+      const up = THREE.MathUtils.smoothstep(e, -0.03, 0.05);
+      const low = 1 - THREE.MathUtils.smoothstep(e, 0.12, 0.55);
+      atmosphere.update({
+        sunDir: dir,
+        sunColor: k.sun,
+        mistColor: scene.fog.color,
+        shafts: up * (0.7 + 1.5 * low),
+        mist: state.underwater ? 0 : 0.0028 * (1 + 2 * (1 - THREE.MathUtils.smoothstep(e, 0.05, 0.4))),
+      });
+    }
+
     sky.mesh.position.copy(camera.position);
   }
 
@@ -180,9 +204,10 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
   // links them in the background instead of freezing the page.
   function compile() {
     renderer.setRenderTarget(composer ? composer.readBuffer : null);
-    const ready = renderer.compileAsync(scene, camera);
+    const ready = [renderer.compileAsync(scene, camera)];
     renderer.setRenderTarget(null);
-    return ready;
+    if (atmosphere) ready.push(atmosphere.compile(renderer));
+    return Promise.all(ready);
   }
 
   function render() {

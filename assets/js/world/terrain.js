@@ -1,5 +1,5 @@
 import { fbm, ridged, noise2, ihash, smoothstep } from "./noise.js?v=20261015-world";
-import { ID } from "./voxels.js?v=20261015-world";
+import { ID } from "./blocks.js?v=20261026-worker";
 
 // The island: a flat plaza in the middle, snowy mountains to the north,
 // cherry blossoms west, birch woods east, meadows and a lighthouse south.
@@ -33,11 +33,13 @@ export function rawHeight(x, z) {
   const r = Math.hypot(x, z * 1.04);
   const shore = coastRadius(x, z);
   const coast = smoothstep(shore + 8, shore - 26, r);
+  const sea = -11 + fbm(x * 0.03, z * 0.03, 2, 31) * 3;
+  // Open ocean and mountain-free land skip the noise that would be scaled to 0.
+  if (coast === 0) return sea * smoothstep(0, 22, distToRect(x, z, FLAT));
   const hills = 3.2 + fbm(x * 0.017, z * 0.017, 4, 11) * 7.5 + fbm(x * 0.07, z * 0.07, 2, 12) * 1.2;
   const m = mountainMask(x, z);
-  const peaks = m * (6 + ridged(x * 0.021, z * 0.021, 5, 21) * 42 + smoothstep(-60, -110, z) * 10);
+  const peaks = m === 0 ? 0 : m * (6 + ridged(x * 0.021, z * 0.021, 5, 21) * 42 + smoothstep(-60, -110, z) * 10);
   const land = Math.max(hills, 1.2) + peaks;
-  const sea = -11 + fbm(x * 0.03, z * 0.03, 2, 31) * 3;
   let h = sea + (land - sea) * coast;
   const flat = smoothstep(0, 22, distToRect(x, z, FLAT));
   h = h * flat;
