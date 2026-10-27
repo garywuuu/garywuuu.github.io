@@ -5,7 +5,7 @@ import { buildTileArray, voxelMaterial, buildChunks } from "/assets/js/world/vox
 import { SEA_Y } from "/assets/js/world/terrain.js?v=20261026-worker";
 import { WORLD, GAMES, MYSTERY, STALLS, BOOTHS, PAGES, SHELF, inShelf, boothAt, pageAt } from "/assets/js/world/plaza.js?v=20261026-worker";
 import { createEnvironment } from "/assets/js/world/env.js?v=20261026-shafts";
-import { makeHeightTexture, makeWaterMaterial, makeOcean } from "/assets/js/world/water.js?v=20261015-world";
+import { makeHeightTexture, makeWaterMaterial, makeOcean, makeReflection, REFLECT_LAYER } from "/assets/js/world/water.js?v=20261026-mirror";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
 import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
 import { buildCat, CAT_LOOKS, CAT_POSE } from "/assets/js/world/cats.js?v=20261015-world";
@@ -539,6 +539,7 @@ function buildWorld(scene, renderer, shared, quality, gen) {
   const glassMat = voxelMaterial(tiles, shared, { transparent: true });
   const voxels = buildChunks(gen.chunks, voxelMat, glassMat, { shadows: quality.shadows });
   scene.add(voxels);
+  world.voxels = voxels;
 
   const plants = makeFoliage(quality.lite ? foliage.filter((_, i) => i % 3 === 0) : foliage, tiles, shared);
   scene.add(plants);
@@ -1357,7 +1358,19 @@ async function startWorld() {
     rooms = buildRooms(scene, content, { font: FONT_FAMILY, renderer });
   });
 
-  const ocean = makeOcean(makeWaterMaterial(env.sky.uniforms, world.heightTex, GRID, SEA_Y), SEA_Y);
+  // The ocean mirrors the terrain, sky and clouds (not on lite, which skips
+  // post-processing too). Lights join the layer so the reflection pass lights
+  // things the same way and reuses the same shaders.
+  const oceanMat = makeWaterMaterial(env.sky.uniforms, world.heightTex, GRID, SEA_Y);
+  const ocean = makeOcean(oceanMat, SEA_Y);
+  const reflection = quality.bloom ? makeReflection({ renderer, scene, camera, y: SEA_Y, surface: ocean }) : null;
+  if (reflection) {
+    oceanMat.uniforms.uReflection.value = reflection.texture;
+    oceanMat.uniforms.uReflectMatrix.value = reflection.matrix;
+    for (const obj of [...world.voxels.children, env.sky.mesh, env.clouds.mesh, env.sun, env.hemi]) {
+      obj.layers.enable(REFLECT_LAYER);
+    }
+  }
   scene.add(ocean);
   const pondMat = makeWaterMaterial(env.sky.uniforms, world.heightTex, GRID, 0.86);
   const pond = new THREE.Mesh(new THREE.PlaneGeometry(7, 5), pondMat);
@@ -1544,6 +1557,7 @@ async function startWorld() {
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
     env.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
+    reflection?.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
     fire.setSize(h * renderer.getPixelRatio());
     ambient.setSize(h * renderer.getPixelRatio());
   }
@@ -2579,6 +2593,7 @@ async function startWorld() {
     ocean.position.z = Math.round(camera.position.z / 8) * 8;
     for (const mat of waters) mat.uniforms.uLight.value = env.state.light;
     renderer.info.reset();
+    if (reflection) ocean.material.uniforms.uMirror.value = reflection.update() ? 1 : 0;
     env.render();
     frameStats(now, dt);
     if (running) rafId = requestAnimationFrame(tick);
@@ -2586,14 +2601,18 @@ async function startWorld() {
 
   function start() {
     if (reduced) {
-      camera.position.set(0.5, 8, 20);
-      camera.lookAt(0.5, 3, -6);
+      // Above the plaza, in front of the Experience house, facing the booths.
+      camera.position.set(0.5, 5.5, 15);
+      camera.lookAt(0.5, 3.5, -8);
       env.update(0, player);
+      if (reflection) ocean.material.uniforms.uMirror.value = reflection.update() ? 1 : 0;
       env.render();
       renderMap();
+      // Same greeting, but the world holds still, so point at the game list.
       if (intro) {
         const lead = intro.querySelector(".playIntroLead");
-        if (lead) lead.textContent = "Motion is reduced. Use the game buttons or the tabs.";
+        if (lead) lead.innerHTML = "i'm gary, welcome to my site!<br />pick a game on the right.";
+        intro.querySelector(".playIntroHint")?.setAttribute("hidden", "");
       }
       return;
     }
