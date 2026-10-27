@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import test from 'node:test';
-import {generateWorld} from '../assets/js/world/worldgen.js';
+import {generateGrid, generateWorld, meshShare, mergeShares} from '../assets/js/world/worldgen.js';
 
 // Pins the generated island byte for byte (blocks, meshes, lighting, tints,
 // foliage, landmarks). Speedups to terrain or meshing must keep this hash;
@@ -27,4 +27,17 @@ test('world generation output is unchanged', () => {
   hash.update(JSON.stringify([world.features, world.foliage]));
   assert.equal(faces, 180201);
   assert.equal(hash.digest('hex'), '0f62ba2afd7f652fdc03783ca788e382fe659b3c5254e65e7961f7302d0161ee');
+});
+
+// The page splits meshing across workers; the shares must merge back into
+// exactly the chunks generateWorld makes.
+test('chunk shares merge back into the full mesh', () => {
+  const { grid } = generateGrid();
+  const whole = mergeShares([meshShare(grid)]);
+  const parts = 4;
+  const split = mergeShares([3, 1, 0, 2].map((part) => meshShare(grid, part, parts)));
+  assert.equal(split.length, whole.length);
+  split.forEach((chunk, i) => {
+    for (const pass of ['opaque', 'trans']) assert.deepEqual(chunk[pass], whole[i][pass]);
+  });
 });

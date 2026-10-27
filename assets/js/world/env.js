@@ -106,6 +106,8 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
   let composer = null;
   let bloom = null;
   let atmosphere = null;
+  let output = null;
+  let grade = null;
   if (quality.bloom) {
     composer = new EffectComposer(renderer);
     // The atmosphere pass reads scene depth; the scene renders into either
@@ -118,8 +120,10 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
     composer.addPass(atmosphere);
     bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.55, 1.15);
     composer.addPass(bloom);
-    composer.addPass(new OutputPass());
-    composer.addPass(new ShaderPass(GradeShader));
+    output = new OutputPass();
+    composer.addPass(output);
+    grade = new ShaderPass(GradeShader);
+    composer.addPass(grade);
   }
 
   const state = {
@@ -205,9 +209,24 @@ export function createEnvironment({ scene, renderer, camera, quality, startTime 
   function compile() {
     renderer.setRenderTarget(composer ? composer.readBuffer : null);
     const ready = [renderer.compileAsync(scene, camera)];
+    if (composer) {
+      // The composer's own passes aren't in the scene, so link them here too
+      // rather than all at once on the first frame. OutputPass picks its
+      // defines on first render; it will pick these same ones.
+      output.material.defines = { SRGB_TRANSFER: "", ACES_FILMIC_TONE_MAPPING: "" };
+      const passes = [bloom.materialHighPassFilter, ...bloom.separableBlurMaterials, bloom.compositeMaterial, bloom.blendMaterial, output.material];
+      ready.push(...passes.map(compileQuad));
+      // The grade pass is last, so it draws straight to the canvas.
+      renderer.setRenderTarget(null);
+      ready.push(compileQuad(grade.material));
+      ready.push(atmosphere.compile(renderer));
+    }
     renderer.setRenderTarget(null);
-    if (atmosphere) ready.push(atmosphere.compile(renderer));
     return Promise.all(ready);
+  }
+
+  function compileQuad(material) {
+    return renderer.compileAsync(new THREE.Mesh(new THREE.PlaneGeometry(), material), camera);
   }
 
   function render() {
