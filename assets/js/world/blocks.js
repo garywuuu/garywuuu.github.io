@@ -233,6 +233,7 @@ export function meshChunk(grid, cx, cz) {
   const x1 = Math.min(cx + CHUNK, grid.x0 + grid.sx);
   const z1 = Math.min(cz + CHUNK, grid.z0 + grid.sz);
   const { data, sy, sz, y0 } = grid;
+  const strideX = sz * sy;
 
   const op = (x, y, z) => {
     if (y < y0) return 1;
@@ -256,11 +257,28 @@ export function meshChunk(grid, cx, cz) {
     for (let z = cz; z < z1; z += 1) {
       const col = ((x - grid.x0) * sz + (z - grid.z0)) * sy;
       const yTop = grid.top[(x - grid.x0) * sz + (z - grid.z0)];
+      const interior = x > grid.x0 && x < grid.x0 + grid.sx - 1 && z > grid.z0 && z < grid.z0 + grid.sz - 1;
       for (let y = y0; y <= yTop; y += 1) {
-        const id = data[col + (y - y0)];
+        const i = col + (y - y0);
+        const id = data[i];
         if (!id) continue;
         const pass = PASS[id];
         if (!pass) continue;
+        // Most terrain is buried: skip the six neighbor lookups when every
+        // neighbor is opaque, since no face could show anyway.
+        if (
+          interior &&
+          y > y0 &&
+          y < y0 + sy - 1 &&
+          OPAQUE[data[i - 1]] &&
+          OPAQUE[data[i + 1]] &&
+          OPAQUE[data[i - sy]] &&
+          OPAQUE[data[i + sy]] &&
+          OPAQUE[data[i - strideX]] &&
+          OPAQUE[data[i + strideX]]
+        ) {
+          continue;
+        }
         const buf = out[pass - 1];
         for (let f = 0; f < 6; f += 1) {
           const face = FACES[f];

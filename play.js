@@ -452,6 +452,8 @@ function makeCover(item, x) {
     mat.map = pixelateCover(image);
     mat.needsUpdate = true;
   };
+  image.decoding = "async";
+  image.fetchPriority = "low";
   image.src = item.art;
   return mesh;
 }
