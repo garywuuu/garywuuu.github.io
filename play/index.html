@@ -125,6 +125,27 @@
 
     <link rel="stylesheet" href="/styles.css?v=20261015-footer" />
     <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg?v=20261001-circle" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.168.0/build/three.module.min.js",
+          "three/addons/": "https://unpkg.com/three@0.168.0/examples/jsm/"
+        }
+      }
+    </script>
+    <!-- Fetch three.js and its post-processing chain up front, in parallel,
+         instead of discovering each file one import at a time. -->
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/build/three.module.min.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/EffectComposer.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/RenderPass.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/UnrealBloomPass.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/OutputPass.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/ShaderPass.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/Pass.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/postprocessing/MaskPass.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/shaders/CopyShader.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/shaders/LuminosityHighPassShader.js" />
+    <link rel="modulepreload" href="https://unpkg.com/three@0.168.0/examples/jsm/shaders/OutputShader.js" />
   </head>
 
   <body class="playPage">
@@ -212,15 +233,7 @@
       </noscript>
     </main>
 
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://unpkg.com/three@0.168.0/build/three.module.js",
-          "three/addons/": "https://unpkg.com/three@0.168.0/examples/jsm/"
-        }
-      }
-    </script>
-    <script type="module" src="/play.js?v=20261022-rooms"></script>
+    <script type="module" src="/play.js?v=20261026-perf"></script>
     <script src="/script.js?v=20261001-no-photo"></script>
   </body>
 </html>

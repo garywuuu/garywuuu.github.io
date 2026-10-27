@@ -3,7 +3,7 @@ import { createCatBrain } from "/assets/js/cat-brain.js?v=20261015-handwired";
 import { buildTileArray } from "/assets/js/world/textures.js?v=20261015-world";
 import { VoxelGrid, voxelMaterial, buildChunks } from "/assets/js/world/voxels.js?v=20261015-world";
 import { generateTerrain, SEA_Y } from "/assets/js/world/terrain.js?v=20261015-world";
-import { createEnvironment } from "/assets/js/world/env.js?v=20261015-world";
+import { createEnvironment } from "/assets/js/world/env.js?v=20261026-perf";
 import { makeHeightTexture, makeWaterMaterial, makeOcean } from "/assets/js/world/water.js?v=20261015-world";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261015-world";
 import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
@@ -1747,6 +1747,8 @@ function startWorld() {
   let pointerDx = 0;
   let pointerDy = 0;
   let running = true;
+  let looping = false;
+  let rafId = 0;
   let last = performance.now();
   let arcadeOpen = false;
   let activeGame = 0;
@@ -2308,9 +2310,12 @@ function startWorld() {
 
   document.addEventListener("visibilitychange", () => {
     running = document.visibilityState === "visible";
-    if (running) {
+    if (running && looping) {
+      // A frame queued before the tab hid fires on return, so drop it rather
+      // than stacking a second loop on top.
       last = performance.now();
-      requestAnimationFrame(tick);
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
     }
   });
 
@@ -2816,23 +2821,28 @@ function startWorld() {
     renderer.info.reset();
     env.render();
     frameStats(now, dt);
-    if (running) requestAnimationFrame(tick);
+    if (running) rafId = requestAnimationFrame(tick);
   }
 
-  if (reduced) {
-    camera.position.set(0.5, 8, 20);
-    camera.lookAt(0.5, 3, -6);
-    env.update(0, player);
-    env.render();
-    renderMap();
-    if (intro) {
-      const lead = intro.querySelector(".playIntroLead");
-      if (lead) lead.textContent = "Motion is reduced. Use the game buttons or the tabs.";
+  function start() {
+    if (reduced) {
+      camera.position.set(0.5, 8, 20);
+      camera.lookAt(0.5, 3, -6);
+      env.update(0, player);
+      env.render();
+      renderMap();
+      if (intro) {
+        const lead = intro.querySelector(".playIntroLead");
+        if (lead) lead.textContent = "Motion is reduced. Use the game buttons or the tabs.";
+      }
+      return;
     }
-    return;
+    looping = true;
+    last = performance.now();
+    if (running) rafId = requestAnimationFrame(tick);
   }
 
-  requestAnimationFrame(tick);
+  env.compile().catch(console.warn).then(start).catch(failWorld);
   } catch (err) {
     failWorld(err);
   }
