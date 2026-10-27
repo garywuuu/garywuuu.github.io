@@ -1,8 +1,8 @@
-import * as THREE from "three";
 import { mulberry32, hashString } from "./noise.js?v=20261015-world";
 
-// Procedural 16px block tiles packed into one mipmapped texture array.
-// Every face samples its own layer, so tiles repeat cleanly with no bleed.
+// Procedural 16px block tiles, painted into the layers of one texture array
+// (built in voxels.js). Every face samples its own layer, so tiles repeat
+// cleanly with no bleed. No three.js here so the worker can paint them.
 
 const S = 16;
 
@@ -403,9 +403,11 @@ export const TILE_NAMES = [...Object.keys(PAINTERS), ...Object.keys(PLANTS)];
 export const PLANT_TILES = Object.keys(PLANTS);
 export const TILE = Object.fromEntries(TILE_NAMES.map((name, i) => [name, i]));
 
-export function buildTileArray(renderer) {
-  const layers = TILE_NAMES.length;
-  const data = new Uint8Array(S * S * 4 * layers);
+export const TILE_SIZE = S;
+
+// RGBA pixels for every tile, one 16x16 layer after another.
+export function paintTiles() {
+  const data = new Uint8Array(S * S * 4 * TILE_NAMES.length);
   for (const [layer, name] of TILE_NAMES.entries()) {
     const tile = makeTile();
     const painter = PAINTERS[name] || PLANTS[name];
@@ -417,18 +419,7 @@ export function buildTileArray(renderer) {
       data.set(tile.px.subarray(src, src + S * 4), dst);
     }
   }
-  const tex = new THREE.DataArrayTexture(data, S, S, layers);
-  tex.format = THREE.RGBAFormat;
-  tex.type = THREE.UnsignedByteType;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestMipmapLinearFilter;
-  tex.generateMipmaps = true;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  tex.needsUpdate = true;
-  return tex;
+  return data;
 }
 
 // Flat preview canvas for a tile; handy for UI swatches or debugging.
