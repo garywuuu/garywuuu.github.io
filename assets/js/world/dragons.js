@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { VoxPart, joint, attach } from "./voxkit.js?v=20261015-world";
+import { VoxPart, joint, attach } from "./voxkit.js?v=20261028-catlike";
 
 // Voxel dragons: a long neck, a hinged jaw for breathing fire, segmented
 // wings that fold at the elbow, and a whip tail. +Z is forward.
