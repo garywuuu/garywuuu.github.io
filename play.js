@@ -2598,8 +2598,19 @@ async function startWorld() {
     renderer.info.reset();
     if (reflection) ocean.material.uniforms.uMirror.value = reflection.update() ? 1 : 0;
     env.render();
+    revealWorld();
     frameStats(now, dt);
     if (running) rafId = requestAnimationFrame(tick);
+  }
+
+  // The poster stands in for the world until its first frame is drawn.
+  let poster = $("#playPoster");
+  function revealWorld() {
+    if (!poster) return;
+    const el = poster;
+    poster = null;
+    el.classList.add("isHidden");
+    setTimeout(() => el.remove(), reduced ? 0 : 700);
   }
 
   function start() {
@@ -2610,6 +2621,7 @@ async function startWorld() {
       env.update(0, player);
       if (reflection) ocean.material.uniforms.uMirror.value = reflection.update() ? 1 : 0;
       env.render();
+      revealWorld();
       renderMap();
       // Same greeting, but the world holds still, so point at the game list.
       if (intro) {
