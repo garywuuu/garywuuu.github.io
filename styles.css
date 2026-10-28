@@ -173,6 +173,13 @@ code {
   color: var(--muted);
 }
 
+#about .prose {
+  font-size: 17px;
+  line-height: 1.9;
+}
+#about .prose p {
+  margin-bottom: 1.7em;
+}
 #about .prose p:last-child {
   margin-bottom: 0;
 }
