@@ -173,34 +173,20 @@ code {
   color: var(--muted);
 }
 
-.aboutGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
-  gap: 18px;
-  align-items: start;
-}
-
-.aboutHeading {
-  grid-column: 1;
-  grid-row: 1;
-  margin: 0;
-}
-
-.aboutProse {
-  grid-column: 1;
-  grid-row: 2;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-}
-
-.aboutProse .prose {
-  flex: 1;
-}
-
-.aboutProse .prose p:last-child {
+#about .prose p:last-child {
   margin-bottom: 0;
+}
+
+/* Company logo before its name, sized to the text. */
+.brand {
+  white-space: nowrap;
+}
+
+.brandMark {
+  height: 0.95em;
+  width: auto;
+  margin-right: 0.3em;
+  vertical-align: -0.1em;
 }
 
 .status {
@@ -214,56 +200,61 @@ code {
   display: none;
 }
 
-.stack {
-  display: grid;
-  gap: 12px;
-  margin-top: 14px;
+/* Research list: title (opens the reader), course and year, summary, links. */
+.researchItem {
+  padding: 22px 0;
+  border-top: 1px solid var(--border);
 }
-
-#researchList {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(3, auto);
-  gap: 14px;
+.researchItem:first-child {
+  padding-top: 4px;
+  border-top: 0;
 }
-
-.card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  background: var(--bg);
+.researchItem h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
 }
-.card:hover {
-  border-color: var(--borderStrong);
-}
-
-.paperCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  padding: 18px 18px 16px 22px;
-  border-radius: 0;
+.researchTitle,
+.textBtn {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--fg);
+  text-align: left;
   cursor: pointer;
-  overflow: hidden;
 }
-.paperCard:hover,
-.paperCard:focus {
-  border-color: var(--fg);
-  outline: none;
+.researchTitle:hover,
+.researchTitle:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-.paperMark {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--fg);
+.researchMeta {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: var(--muted);
 }
-.paperCard .row {
-  margin-top: auto;
-  padding-top: 14px;
+.researchSummary {
+  margin: 10px 0 0 0;
+  color: rgba(0, 0, 0, 0.86);
 }
+.researchLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 10px 0 0 0;
+  font-size: 14px;
+}
+.researchLinks a,
+.textBtn {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 button.paperBtn,
 a.paperBtn {
   appearance: none;
@@ -400,69 +391,6 @@ body.paperOpen {
   min-width: 118px;
 }
 
-.cardTitle {
-  margin: 0;
-  font-size: 16px;
-}
-.cardMeta {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--muted);
-}
-.cardText {
-  margin: 10px 0 0 0;
-  color: rgba(0, 0, 0, 0.86);
-  font-size: calc(1em - 2px);
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-top: 12px;
-}
-
-.pill {
-  display: inline-block;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 13px;
-  text-decoration: none;
-  color: var(--fg);
-}
-.pill:hover,
-.pill:focus {
-  border-color: var(--fg);
-  outline: none;
-}
-
-.details {
-  margin-top: 10px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-
-.experienceEntry {
-  margin-bottom: 24px;
-}
-.experienceEntry:last-child {
-  margin-bottom: 0;
-}
-.experienceEntry h3 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.experienceEntry p {
-  margin: 0 0 8px 0;
-  color: rgba(0, 0, 0, 0.86);
-}
-.experienceEntry p:last-child {
-  margin-bottom: 0;
-}
-
 .bullets {
   margin: 10px 0 0 0;
   padding-left: 18px;
@@ -495,10 +423,6 @@ body.paperOpen {
   .linkGrid {
     grid-template-columns: 1fr;
   }
-  #researchList {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, auto);
-  }
 }
 
 @media (max-width: 520px) {
@@ -508,10 +432,6 @@ body.paperOpen {
   }
   .nav {
     justify-content: flex-start;
-  }
-  #researchList {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
   }
   .paperReader {
     padding: 10px;
@@ -583,7 +503,8 @@ body.paperOpen {
 }
 .footerRow {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
   flex-wrap: wrap;
   font-size: 13px;

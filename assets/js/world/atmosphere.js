@@ -107,7 +107,10 @@ vec3 worldAt(vec2 uv, float depth) {
 }
 
 void main() {
-  vec3 col = texture2D(tDiffuse, vUv).rgb;
+  // A single NaN, infinite or negative pixel from the scene would be smeared
+  // across a third of the screen by bloom and come out black for a frame.
+  // Clamping here, before bloom, keeps it to that one pixel.
+  vec3 col = clamp(texture2D(tDiffuse, vUv).rgb, 0.0, 256.0);
   float depth = texture2D(tDepth, vUv).x;
   bool sky = depth >= 1.0;
 
