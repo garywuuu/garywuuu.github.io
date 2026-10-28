@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { VoxPart } from "./voxkit.js?v=20261015-world";
+import { VoxPart } from "./voxkit.js?v=20261028-catlike";
 
 // Ambient life: fireflies at night, drifting cherry petals, butterflies by
 // day, the lighthouse's sweeping beam, and the windmill's turning sails.

@@ -7,13 +7,13 @@ import { WORLD, GAMES, MYSTERY, STALLS, BOOTHS, PAGES, SHELF, inShelf, boothAt, 
 import { createEnvironment } from "/assets/js/world/env.js?v=20261028-clamp";
 import { makeHeightTexture, makeWaterMaterial, makeOcean, makeReflection, REFLECT_LAYER } from "/assets/js/world/water.js?v=20261026-mirror";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
-import { voxMaterial } from "/assets/js/world/voxkit.js?v=20261015-world";
-import { buildCat, CAT_LOOKS, CAT_POSE } from "/assets/js/world/cats.js?v=20261015-world";
+import { voxMaterial, easeJoint } from "/assets/js/world/voxkit.js?v=20261028-catlike";
+import { buildCat, poseCat, CAT_LOOKS, CAT_HEAD } from "/assets/js/world/cats.js?v=20261028-catlike";
 import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
-import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261017-legs";
+import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261028-catlike";
 import { loadRoomContent, buildRooms } from "/assets/js/world/rooms.js?v=20261022-rooms";
 import { makeFire } from "/assets/js/world/fire.js?v=20261015-world";
-import { makeAmbient } from "/assets/js/world/ambient.js?v=20261015-world";
+import { makeAmbient } from "/assets/js/world/ambient.js?v=20261028-catlike";
 import { createMouseLookControls } from "/play-controls.js?v=20261015-mouse-look";
 
 const decideCatMood = createCatBrain();
@@ -619,17 +619,21 @@ function addBox(parent, kind, x, y, z, sx, sy, sz, extra = {}) {
 }
 
 let critterMaterial = null;
+const CAT_SCALE = 0.8;
 
 function makeCritter(scene, spec) {
   const root = new THREE.Group();
   let parts = { wings: null, tail: null, legs: [] };
   if (spec.kitten) {
-    // Kittens: mom's coat, smaller, with an even bigger head.
+    // Kittens: mom's coat, smaller, with a bigger head.
     parts = buildCat(root, CAT_LOOKS[spec.kitten], critterMaterial);
-    root.scale.setScalar(0.56);
-    parts.head.scale.setScalar(1.2);
+    root.scale.setScalar(CAT_SCALE * 0.56);
+    parts.head.scale.setScalar(CAT_HEAD * 1.5);
   } else if (CAT_LOOKS[spec.id]) {
+    // Adults are scaled down as a whole, keeping the head its full size.
     parts = buildCat(root, CAT_LOOKS[spec.id], critterMaterial);
+    root.scale.setScalar(CAT_SCALE);
+    parts.head.scale.setScalar(CAT_HEAD / CAT_SCALE);
   } else if (DRAGON_LOOKS[spec.id]) {
     parts = buildDragon(root, DRAGON_LOOKS[spec.id], critterMaterial);
     root.rotation.order = "YXZ";
@@ -932,179 +936,6 @@ function poseDragon(critter, now, dt, sit) {
   }
   if (data.tailMid) data.tailMid.rotation.y += (((1 - sit) * Math.sin(now / 220 + data.heading) * 0.18 + sit * Math.sin(now / 300) * 0.16) - data.tailMid.rotation.y) * blend;
   if (data.tailTip) data.tailTip.rotation.y += (((1 - sit) * Math.sin(now / 180 + data.heading) * 0.22 + sit * Math.sin(now / 240) * 0.2) - data.tailTip.rotation.y) * blend;
-}
-
-function easeJoint(node, rx, ry, rz, t) {
-  if (!node) return;
-  node.rotation.x += (rx - node.rotation.x) * t;
-  node.rotation.y += (ry - node.rotation.y) * t;
-  node.rotation.z += (rz - node.rotation.z) * t;
-}
-
-function poseCat(critter, now, dt) {
-  const data = critter.userData;
-  const stand = data.target && (data.mood === "browse" || data.mood === "guard");
-  const atStand = stand && Math.hypot(data.target.position.x - critter.position.x, data.target.position.z - critter.position.z) < 0.55;
-  const moving = data.mood === "wander" || data.mood === "chase" || data.mood === "yarn" || data.mood === "scratch" || (stand && !atStand) || (data.mood === "pounce" && data.moodT <= 0.7);
-  const pace = data.mood === "chase" ? 10 : data.mood === "yarn" ? 9 : 7.2;
-  if (moving) data.gait += dt * pace;
-  const walk = Math.sin(data.gait);
-  const walkB = Math.sin(data.gait + Math.PI);
-  const blend = Math.min(1, dt * 9);
-  let torsoX = 0;
-  let torsoZ = 0;
-  let headX = 0;
-  let headY = Math.sin(now / 1400 + data.baseY) * 0.06;
-  let headZ = 0;
-  const hips = [0, 0, 0, 0];
-  const hipZ = [0, 0, 0, 0];
-  let tail = [
-    { x: 0.08, y: Math.sin(now / 420) * 0.08 },
-    { x: 0.04, y: Math.sin(now / 360) * 0.1 },
-    { x: 0.02, y: Math.sin(now / 300) * 0.08 },
-  ];
-
-  if (data.mood === "sit" || data.mood === "regal") {
-    // Upright sit: chest raised, front legs straight, haunches folded.
-    torsoX = data.mood === "regal" ? -0.42 : -0.34;
-    hips[0] = -torsoX;
-    hips[1] = -torsoX;
-    hips[2] = -1.25;
-    hips[3] = -1.25;
-    tail = data.mood === "regal"
-      ? [{ x: 0.55, y: 0.15 }, { x: 0.35, y: 0.1 }, { x: 0.2, y: 0.05 }]
-      : [{ x: 0.18, y: 0.08 }, { x: 0.12, y: 0.06 }, { x: 0.08, y: 0.04 }];
-    headX = (data.mood === "regal" ? 0.3 : 0.38) + Math.sin(now / 2200 + data.blinkOffset) * 0.06;
-    headZ = Math.sin(now / 3100 + data.blinkOffset * 2) * 0.12;
-  } else if (data.mood === "loaf") {
-    // Paws tucked away, chin down: a sleepy bread loaf.
-    hips[0] = 1.35;
-    hips[1] = 1.35;
-    hips[2] = -1.35;
-    hips[3] = -1.35;
-    headX = 0.12 + Math.sin(now / 1600) * 0.03;
-    tail = [{ x: 0.15, y: 0 }, { x: 0.1, y: 0 }, { x: 0.05, y: 0 }];
-  } else if (data.mood === "knead") {
-    const a = (Math.sin(now / 120) + 1) * 0.5;
-    hips[0] = 0.2 + a * 0.45;
-    hips[1] = 0.2 + (1 - a) * 0.45;
-    hips[2] = -1.12;
-    hips[3] = -1.12;
-  } else if (data.mood === "browse" && atStand) {
-    torsoX = 0.04;
-    headX = -0.08;
-    headY = Math.sin(now / 700) * 0.1;
-    hips[0] = 0.18;
-    hips[1] = 0.18;
-    hips[2] = -1.08;
-    hips[3] = -1.08;
-    tail = [{ x: 0.22, y: 0.06 }, { x: 0.14, y: 0.04 }, { x: 0.08, y: 0.02 }];
-  } else if (data.mood === "guard" && atStand) {
-    torsoX = -0.02;
-    headX = -0.06;
-    hips[0] = 0.12;
-    hips[1] = 0.12;
-    hips[2] = -1.18;
-    hips[3] = -1.18;
-    tail = [{ x: 0.55, y: 0.12 }, { x: 0.32, y: 0.08 }, { x: 0.18, y: 0.04 }];
-  } else if (data.mood === "pet") {
-    torsoX = 0.03;
-    headX = 0.16 + Math.sin(now / 160) * 0.08;
-    headY = Math.sin(now / 280) * 0.14;
-    hips[0] = 0.18 + Math.abs(Math.sin(now / 130)) * 0.22;
-    hips[1] = 0.12;
-    hips[2] = -1.08;
-    hips[3] = -1.08;
-    tail = [
-      { x: 0.12, y: Math.sin(now / 140) * 0.22 },
-      { x: 0.1, y: Math.sin(now / 120) * 0.2 },
-      { x: 0.08, y: Math.sin(now / 100) * 0.16 },
-    ];
-  } else if (data.mood === "swat") {
-    const bat = Math.max(0, Math.sin(now / 100));
-    const i = data.swatLeg || 0;
-    hips[i] = 0.15 + bat * 0.85;
-    hipZ[i] = (i ? 0.25 : -0.25) * bat;
-    hips[i === 1 ? 0 : 1] = 0.2;
-    hips[2] = -0.25;
-    hips[3] = -0.25;
-    headY = (i ? 0.1 : -0.1);
-    tail = [{ x: 0.05, y: Math.sin(now / 90) * 0.2 }, { x: 0.05, y: Math.sin(now / 80) * 0.18 }, { x: 0.04, y: Math.sin(now / 70) * 0.16 }];
-  } else if (data.mood === "stretch") {
-    torsoX = 0.16;
-    hips[0] = 0.7;
-    hips[1] = 0.7;
-    hips[2] = -0.45;
-    hips[3] = -0.45;
-    tail = [{ x: -0.12, y: 0 }, { x: -0.08, y: 0 }, { x: -0.04, y: 0 }];
-  } else if (data.mood === "roll") {
-    torsoZ = Math.sin(now / 420) * 0.28;
-    hips[0] = 0.45;
-    hips[1] = 0.35;
-    hips[2] = 0.4;
-    hips[3] = 0.3;
-  } else if (data.mood === "pounce") {
-    const crouch = data.moodT > 0.7;
-    torsoX = crouch ? 0.14 : -0.06;
-    hips[0] = crouch ? 0.45 : 0.25;
-    hips[1] = crouch ? 0.45 : 0.25;
-    hips[2] = crouch ? 0.15 : -0.25;
-    hips[3] = crouch ? 0.15 : -0.25;
-  } else if (data.mood === "groom") {
-    headX = 0.28;
-    headZ = 0.22;
-    hips[0] = 0.55 + Math.sin(now / 150) * 0.2;
-    hips[1] = 0.15;
-    hips[2] = -0.2;
-    hips[3] = -0.2;
-  } else if (data.mood === "nuzzle") {
-    headX = 0.08;
-    headY = Math.sin(now / 240) * 0.1;
-    hips[0] = 0.12;
-    hips[1] = 0.12;
-    hips[2] = -0.12;
-    hips[3] = -0.12;
-    tail = [{ x: 0.05, y: Math.sin(now / 140) * 0.18 }, { x: 0.06, y: Math.sin(now / 120) * 0.16 }, { x: 0.05, y: Math.sin(now / 100) * 0.14 }];
-  } else if (data.mood === "scratch") {
-    hips[0] = Math.sin(now / 80) * 0.55;
-    hips[1] = Math.sin(now / 80 + 1) * 0.55;
-    hips[2] = -0.1;
-    hips[3] = -0.1;
-  } else if (moving) {
-    hips[0] = walk * 0.42;
-    hips[1] = walkB * 0.42;
-    hips[2] = walkB * 0.38;
-    hips[3] = walk * 0.38;
-    const wag = data.mood === "chase" || data.mood === "yarn" ? 0.22 : 0.12;
-    tail = [
-      { x: 0.06, y: Math.sin(now / 180 + data.gait) * wag },
-      { x: 0.05, y: Math.sin(now / 150 + data.gait + 0.4) * wag },
-      { x: 0.04, y: Math.sin(now / 120 + data.gait + 0.8) * wag },
-    ];
-  }
-
-  easeJoint(data.torso, torsoX, 0, torsoZ, blend);
-  if (data.torso) {
-    const sitLow = data.mood === "sit" || data.mood === "regal" || data.mood === "knead" || data.mood === "loaf" || data.mood === "pet" || data.mood === "browse" || data.mood === "guard";
-    const wantY = data.mood === "loaf" ? CAT_POSE.loafY : sitLow ? CAT_POSE.sitY : CAT_POSE.standY;
-    data.torso.position.y += (wantY - data.torso.position.y) * blend;
-  }
-  easeJoint(data.head, headX, headY, headZ, blend);
-  const blinkPhase = (now / 1000 + data.blinkOffset) % 4.8;
-  const eyeOpen = blinkPhase < 0.16 ? 0.08 : data.mood === "loaf" ? 0.1 : data.mood === "pet" || data.mood === "nuzzle" ? 0.3 : 1;
-  for (const eye of data.eyes) eye.scale.y += (eyeOpen - eye.scale.y) * Math.min(1, dt * 24);
-  for (const [i, ear] of data.ears.entries()) {
-    const twitch = Math.max(0, Math.sin(now / 680 + data.gait + i * 2)) ** 12;
-    easeJoint(ear, twitch * 0.12, 0, (i ? 1 : -1) * (twitch * 0.18 - 0.12), blend);
-  }
-  for (const [i, leg] of data.legs.entries()) {
-    if (!leg) continue;
-    easeJoint(leg, hips[i], 0, hipZ[i], blend);
-  }
-  const tailLift = data.mood === "loaf" || data.mood === "sit" ? 0.25 : 0.9;
-  easeJoint(data.tail, tail[0].x + tailLift, tail[0].y, 0, blend);
-  easeJoint(data.tailMid, tail[1].x, tail[1].y, 0, blend);
-  easeJoint(data.tailTip, tail[2].x + 0.6, tail[2].y, 0, blend);
 }
 
 function pickCatMood(critter, cats, toys) {
@@ -1446,6 +1277,82 @@ async function startWorld() {
     (cat.userData.head || cat).getWorldPosition(headPos);
     emotes.spawn(kind, headPos.x, headPos.y + lift * cat.scale.y, headPos.z, opts);
   }
+  const camDir = new THREE.Vector3();
+  const gazeTo = new THREE.Vector3();
+  // What a cat is paying attention to: the player (how far, which way, and
+  // whether they're staring at it) and the nearest dragon.
+  function catSenses(cat, dt) {
+    const data = cat.userData;
+    const dx = player.x - cat.position.x;
+    const dz = player.z - cat.position.z;
+    data.playerD = Math.hypot(dx, dz);
+    data.playerYaw = wrapAngle(Math.atan2(dx, dz) - data.heading);
+    data.greet = data.playerD < 2.4;
+    // Hold a cat's gaze and it slow-blinks back.
+    gazeTo.set(cat.position.x, cat.position.y + 0.45 * cat.scale.y, cat.position.z).sub(camera.position);
+    const d = gazeTo.length();
+    data.gazeT = d < 7 && gazeTo.dot(camDir) > d * 0.985 ? (data.gazeT || 0) + dt : 0;
+    data.blinkCool = Math.max(0, (data.blinkCool || 0) - dt);
+    data.slowBlink = Math.max(0, (data.slowBlink || 0) - dt);
+    if (data.gazeT > 1.3 && data.blinkCool <= 0 && data.mood !== "loaf" && data.mood !== "sunbathe") {
+      data.slowBlink = 1.8;
+      data.blinkCool = 6;
+    }
+    data.spook = Math.max(0, (data.spook || 0) - dt);
+    data.spookCool = Math.max(0, (data.spookCool || 0) - dt);
+    data.watch = null;
+    let best = 22;
+    for (const dragon of dragons) {
+      // A perched dragon is old news; one flying past gets watched.
+      if (dragon.userData.mood === "perch") continue;
+      const ddx = dragon.position.x - cat.position.x;
+      const ddz = dragon.position.z - cat.position.z;
+      const dy = dragon.position.y - cat.position.y - 0.5;
+      const flat = Math.hypot(ddx, ddz);
+      const dist = Math.hypot(flat, dy);
+      if (dist >= best) continue;
+      best = dist;
+      // Dragons cruise well overhead; one passing right above is a fright.
+      if (flat < 5 && dy < 17 && data.spookCool <= 0) {
+        data.spook = 1.5;
+        data.spookCool = 8;
+      }
+      const yaw = wrapAngle(Math.atan2(ddx, ddz) - data.heading);
+      if (Math.abs(yaw) > 2.3) continue;
+      data.watch = data.watchInfo ||= {};
+      data.watch.yaw = yaw;
+      data.watch.pitch = Math.atan2(dy, flat);
+      data.watch.dist = dist;
+    }
+  }
+  // Whims the mood picker doesn't know about: zoomies at dusk and naps in a
+  // patch of sun.
+  function catWhim(cat) {
+    const data = cat.userData;
+    const t = env.state.time;
+    if (t > 0.44 && t < 0.56 && Math.random() < 0.2) {
+      setCatMood(cat, "zoom", { moodT: 2.2 + Math.random() * 2, speed: 3.4 });
+      data.timer = 0;
+    } else if (data.mood === "loaf" && env.state.sunDir.y > 0.2 && Math.random() < 0.6) {
+      const spot = sunnySpot(cat.position.x, cat.position.z);
+      if (spot) setCatMood(cat, "sunbathe", { target: spot, moodT: 9 + Math.random() * 7, speed: 0.95 });
+    }
+  }
+  function sunnySpot(x, z) {
+    const sun = env.state.sunDir;
+    for (let i = 0; i < 10; i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.5 + Math.random() * 3.5;
+      const sx = x + Math.cos(a) * r;
+      const sz = z + Math.sin(a) * r;
+      if (!roamOk(sx, sz)) continue;
+      const y = groundY(sx, sz) + 0.3;
+      let lit = true;
+      for (let k = 0.6; k < 24 && lit; k += 0.6) lit = !solidAt(sx + sun.x * k, y + sun.y * k, sz + sun.z * k);
+      if (lit) return makeSpot(sx, sz, sx + Math.cos(a), sz + Math.sin(a));
+    }
+    return null;
+  }
   if (params.get("dragondemo") === "perch") {
     // Every dragon standing in a row, side-on to a camera on +z.
     dragons.forEach((d, i) => {
@@ -1476,22 +1383,26 @@ async function startWorld() {
   }
   if (params.has("catdemo")) {
     // Screenshot lineup: every coat in a different mood, facing the camera.
-    const moods = ["sit", "wander", "loaf", "pet", "regal", "knead", "sit", "groom", "wander", "stretch"];
+    const moods = ["sit", "wander", "loaf", "pet", "regal", "knead", "pounce", "groom", "sunbathe", "stretch"];
+    const facing = params.get("catdemo") === "side" ? Math.PI / 2 : 0;
     const adults = cats.filter((c) => !c.userData.kitten);
     const kits = cats.filter((c) => c.userData.kitten);
+    // Side-on, the rows spread out so each profile reads on its own.
+    const gapX = facing ? 1.3 : 0.88;
+    const gapZ = facing ? 2.6 : 1.1;
     adults.forEach((cat, i) => {
-      cat.position.x = -1.75 + (i % 5) * 0.88;
-      cat.position.z = 10.2 - Math.floor(i / 5) * 1.1;
+      cat.position.x = -2 * gapX + (i % 5) * gapX;
+      cat.position.z = 10.2 - Math.floor(i / 5) * gapZ;
       cat.userData.demo = moods[i % moods.length];
-      cat.userData.heading = 0;
+      cat.userData.heading = facing;
     });
     const kitMoods = ["sit", "loaf", "pet", "wander", "swat"];
     kits.forEach((cat, i) => {
-      cat.position.x = -1.3 + i * 0.68;
-      cat.position.z = 11.2;
+      cat.position.x = -1.3 + i * (facing ? 0.9 : 0.68);
+      cat.position.z = facing ? 5.4 : 11.2;
       cat.userData.demo = kitMoods[i % kitMoods.length];
       cat.userData.kittenOf = null;
-      cat.userData.heading = 0;
+      cat.userData.heading = facing;
     });
   }
   let ballVel = new THREE.Vector3();
@@ -2302,22 +2213,24 @@ async function startWorld() {
       }
     }
 
+    camera.getWorldDirection(camDir);
     for (const critter of critters) {
       const data = critter.userData;
       if (!data.sky) {
+        catSenses(critter, dt);
         // Floating emotes: hearts while petted, Zs while napping.
         data.emoteT -= dt;
         if (data.emoteT <= 0) {
           if (data.mood === "pet") {
             emoteAbove(critter, "heart");
             data.emoteT = 0.55 + Math.random() * 0.3;
-          } else if (data.mood === "loaf") {
+          } else if (data.mood === "loaf" || (data.mood === "sunbathe" && data.speed === 0)) {
             emoteAbove(critter, "z", 0.26, { vy: 0.28, vx: 0.05, size: 0.16, life: 2.4 });
             data.emoteT = 1.3;
           } else if (data.mood === "knead" || data.mood === "nuzzle") {
             emoteAbove(critter, "heart", 0.3, { size: 0.15 });
             data.emoteT = 1.6;
-          } else if (data.mood === "yarn" || data.mood === "pounce") {
+          } else if (data.mood === "yarn" || data.mood === "pounce" || data.mood === "zoom") {
             emoteAbove(critter, "sparkle", 0.26, { size: 0.16, life: 0.9 });
             data.emoteT = 1.1;
           } else data.emoteT = 0.5;
@@ -2339,7 +2252,10 @@ async function startWorld() {
       data.moodT -= dt;
       if (data.moodT <= 0) {
         if (data.sky) pickDragonMood(critter, dragons);
-        else pickCatMood(critter, cats, catToys);
+        else {
+          pickCatMood(critter, cats, catToys);
+          catWhim(critter);
+        }
       }
 
       const mode = data.sky ? "sky" : "walk";
@@ -2366,14 +2282,14 @@ async function startWorld() {
         const dist = Math.hypot(pal.position.x - critter.position.x, pal.position.z - critter.position.z);
         if (dist > 0.9) stepToward(critter, aim.x, aim.z, dt, mode);
         else faceToward(critter, pal.position.x, pal.position.z);
-      } else if ((data.mood === "yarn" || data.mood === "scratch" || data.mood === "browse" || data.mood === "guard") && toy) {
+      } else if ((data.mood === "yarn" || data.mood === "scratch" || data.mood === "browse" || data.mood === "guard" || data.mood === "sunbathe") && toy) {
         const reach = data.mood === "yarn" ? 0.35 : data.mood === "scratch" ? 0.55 : 0.42;
         const dist = Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z);
         if (dist > reach) stepToward(critter, toy.position.x, toy.position.z, dt, mode);
         else {
           const look = toy.look || toy.position;
           faceToward(critter, look.x, look.z);
-          if (data.mood === "browse" || data.mood === "guard") data.speed = 0;
+          if (data.mood === "browse" || data.mood === "guard" || data.mood === "sunbathe") data.speed = 0;
         }
       } else if (data.mood === "tour" && toy) {
         stepToward(critter, toy.x, toy.z, dt, mode);
@@ -2418,7 +2334,7 @@ async function startWorld() {
       } else {
         if (data.timer <= 0) {
           data.heading += (hash(critter.position.x * 10, critter.position.z * 10) - 0.5) * Math.PI;
-          data.timer = 1.4 + hash(critter.position.z, now) * 2.2;
+          data.timer = data.mood === "zoom" ? 0.35 + hash(critter.position.z, now) * 0.5 : 1.4 + hash(critter.position.z, now) * 2.2;
         }
         const step = data.speed * dt;
         const nx = critter.position.x + Math.sin(data.heading) * step;
@@ -2508,6 +2424,7 @@ async function startWorld() {
         let bob = 0;
         if (data.mood === "pounce" && data.moodT <= 0.7) bob = Math.abs(Math.sin(now / 90)) * 0.1;
         else if (data.mood === "yarn" && toy && Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z) < 0.5) bob = Math.abs(Math.sin(now / 140)) * 0.06;
+        else if (data.mood === "zoom") bob = Math.abs(Math.sin(data.gait)) * 0.07;
         else if (data.mood === "wander" || data.mood === "chase") bob = Math.abs(Math.sin(data.gait * 2)) * 0.03;
         critter.position.y = Math.max(floor, floor + bob);
         poseCat(critter, now, dt);

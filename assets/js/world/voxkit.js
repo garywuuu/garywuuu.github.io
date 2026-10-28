@@ -158,3 +158,11 @@ export function attach(pivot, part, material) {
   pivot.add(mesh);
   return mesh;
 }
+
+// Eases a joint's rotation toward a target; t is the fraction to cover.
+export function easeJoint(node, rx, ry, rz, t) {
+  if (!node) return;
+  node.rotation.x += (rx - node.rotation.x) * t;
+  node.rotation.y += (ry - node.rotation.y) * t;
+  node.rotation.z += (rz - node.rotation.z) * t;
+}
