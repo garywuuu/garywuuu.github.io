@@ -4,10 +4,10 @@ A minimalist black and white personal website with a Three.js voxel lobby at `/p
 
 ## Features
 
-- **Routed pages**: Play, About, Research, Experience
+- **Routed pages**: About (the homepage), Research, Play
 - **Instaplay Spawn**: first-person voxel plaza. Walk into a labeled booth to play a live Instaplay game. Side buildings open About, Research, and Experience.
 - **Research Papers**: Display and download PDF research papers from college
-- **Experience**: Resume-style display of internships and work experiences
+- **Experience**: Shown inside the Play world's Experience house (`/experience/` redirects home)
 - **Responsive design**: Works on desktop and mobile devices
 - **Accessible**: Keyboard navigation and proper semantic HTML
 

@@ -5,7 +5,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { makeSky, makeClouds } from "./sky.js?v=20261015-world";
-import { AtmospherePass } from "./atmosphere.js?v=20261026-shafts";
+import { AtmospherePass } from "./atmosphere.js?v=20261028-clamp";
 
 // Day/night cycle: sky, sun and moon light, fog, shadows, light shafts,
 // mist, and bloom.

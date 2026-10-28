@@ -162,109 +162,44 @@
     setupPaperReader();
 
     for (const [idx, p] of papers.entries()) {
-      const titleRow = el("div", {}, [
-        el("h3", { class: "cardTitle", text: p.title || "Untitled research" }),
-        el(
-          "div",
-          { class: "cardMeta" },
-          [
-            p.venue ? el("span", { text: p.venue }) : el("span"),
-            p.venue && p.year ? el("span", { text: " • " }) : el("span"),
-            p.year ? el("span", { text: String(p.year) }) : el("span"),
-          ].filter((n) => n.textContent !== "")
-        ),
+      const title = el("button", { class: "researchTitle", type: "button", text: p.title || "Untitled research" });
+      title.addEventListener("click", () => openPaperReader(p));
+
+      const meta = [p.venue, p.year].filter(Boolean).join(" · ");
+
+      const read = el("button", { class: "textBtn", type: "button", text: "Read" });
+      read.addEventListener("click", () => openPaperReader(p));
+      const links = el("p", { class: "researchLinks" }, [
+        read,
+        el("a", { href: paperHref(p.pdf), download: safeFileName(p.pdf), text: "Download PDF" }),
       ]);
-
-      const openBtn = el("button", { class: "paperBtn", type: "button", text: "Read paper" });
-      openBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openPaperReader(p);
-      });
-
-      const actions = el("div", { class: "row" }, [
-        openBtn,
-        el("a", { class: "paperBtn", href: paperHref(p.pdf), download: safeFileName(p.pdf), text: "Download" }),
-      ]);
-
       if (Array.isArray(p.links)) {
         for (const l of p.links) {
           if (!l || !l.url) continue;
-          actions.append(el("a", { class: "pill", href: l.url, target: "_blank", rel: "noreferrer", text: l.label || hostFromUrl(l.url) }));
+          links.append(el("a", { href: l.url, target: "_blank", rel: "noreferrer", text: l.label || hostFromUrl(l.url) }));
         }
       }
 
-      const card = el("article", { class: "card paperCard", tabindex: "0", role: "button", "aria-label": `Read ${p.title || "paper"}` }, [
-        el("div", { class: "paperMark", "aria-hidden": "true" }),
-        titleRow,
-        p.summary ? el("p", { class: "cardText", text: p.summary }) : el("span"),
-        actions,
+      const entry = el("article", { class: "researchItem" }, [
+        el("h2", {}, [title]),
+        meta ? el("p", { class: "researchMeta", text: meta }) : el("span"),
+        p.summary ? el("p", { class: "researchSummary", text: p.summary }) : el("span"),
+        links,
       ]);
-
-      const open = () => openPaperReader(p);
-      card.addEventListener("click", (e) => {
-        if (e.target.closest("a, button")) return;
-        open();
-      });
-      card.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          open();
-        }
-      });
 
       if (p.abstract) {
         const detailsId = `research-abs-${idx}`;
-        const btn = el("button", {
-          class: "pill",
-          type: "button",
-          "aria-expanded": "false",
-          "aria-controls": detailsId,
-          text: "Show abstract",
+        const btn = el("button", { class: "textBtn", type: "button", "aria-expanded": "false", "aria-controls": detailsId, text: "Abstract" });
+        const details = el("p", { class: "researchSummary", id: detailsId, hidden: "true", text: p.abstract });
+        btn.addEventListener("click", () => {
+          const shown = btn.getAttribute("aria-expanded") === "true";
+          btn.setAttribute("aria-expanded", shown ? "false" : "true");
+          details.hidden = shown;
         });
-        const details = el("div", { class: "details", id: detailsId, hidden: "true" }, [el("p", { class: "cardText", text: p.abstract })]);
-
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const openAbs = btn.getAttribute("aria-expanded") === "true";
-          btn.setAttribute("aria-expanded", openAbs ? "false" : "true");
-          btn.textContent = openAbs ? "Show abstract" : "Hide abstract";
-          if (openAbs) details.setAttribute("hidden", "true");
-          else details.removeAttribute("hidden");
-        });
-
-        actions.append(btn);
-        card.append(details);
+        links.append(btn);
+        entry.append(details);
       }
 
-      list.append(card);
-    }
-  }
-
-  function renderExperience(exps, linksById) {
-    const list = document.getElementById("experienceList");
-    if (!list) return;
-    list.innerHTML = "";
-
-    const score = (e) => {
-      // prefer end date, otherwise start date; higher is more recent
-      const key = e.end || e.start || "";
-      return key.replaceAll("-", "");
-    };
-    const sorted = [...exps].sort((a, b) => (score(b) > score(a) ? 1 : -1));
-
-    for (const e of sorted) {
-      // Title and org
-      const titleText = e.title || "Role";
-      const metaText = e.org ? ` • ${e.org}` : "";
-      const children = [el("h3", { text: `${titleText}${metaText}` })];
-
-      // Bullets as a single paragraph
-      if (Array.isArray(e.bullets) && e.bullets.length) {
-        const paragraphText = e.bullets.join(" ");
-        children.push(el("p", { text: paragraphText }));
-      }
-
-      const entry = el("div", { class: "experienceEntry" }, children);
       list.append(entry);
     }
   }
@@ -291,36 +226,16 @@
 
     setupActiveNav();
 
-    const needsResearch = Boolean(document.getElementById("researchList"));
-    const needsExperience = Boolean(document.getElementById("experienceList"));
-
-    if (needsResearch) setStatus("researchStatus", "Loading research…");
-    if (needsExperience) setStatus("experienceStatus", "Loading experience…");
-
-    if (needsResearch || needsExperience) {
-      try {
-        const [papers, exps, links] = await Promise.all([
-          needsResearch ? fetchJson("/data/papers.json") : Promise.resolve([]),
-          needsExperience ? fetchJson("/data/experience.json") : Promise.resolve([]),
-          fetchJson("/data/links.json").catch(() => ({})),
-        ]);
-
-        if (needsResearch) {
-          if (!Array.isArray(papers) || papers.length === 0) setStatus("researchStatus", "No research yet.");
-          else setStatus("researchStatus", "");
-          renderPapers(Array.isArray(papers) ? papers : []);
-        }
-
-        if (needsExperience) {
-          if (!Array.isArray(exps) || exps.length === 0) setStatus("experienceStatus", "No experience entries yet.");
-          else setStatus("experienceStatus", "");
-          renderExperience(Array.isArray(exps) ? exps : [], links && typeof links === "object" ? links : {});
-        }
-      } catch (err) {
-        console.error(err);
-        if (needsResearch) setStatus("researchStatus", "Failed to load data. Check the JSON files under data/.");
-        if (needsExperience) setStatus("experienceStatus", "Failed to load data. Check the JSON files under data/.");
-      }
+    if (!document.getElementById("researchList")) return;
+    setStatus("researchStatus", "Loading research…");
+    try {
+      const papers = await fetchJson("/data/papers.json");
+      if (!Array.isArray(papers) || papers.length === 0) setStatus("researchStatus", "No research yet.");
+      else setStatus("researchStatus", "");
+      renderPapers(Array.isArray(papers) ? papers : []);
+    } catch (err) {
+      console.error(err);
+      setStatus("researchStatus", "Failed to load data. Check data/papers.json.");
     }
   }
 
