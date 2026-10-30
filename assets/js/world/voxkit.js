@@ -20,6 +20,12 @@ const tmpVec = new THREE.Vector3();
 const tmpNrm = new THREE.Vector3();
 const tmpScale = new THREE.Vector3(1, 1, 1);
 
+// Faces of different boxes in one part that land closer than this get
+// pulled apart to this, so the depth buffer can always tell which is in
+// front. Coplanar overlaps would otherwise z-fight: even same-colored boxes
+// shade their side faces with a height-dependent gradient.
+const FACE_GAP = 0.005;
+
 export class VoxPart {
   constructor() {
     this.pos = [];
@@ -27,11 +33,48 @@ export class VoxPart {
     this.col = [];
     this.emit = [];
     this.idx = [];
+    // Axis-aligned boxes so far, as [minX, minY, minZ, maxX, maxY, maxZ].
+    this.boxes = [];
+  }
+
+  // Grows a new axis-aligned box so none of its faces sit on (or just
+  // behind) a matching face of an earlier box it overlaps: later boxes
+  // (stripes, patches, faces) are meant to sit on top.
+  clearFaces(b) {
+    for (let pass = 0; pass < 3; pass += 1) {
+      let moved = false;
+      for (const e of this.boxes) {
+        for (let a = 0; a < 3; a += 1) {
+          const u = (a + 1) % 3;
+          const v = (a + 2) % 3;
+          const overlaps =
+            Math.min(b[3 + u], e[3 + u]) - Math.max(b[u], e[u]) > 1e-6 &&
+            Math.min(b[3 + v], e[3 + v]) - Math.max(b[v], e[v]) > 1e-6;
+          if (!overlaps) continue;
+          if (Math.abs(b[3 + a] - e[3 + a]) < FACE_GAP && b[3 + a] < e[3 + a] + FACE_GAP) {
+            b[3 + a] = e[3 + a] + FACE_GAP;
+            moved = true;
+          }
+          if (Math.abs(b[a] - e[a]) < FACE_GAP && b[a] > e[a] - FACE_GAP) {
+            b[a] = e[a] - FACE_GAP;
+            moved = true;
+          }
+        }
+      }
+      if (!moved) break;
+    }
   }
 
   // Centered box; opts: rx/ry/rz rotation, glow (emissive strength), shade
   // (darkens the bottom faces for a soft fake occlusion).
   box(x, y, z, sx, sy, sz, color, opts = {}) {
+    if (!opts.rx && !opts.ry && !opts.rz) {
+      const b = [x - sx / 2, y - sy / 2, z - sz / 2, x + sx / 2, y + sy / 2, z + sz / 2];
+      this.clearFaces(b);
+      this.boxes.push(b);
+      [x, y, z] = [(b[0] + b[3]) / 2, (b[1] + b[4]) / 2, (b[2] + b[5]) / 2];
+      [sx, sy, sz] = [b[3] - b[0], b[4] - b[1], b[5] - b[2]];
+    }
     tmpColor.set(color);
     tmpEuler.set(opts.rx || 0, opts.ry || 0, opts.rz || 0);
     tmpQuat.setFromEuler(tmpEuler);
@@ -141,6 +184,24 @@ export function voxMaterial(shared) {
       .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * vEmit * mix(1.0, uGlowBoost, 0.6);");
   };
   mat.customProgramCacheKey = () => "voxkit";
+  return mat;
+}
+
+// The same material drawn a hair deeper in the depth buffer, for parts that
+// tuck into or press against another joint's mesh (a leg against the body):
+// where their faces meet, the other mesh always wins instead of flickering.
+const behind = new WeakMap();
+export function tuckedMaterial(material) {
+  let mat = behind.get(material);
+  if (!mat) {
+    mat = material.clone();
+    mat.onBeforeCompile = material.onBeforeCompile;
+    mat.customProgramCacheKey = material.customProgramCacheKey;
+    mat.polygonOffset = true;
+    mat.polygonOffsetFactor = 1;
+    mat.polygonOffsetUnits = 2;
+    behind.set(material, mat);
+  }
   return mat;
 }
 

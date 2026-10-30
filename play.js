@@ -7,13 +7,13 @@ import { WORLD, GAMES, MYSTERY, STALLS, BOOTHS, PAGES, SHELF, inShelf, boothAt, 
 import { createEnvironment } from "/assets/js/world/env.js?v=20261028-clamp";
 import { makeHeightTexture, makeWaterMaterial, makeOcean, makeReflection, REFLECT_LAYER } from "/assets/js/world/water.js?v=20261026-mirror";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
-import { voxMaterial, easeJoint } from "/assets/js/world/voxkit.js?v=20261028-catlike";
-import { buildCat, poseCat, CAT_LOOKS, CAT_HEAD, CAT_PACE } from "/assets/js/world/cats.js?v=20261029-pace";
+import { voxMaterial, easeJoint } from "/assets/js/world/voxkit.js?v=20261030-zfight";
+import { buildCat, poseCat, CAT_LOOKS, CAT_HEAD, CAT_PACE } from "/assets/js/world/cats.js?v=20261030-zfight";
 import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
-import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261028-catlike";
+import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261030-zfight";
 import { loadRoomContent, buildRooms } from "/assets/js/world/rooms.js?v=20261022-rooms";
 import { makeFire } from "/assets/js/world/fire.js?v=20261015-world";
-import { makeAmbient } from "/assets/js/world/ambient.js?v=20261028-catlike";
+import { makeAmbient } from "/assets/js/world/ambient.js?v=20261030-zfight";
 import { createMouseLookControls } from "/play-controls.js?v=20261015-mouse-look";
 
 const decideCatMood = createCatBrain();
@@ -1188,7 +1188,10 @@ async function startWorld() {
 
   const scene = new THREE.Scene();
 
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.08, 1200);
+  // Near plane: as far out as the player's 0.28 collision radius allows
+  // without clipping into walls, for the most depth precision (less
+  // z-fighting in the distance).
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.2, 1200);
   camera.position.set(WORLD.spawn.x, WORLD.spawn.y, WORLD.spawn.z);
 
   const timeParam = params.get("time");

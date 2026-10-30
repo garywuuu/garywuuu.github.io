@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { VoxPart, joint, attach, easeJoint } from "./voxkit.js?v=20261028-catlike";
+import { VoxPart, joint, attach, easeJoint, tuckedMaterial } from "./voxkit.js?v=20261030-zfight";
 
 // Voxel cats: long bodies on long legs, small round heads with big glossy
 // eyes, tall ears and a long tail. Every joint is one merged mesh.
@@ -71,7 +71,7 @@ export function buildCat(root, look, material) {
   t.box(0, 0.01, -0.17, 0.3, 0.26, 0.22, body);
   t.box(0, 0.01, -0.18, 0.26, 0.28, 0.24, body);
   t.box(0, 0.1, 0.26, 0.16, 0.15, 0.13, body);
-  t.box(0, 0.06, 0.29, 0.2, 0.12, 0.08, body);
+  t.box(0, 0.06, 0.29, 0.18, 0.12, 0.08, body);
   t.box(0, -0.105, -0.01, 0.2, 0.02, 0.24, belly, { shade: 0.9 });
   t.box(0, -0.152, 0.17, 0.2, 0.01, 0.18, belly, { shade: 0.9 });
   t.box(0, -0.02, 0.292, 0.2, 0.18, 0.012, belly);
@@ -96,7 +96,7 @@ export function buildCat(root, look, material) {
   // Rounded cranium over wide cheeks, with a short muzzle out front.
   h.box(0, 0.07, 0.06, 0.4, 0.3, 0.34, body);
   h.box(0, 0.08, 0.06, 0.34, 0.36, 0.3, body);
-  h.box(0, -0.06, 0.1, 0.48, 0.16, 0.3, body);
+  h.box(0, -0.07, 0.1, 0.46, 0.14, 0.3, body);
   for (const side of [-1, 1]) h.box(side * 0.25, -0.07, 0.12, 0.05, 0.11, 0.2, body);
   h.box(0, -0.07, 0.27, 0.22, 0.12, 0.08, muzzle);
   h.box(0, -0.12, 0.29, 0.14, 0.06, 0.05, muzzle);
@@ -110,7 +110,7 @@ export function buildCat(root, look, material) {
     for (const side of [-1, 1]) h.box(side * 0.09, 0.265, 0.09, 0.04, 0.012, 0.13, look.stripes, { ry: side * 0.25 });
     for (const side of [-1, 1]) h.box(side * 0.206, 0.12, 0.1, 0.012, 0.035, 0.12, look.stripes);
   }
-  if (look.spot) h.box(0.12, 0.17, 0.236, 0.13, 0.1, 0.012, look.spot);
+  if (look.spot) h.box(0.12, 0.2, 0.236, 0.13, 0.08, 0.012, look.spot);
   // Nose on the tip of the muzzle, ":3" mouth below, whiskers off the sides.
   const front = 0.316;
   h.box(0, -0.025, front, 0.075, 0.026, 0.012, C.nose, { shade: 1 });
@@ -161,21 +161,23 @@ export function buildCat(root, look, material) {
   const knees = [];
   const feet = [];
   const { upper, lower } = CAT_POSE;
-  const spots = [[-0.095, CAT_POSE.frontZ], [0.095, CAT_POSE.frontZ], [-0.095, CAT_POSE.backZ], [0.095, CAT_POSE.backZ]];
+  // Legs tuck into the body, so they lose any depth-test tie with it.
+  const tucked = tuckedMaterial(material);
+  const spots = [[-0.09, CAT_POSE.frontZ], [0.09, CAT_POSE.frontZ], [-0.09, CAT_POSE.backZ], [0.09, CAT_POSE.backZ]];
   for (const [i, [x, z]] of spots.entries()) {
     const hip = joint(torso, x, CAT_POSE.hipY, z);
     const u = new VoxPart();
     u.box(0, -upper / 2, 0, 0.09, upper + 0.03, 0.09, body);
     u.box(0, 0.005, 0, 0.1, 0.07, i >= 2 ? 0.16 : 0.12, body);
-    if (i >= 2) u.box(Math.sign(x) * 0.006, -0.05, -0.005, 0.1, 0.14, 0.13, body);
-    attach(hip, u, material);
+    if (i >= 2) u.box(Math.sign(x) * 0.02, -0.05, -0.005, 0.1, 0.14, 0.13, body);
+    attach(hip, u, tucked);
     const knee = joint(hip, 0, -upper, 0);
-    attach(knee, new VoxPart().box(0, -(lower - 0.025) / 2, 0, 0.075, lower + 0.005, 0.075, body), material);
+    attach(knee, new VoxPart().box(0, -(lower - 0.025) / 2, 0, 0.075, lower + 0.005, 0.075, body), tucked);
     const foot = joint(knee, 0, -lower + 0.025, 0);
     const f = new VoxPart();
-    f.box(0, 0, 0.012, 0.1, 0.05, 0.115, sock);
+    f.box(0, 0, 0.012, 0.11, 0.05, 0.115, sock);
     f.box(0, -0.026, 0.05, 0.07, 0.006, 0.02, C.pink, { shade: 1 });
-    attach(foot, f, material);
+    attach(foot, f, tucked);
     legs.push(hip);
     knees.push(knee);
     feet.push(foot);
@@ -186,9 +188,11 @@ export function buildCat(root, look, material) {
   const tail = joint(torso, 0, 0.08, -0.29);
   attach(tail, new VoxPart().box(0, 0, -0.11, 0.08, 0.08, 0.24, tailColor), material);
   const tailMid = joint(tail, 0, 0, -0.22);
-  attach(tailMid, new VoxPart().box(0, 0, -0.11, 0.075, 0.075, 0.24, tailColor), material);
+  // The middle segment draws tucked, so neither joint of the bending tail
+  // can z-fight.
+  attach(tailMid, new VoxPart().box(0, 0, -0.11, 0.07, 0.07, 0.24, tailColor), tucked);
   const tailTip = joint(tailMid, 0, 0, -0.22);
-  attach(tailTip, new VoxPart().box(0, 0, -0.1, 0.075, 0.075, 0.22, look.tailTip || tailColor), material);
+  attach(tailTip, new VoxPart().box(0, 0, -0.1, 0.06, 0.06, 0.22, look.tailTip || tailColor), material);
   tail.rotation.x = 0.95;
   tailTip.rotation.x = 0.55;
 
@@ -555,7 +559,7 @@ export function poseCat(critter, now, dt) {
     const paw = THREE.MathUtils.lerp(ik.paw + curl, tuck ? 0 : -(pitch + last.hip + last.knee), w);
     leg.rotation.set(hip, 0, pose.hipZ[i]);
     data.knees[i]?.rotation.set(knee, 0, 0);
-    data.feet[i]?.rotation.set(THREE.MathUtils.clamp(paw, -1.6, 1.6), 0, 0);
+    data.feet[i]?.rotation.set(THREE.MathUtils.clamp(paw, -1.4, 1.4), 0, 0);
   }
   const segs = [data.tail, data.tailMid, data.tailTip];
   for (const [i, seg] of segs.entries()) {
