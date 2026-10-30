@@ -49,6 +49,10 @@ export const CAT_POSE = { standY: 0.325, hipY: -0.07, frontZ: 0.2, backZ: -0.19,
 // face keeps its pixel detail; kittens scale it back up.
 export const CAT_HEAD = 0.5;
 
+// How fast cats live: scales their walking speeds, mood lengths and every
+// idle animation. 1 is the old, rather frantic pace.
+export const CAT_PACE = 0.6;
+
 export function buildCat(root, look, material) {
   const body = look.body;
   const belly = look.belly || body;
@@ -228,9 +232,11 @@ const wrapE = new THREE.Euler();
 // joints from buildCat plus mood state from the game.
 export function poseCat(critter, now, dt) {
   const data = critter.userData;
-  const mood = data.mood;
+  now *= CAT_PACE;
+  // A cat that has reached its ball of yarn bats at it.
+  const mood = data.mood === "yarn" && data.arrived ? "swat" : data.mood;
   const spot = data.target?.position;
-  const parked = PARK_MOODS.has(mood) && (!spot || Math.hypot(spot.x - critter.position.x, spot.z - critter.position.z) < (mood === "scratch" ? 0.62 : 0.55));
+  const parked = PARK_MOODS.has(mood) && (!spot || data.arrived || Math.hypot(spot.x - critter.position.x, spot.z - critter.position.z) < (mood === "scratch" ? 0.62 : 0.55));
   const moving =
     mood === "wander" || mood === "chase" || mood === "yarn" || mood === "zoom" || (PARK_MOODS.has(mood) && !parked) || (mood === "pounce" && data.moodT <= 0.7);
   // Step rate follows ground speed so planted paws don't skate: each paw
@@ -239,7 +245,6 @@ export function poseCat(critter, now, dt) {
   const speed = data.speed || 0;
   const pace = speed > 0.05 ? Math.min(18, (Math.PI * speed) / (2 * stride * (critter.scale.x || 1))) : 7;
   if (moving) data.gait += dt * pace;
-  const blend = Math.min(1, dt * 10);
   const sway = (amp, period, phase = 0) => Math.sin(now / period + phase) * amp;
   const side = data.blinkOffset > 2.4 ? 1 : -1;
   const breathe = sway(0.004, 700, data.blinkOffset);
@@ -249,6 +254,8 @@ export function poseCat(critter, now, dt) {
   let torsoX = 0;
   let torsoY = 0;
   let torsoZ = 0;
+  let wiggle = 0;
+  let gaitKind = null;
   let headX = 0;
   let headY = sway(0.06, 1400, data.baseY);
   let headZ = 0;
@@ -364,8 +371,8 @@ export function poseCat(critter, now, dt) {
     y = 0.19;
     reach[0] = reach[1] = 0.1;
     reach[2] = reach[3] = 0.06;
-    torsoY = sway(0.08, 55);
-    headY = -torsoY;
+    wiggle = sway(0.07, 70);
+    headY = -wiggle;
     headX = -0.25;
     tail = [{ x: 0.12, y: sway(0.4, 170) }, { x: 0.02, y: sway(0.35, 170, -0.7) }, { x: 0.15, y: sway(0.5, 170, -1.4) }];
   } else if (mood === "scratch" && parked) {
@@ -385,41 +392,60 @@ export function poseCat(critter, now, dt) {
     raw[2] = raw[3] = { hip: 0.75, knee: 0.15 };
     tail = [{ x: 0.3, y: 0 }, { x: 0, y: 0 }, { x: 0.1, y: 0 }];
   } else if (mood === "zoom") {
-    // Rotary gallop: forelegs land together, then the hind pair; the back
-    // flexes and the body rocks.
     y = 0.29;
-    const g = data.gait;
-    for (let i = 0; i < 4; i += 1) {
-      const p = g + (i < 2 ? 0 : Math.PI * 0.85) + (i % 2) * 0.3;
-      reach[i] = (i < 2 ? 0.04 : -0.04) - Math.sin(p) * stride;
-      lift[i] = Math.max(0, -Math.cos(p)) * 0.09;
-    }
-    torsoX = Math.sin(g) * 0.12;
+    gaitKind = "gallop";
     earsBack = 1;
     puff = 1.6;
     tail = [{ x: 0.35, y: sway(0.12, 90) }, { x: 0.1, y: 0 }, { x: 0.1, y: 0 }];
   } else if (moving) {
-    // Walk: diagonal pairs with a slight lead, each paw rolling back along
-    // the ground then lifting and swinging through. The body dips a touch
-    // twice per stride and the shoulders roll.
-    const g = data.gait;
-    for (let i = 0; i < 4; i += 1) {
-      const p = g + (i === 0 || i === 3 ? 0 : Math.PI) + (i >= 2 ? 0.6 : 0);
-      reach[i] = (i < 2 ? 0.02 : -0.02) - Math.sin(p) * stride;
-      lift[i] = Math.max(0, -Math.cos(p)) ** 1.5 * 0.06;
-    }
-    y = 0.322 - Math.abs(Math.cos(g)) * 0.006;
-    torsoZ = Math.sin(g) * 0.035;
-    torsoY = Math.sin(g) * 0.03;
-    headY = -torsoY;
-    headZ = -torsoZ;
-    headX = Math.cos(g * 2) * 0.03;
+    gaitKind = "walk";
     const wag = mood === "chase" || mood === "yarn" ? 0.2 : 0.1;
+    const g = data.gait;
     tail = [
       { x: 0.55, y: Math.sin(g * 0.5) * wag },
       { x: 0.3, y: Math.sin(g * 0.5 - 0.6) * wag },
       { x: 0.35, y: Math.sin(g * 0.5 - 1.2) * wag },
     ];
+  }
+
+  // The gait fades in and out rather than switching on, so a cat eases
+  // from standing into its stride and back.
+  data.walkMix = (data.walkMix ?? 0) + ((gaitKind ? 1 : 0) - (data.walkMix ?? 0)) * Math.min(1, dt * 5);
+  if (gaitKind) data.gaitKind = gaitKind;
+  const mix = data.walkMix;
+  const gaitReach = [0, 0, 0, 0];
+  const gaitLift = [0, 0, 0, 0];
+  let gaitX = 0;
+  let gaitY = 0;
+  let gaitZ = 0;
+  let gaitDip = 0;
+  if (mix > 0.001) {
+    const g = data.gait;
+    if (data.gaitKind === "gallop") {
+      // Rotary gallop: forelegs land together, then the hind pair; the
+      // back flexes and the body rocks.
+      for (let i = 0; i < 4; i += 1) {
+        const p = g + (i < 2 ? 0 : Math.PI * 0.85) + (i % 2) * 0.3;
+        gaitReach[i] = -Math.sin(p) * stride;
+        gaitLift[i] = Math.max(0, -Math.cos(p)) * 0.09;
+      }
+      gaitX = Math.sin(g) * 0.12;
+    } else {
+      // Walk: diagonal pairs with a slight lead, each paw rolling back
+      // along the ground then lifting and swinging through. The body dips a
+      // touch twice per stride and the shoulders roll.
+      for (let i = 0; i < 4; i += 1) {
+        const p = g + (i === 0 || i === 3 ? 0 : Math.PI) + (i >= 2 ? 0.6 : 0);
+        gaitReach[i] = -Math.sin(p) * stride;
+        gaitLift[i] = Math.max(0, -Math.cos(p)) ** 1.5 * 0.06;
+      }
+      gaitDip = -Math.abs(Math.cos(g)) * 0.006;
+      gaitZ = Math.sin(g) * 0.035;
+      gaitY = Math.sin(g) * 0.03;
+      headX += Math.cos(g * 2) * 0.03 * mix;
+    }
+    headY -= gaitY * mix;
+    headZ -= gaitZ * mix;
   }
 
   // Sitting and lying cats wrap the tail down to the ground and around
@@ -452,8 +478,8 @@ export function poseCat(critter, now, dt) {
     headX = -torsoX + THREE.MathUtils.clamp(-watch.pitch, -1.1, 0.3);
     earYaw = THREE.MathUtils.clamp(watch.yaw - headY, -0.6, 0.6);
     if (watch.dist < 18) {
-      headX += sway(0.035, 18);
-      tail[2] = { x: tail[2].x, y: sway(0.45, 60) };
+      headX += sway(0.02, 40);
+      tail[2] = { x: tail[2].x, y: sway(0.35, 110) };
     }
   } else if (data.playerD < 5 && Math.abs(data.playerYaw) < 2.4) {
     if (idle && mood !== "pet" && mood !== "groom") headY = THREE.MathUtils.clamp(data.playerYaw, -1, 1);
@@ -466,9 +492,27 @@ export function poseCat(critter, now, dt) {
     eyes = 1.15;
   }
 
-  easeJoint(data.torso, torsoX, torsoY, torsoZ, blend);
-  if (data.torso) data.torso.position.y += (y + breathe - data.torso.position.y) * blend;
-  easeJoint(data.head, headX, headY, headZ, blend);
+  // Posture (height, pitch, where each paw rests) eases toward the mood's
+  // target; the legs then solve against the eased body, so paws stay
+  // planted while a cat sits down, stands up or settles.
+  const ease = Math.min(1, dt * 4);
+  const pose = (data.pose ||= { y, x: torsoX, ty: torsoY, tz: torsoZ, reach: [...reach], lift: [...lift], hipZ: [0, 0, 0, 0] });
+  pose.y += (y - pose.y) * ease;
+  pose.x += (torsoX - pose.x) * ease;
+  pose.ty += (torsoY - pose.ty) * ease;
+  pose.tz += (torsoZ - pose.tz) * ease;
+  for (let i = 0; i < 4; i += 1) {
+    pose.reach[i] += (reach[i] - pose.reach[i]) * ease;
+    pose.lift[i] += (lift[i] - pose.lift[i]) * ease;
+    pose.hipZ[i] += (hipZ[i] - pose.hipZ[i]) * ease;
+  }
+  const bodyY = pose.y + gaitDip * mix;
+  const pitch = pose.x + gaitX * mix;
+  if (data.torso) {
+    data.torso.rotation.set(pitch, pose.ty + gaitY * mix + wiggle, pose.tz + gaitZ * mix);
+    data.torso.position.y = bodyY + breathe;
+  }
+  easeJoint(data.head, headX, headY, headZ, Math.min(1, dt * 5));
 
   // Blinks, plus a long slow blink back at a player who holds their gaze.
   const blinkPhase = (now / 1000 + data.blinkOffset) % 4.8;
@@ -488,23 +532,35 @@ export function poseCat(critter, now, dt) {
     easeJoint(ear, rx, earYaw * (1 - earsBack), rz, Math.min(1, dt * (earsBack ? 16 : 9)));
   }
 
-  // Legs: solve against the torso's target pose so paws plant exactly. Walk
-  // and gallop legs follow closely so feet don't skate; posture changes ease.
-  const legBlend = moving ? Math.min(1, dt * 30) : blend;
+  // Legs: IK against the eased body, cross-faded with any directly posed
+  // (tucked, raised or sprawled) legs.
+  const rawW = (data.rawW ||= [0, 0, 0, 0]);
+  const rawLast = (data.rawLast ||= [null, null, null, null]);
   for (const [i, leg] of data.legs.entries()) {
     if (!leg) continue;
-    const r = raw[i];
-    const sol = r ? { hip: r.hip, knee: r.knee, paw: tuck ? 0 : -(torsoX + r.hip + r.knee) } : solveLeg(i, y, torsoX, reach[i], lift[i]);
-    // A lifted paw curls under a little.
-    const curl = lift[i] > 0.005 ? Math.min(0.8, lift[i] * 10) : 0;
-    easeJoint(leg, sol.hip, 0, hipZ[i], legBlend);
-    easeJoint(data.knees[i], sol.knee, 0, 0, legBlend);
-    easeJoint(data.feet[i], THREE.MathUtils.clamp(sol.paw + curl, -1.6, 1.6), 0, 0, legBlend);
+    const ik = solveLeg(i, bodyY, pitch, pose.reach[i] + gaitReach[i] * mix, pose.lift[i] + gaitLift[i] * mix);
+    rawW[i] += ((raw[i] ? 1 : 0) - rawW[i]) * Math.min(1, dt * 5);
+    const last = (rawLast[i] ||= { hip: ik.hip, knee: ik.knee });
+    if (raw[i]) {
+      const k = Math.min(1, dt * 8);
+      last.hip += (raw[i].hip - last.hip) * k;
+      last.knee += (raw[i].knee - last.knee) * k;
+    }
+    const w = rawW[i];
+    const hip = THREE.MathUtils.lerp(ik.hip, last.hip, w);
+    const knee = THREE.MathUtils.lerp(ik.knee, last.knee, w);
+    // A lifted paw curls under a little; a tucked one folds with the leg.
+    const lifted = pose.lift[i] + gaitLift[i] * mix;
+    const curl = lifted > 0.005 ? Math.min(0.8, lifted * 10) : 0;
+    const paw = THREE.MathUtils.lerp(ik.paw + curl, tuck ? 0 : -(pitch + last.hip + last.knee), w);
+    leg.rotation.set(hip, 0, pose.hipZ[i]);
+    data.knees[i]?.rotation.set(knee, 0, 0);
+    data.feet[i]?.rotation.set(THREE.MathUtils.clamp(paw, -1.6, 1.6), 0, 0);
   }
   const segs = [data.tail, data.tailMid, data.tailTip];
   for (const [i, seg] of segs.entries()) {
     if (!seg) continue;
-    easeJoint(seg, tail[i].x, tail[i].y, tail[i].z || 0, Math.min(1, dt * 6));
+    easeJoint(seg, tail[i].x, tail[i].y, tail[i].z || 0, Math.min(1, dt * 3.5));
     const fur = seg.children[0];
     if (fur?.isMesh) {
       const p = fur.scale.x + (puff - fur.scale.x) * Math.min(1, dt * (puff > fur.scale.x ? 18 : 3));

@@ -8,7 +8,7 @@ import { createEnvironment } from "/assets/js/world/env.js?v=20261028-clamp";
 import { makeHeightTexture, makeWaterMaterial, makeOcean, makeReflection, REFLECT_LAYER } from "/assets/js/world/water.js?v=20261026-mirror";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
 import { voxMaterial, easeJoint } from "/assets/js/world/voxkit.js?v=20261028-catlike";
-import { buildCat, poseCat, CAT_LOOKS, CAT_HEAD } from "/assets/js/world/cats.js?v=20261028-catlike";
+import { buildCat, poseCat, CAT_LOOKS, CAT_HEAD, CAT_PACE } from "/assets/js/world/cats.js?v=20261029-pace";
 import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
 import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261028-catlike";
 import { loadRoomContent, buildRooms } from "/assets/js/world/rooms.js?v=20261022-rooms";
@@ -650,7 +650,7 @@ function makeCritter(scene, spec) {
     kittenOf: null,
     emoteT: hash(spec.z, spec.x) * 1.5,
     heading: hash(spec.x, spec.z) * Math.PI * 2,
-    speed: sky ? 7 : 0.95,
+    speed: sky ? 7 : 0.95 * CAT_PACE,
     timer: 1 + hash(spec.z, spec.x) * 2,
     sky,
     hop: !sky && (spec.id === "spot" || spec.id === "cream"),
@@ -766,12 +766,24 @@ function steerToward(critter, x, z, turn) {
   critter.userData.heading += THREE.MathUtils.clamp(delta, -max, max);
 }
 
+// How fast a cat can turn, in radians per second: quicker on the move.
+function catTurnRate(critter) {
+  return 2 + critter.userData.speed * 2.5;
+}
+
+// Limits how far a cat's heading moved this frame, so every turn, however
+// it was asked for, plays out smoothly.
+function limitTurn(critter, from, dt) {
+  const max = catTurnRate(critter) * dt;
+  critter.userData.heading = from + THREE.MathUtils.clamp(wrapAngle(critter.userData.heading - from), -max, max);
+}
+
 function faceToward(critter, x, z) {
   steerToward(critter, x, z, 0.18);
 }
 
 function stepToward(critter, x, z, dt, mode) {
-  steerToward(critter, x, z, critter.userData.sky ? 0.08 : 0.14);
+  steerToward(critter, x, z, critter.userData.sky ? 0.08 : catTurnRate(critter) * dt);
   const step = critter.userData.speed * dt;
   const nx = critter.position.x + Math.sin(critter.userData.heading) * step;
   const nz = critter.position.z + Math.cos(critter.userData.heading) * step;
@@ -800,7 +812,7 @@ function bumpApart(a, b, minDist) {
   const dz = a.position.z - b.position.z;
   const d = Math.hypot(dx, dz) || 0.0001;
   if (d >= minDist) return d;
-  const push = (minDist - d) * 0.45;
+  const push = (minDist - d) * (a.userData.sky ? 0.45 : 0.2);
   const ux = dx / d;
   const uz = dz / d;
   const modeA = a.userData.sky ? "sky" : "walk";
@@ -854,8 +866,8 @@ function startTag(chaser, pal, now) {
     setCatMood(chaser, "sit", { moodT: 1.5 });
     pal.userData.mood = "chase";
     pal.userData.playWith = chaser;
-    pal.userData.moodT = 2.8;
-    pal.userData.speed = 2.0;
+    pal.userData.moodT = 2.8 / CAT_PACE;
+    pal.userData.speed = 2.0 * CAT_PACE;
     pal.userData.heading += Math.PI * 0.55;
   }
 }
@@ -877,8 +889,11 @@ function nearestOther(critter, list) {
 function setCatMood(critter, mood, extra = {}) {
   const data = critter.userData;
   data.mood = mood;
-  data.moodT = extra.moodT ?? 2.6;
-  data.speed = extra.speed ?? 0;
+  data.moodT = (extra.moodT ?? 2.6) / CAT_PACE;
+  data.speed = (extra.speed ?? 0) * CAT_PACE;
+  data.arrived = false;
+  data.stuckT = 0;
+  data.lastDist = Infinity;
   data.target = extra.target ?? null;
   data.playWith = extra.playWith ?? null;
   data.attention = extra.attention ?? (mood === "pet" ? data.moodT : 0);
@@ -1238,6 +1253,7 @@ async function startWorld() {
   function updateKitten(kit, now, dt) {
     const data = kit.userData;
     const mom = data.kittenOf;
+    const from = data.heading;
     data.timer -= dt;
     data.moodT -= dt;
     if (data.mood === "pet" && data.moodT > 0) {
@@ -1246,30 +1262,37 @@ async function startWorld() {
     } else {
       const aim = playPoint(mom, data.slot, 0.62);
       const dist = Math.hypot(aim.x - kit.position.x, aim.z - kit.position.z);
+      // Start following once mom is well away (or on the move), and only
+      // stop once caught up and she has settled, so a kitten doesn't
+      // flicker between trotting and sitting.
+      const momMoving = MOM_MOVING.has(mom.userData.mood);
+      if (dist > 0.6 || (momMoving && dist > 0.3)) data.following = true;
+      else if (dist < 0.15 && !momMoving) data.following = false;
       if (dist > 5) {
         kit.position.x = aim.x;
         kit.position.z = aim.z;
-      } else if (dist > (MOM_MOVING.has(mom.userData.mood) ? 0.2 : 0.45)) {
+      } else if (data.following) {
         data.mood = dist > 1.4 ? "chase" : "wander";
-        data.speed = Math.min(2.8, 0.7 + dist * 1.1);
-        stepToward(kit, aim.x, aim.z, dt, "walk");
+        data.speed = Math.min(2.8, 0.25 + dist * 1.4) * CAT_PACE;
+        if (dist > 0.06) stepToward(kit, aim.x, aim.z, dt, "walk");
       } else {
         if (data.timer <= 0 || data.mood === "wander" || data.mood === "chase") {
           const napping = mom.userData.mood === "loaf" || mom.userData.mood === "sit";
           const pick = napping && Math.random() < 0.5 ? "loaf" : KITTEN_PLAY[Math.floor(Math.random() * KITTEN_PLAY.length)];
           data.mood = pick;
-          data.moodT = 3;
+          data.moodT = 3 / CAT_PACE;
           data.swatLeg = Math.random() < 0.5 ? 0 : 1;
-          data.timer = 2 + Math.random() * 3.5;
+          data.timer = (2 + Math.random() * 3.5) / CAT_PACE;
         }
-        if (data.mood === "pounce" && data.moodT < 0.7) data.moodT = 3;
+        if (data.mood === "pounce" && data.moodT < 0.7) data.moodT = 3 / CAT_PACE;
         if (data.mood !== "loaf") faceToward(kit, mom.position.x, mom.position.z);
       }
     }
+    limitTurn(kit, from, dt);
     kit.rotation.y = data.heading;
     const floor = groundY(kit.position.x, kit.position.z);
-    const hop = data.mood === "chase" || data.mood === "wander" ? Math.abs(Math.sin(data.gait)) * 0.05 : 0;
-    kit.position.y = floor + hop;
+    const hop = data.mood === "chase" || data.mood === "wander" ? Math.abs(Math.sin(data.gait)) * 0.03 : 0;
+    kit.position.y += (floor + hop - kit.position.y) * Math.min(1, dt * 12);
     poseCat(kit, now, dt);
   }
   const headPos = new THREE.Vector3();
@@ -2248,6 +2271,7 @@ async function startWorld() {
         updateKitten(critter, now, dt);
         continue;
       }
+      const from = data.heading;
       data.timer -= dt;
       data.moodT -= dt;
       if (data.moodT <= 0) {
@@ -2285,7 +2309,19 @@ async function startWorld() {
       } else if ((data.mood === "yarn" || data.mood === "scratch" || data.mood === "browse" || data.mood === "guard" || data.mood === "sunbathe") && toy) {
         const reach = data.mood === "yarn" ? 0.35 : data.mood === "scratch" ? 0.55 : 0.42;
         const dist = Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z);
-        if (dist > reach) stepToward(critter, toy.position.x, toy.position.z, dt, mode);
+        if (data.mood === "yarn") {
+          // The yarn rolls about: bat at it while close, with some slack
+          // before trotting after it again.
+          if (dist < reach) data.arrived = true;
+          else if (dist > reach + 0.3) data.arrived = false;
+        } else if (!data.arrived) {
+          // Arrive on reaching the spot, or settle nearby if another cat
+          // is already there and blocking the way.
+          data.stuckT = dist < data.lastDist - 0.003 ? 0 : data.stuckT + dt;
+          data.lastDist = Math.min(data.lastDist, dist);
+          if (dist <= reach || (data.stuckT > 0.8 && dist < 1.6)) data.arrived = true;
+        }
+        if (!data.arrived) stepToward(critter, toy.position.x, toy.position.z, dt, mode);
         else {
           const look = toy.look || toy.position;
           faceToward(critter, look.x, look.z);
@@ -2307,7 +2343,7 @@ async function startWorld() {
       } else if (data.mood === "pounce") {
         const crouch = data.moodT > 0.7;
         if (!crouch) {
-          data.speed = 2.4;
+          data.speed = 2.4 * CAT_PACE;
           const nx = critter.position.x + Math.sin(data.heading) * data.speed * dt;
           const nz = critter.position.z + Math.cos(data.heading) * data.speed * dt;
           if (roamOk(nx, nz, mode)) {
@@ -2333,8 +2369,15 @@ async function startWorld() {
         data.heading += Math.sin(now / 900 + data.baseY) * (data.mood === "regal" ? 0.01 : 0.004);
       } else {
         if (data.timer <= 0) {
-          data.heading += (hash(critter.position.x * 10, critter.position.z * 10) - 0.5) * Math.PI;
-          data.timer = data.mood === "zoom" ? 0.35 + hash(critter.position.z, now) * 0.5 : 1.4 + hash(critter.position.z, now) * 2.2;
+          const turn = (hash(critter.position.x * 10, critter.position.z * 10) - 0.5) * Math.PI;
+          if (data.sky) data.heading += turn;
+          else data.wantHeading = data.heading + turn;
+          data.timer = data.mood === "zoom" ? 0.6 + hash(critter.position.z, now) * 0.6 : (1.4 + hash(critter.position.z, now) * 2.2) / CAT_PACE;
+        }
+        // Cats curve onto their new course rather than pivoting on the spot.
+        if (!data.sky && data.wantHeading != null) {
+          const max = catTurnRate(critter) * dt;
+          data.heading += THREE.MathUtils.clamp(wrapAngle(data.wantHeading - data.heading), -max, max);
         }
         const step = data.speed * dt;
         const nx = critter.position.x + Math.sin(data.heading) * step;
@@ -2342,10 +2385,13 @@ async function startWorld() {
         if (roamOk(nx, nz, mode, data.sky ? critter.position.y : null)) {
           critter.position.x = nx;
           critter.position.z = nz;
-        } else {
+        } else if (data.sky) {
           data.heading += Math.PI * 0.7;
+        } else if (Math.abs(wrapAngle((data.wantHeading ?? data.heading) - data.heading)) < 0.3) {
+          data.wantHeading = data.heading + Math.PI * 0.7;
         }
       }
+      if (!data.sky) limitTurn(critter, from, dt);
       critter.rotation.y = data.heading;
 
       if (data.sky) {
@@ -2422,11 +2468,12 @@ async function startWorld() {
         critter.rotation.z = 0;
         const floor = groundY(critter.position.x, critter.position.z);
         let bob = 0;
-        if (data.mood === "pounce" && data.moodT <= 0.7) bob = Math.abs(Math.sin(now / 90)) * 0.1;
-        else if (data.mood === "yarn" && toy && Math.hypot(toy.position.x - critter.position.x, toy.position.z - critter.position.z) < 0.5) bob = Math.abs(Math.sin(now / 140)) * 0.06;
-        else if (data.mood === "zoom") bob = Math.abs(Math.sin(data.gait)) * 0.07;
+        // One arc for the leap at the end of a pounce.
+        if (data.mood === "pounce" && data.moodT <= 0.7) bob = Math.sin((Math.max(0, data.moodT) / 0.7) * Math.PI) * 0.12;
+        else if (data.mood === "zoom") bob = Math.abs(Math.sin(data.gait)) * 0.05;
         else if (data.mood === "wander" || data.mood === "chase") bob = Math.abs(Math.sin(data.gait * 2)) * 0.03;
-        critter.position.y = Math.max(floor, floor + bob);
+        // Ease onto the ground height so stepping up a block isn't a snap.
+        critter.position.y += (Math.max(floor, floor + bob) - critter.position.y) * Math.min(1, dt * 12);
         poseCat(critter, now, dt);
       }
     }
