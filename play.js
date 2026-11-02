@@ -8,7 +8,7 @@ import { createEnvironment } from "/assets/js/world/env.js?v=20261028-clamp";
 import { makeHeightTexture, makeWaterMaterial, makeOcean, makeReflection, REFLECT_LAYER } from "/assets/js/world/water.js?v=20261026-mirror";
 import { makeFoliage } from "/assets/js/world/foliage.js?v=20261026-worker";
 import { voxMaterial, easeJoint } from "/assets/js/world/voxkit.js?v=20261030-zfight";
-import { buildCat, poseCat, CAT_LOOKS, CAT_HEAD, CAT_PACE } from "/assets/js/world/cats.js?v=20261030-zfight";
+import { buildCat, poseCat, CAT_LOOKS, CAT_HEAD, CAT_PACE } from "/assets/js/world/cats.js?v=20261102-natural";
 import { makeEmotes } from "/assets/js/world/emotes.js?v=20261015-world";
 import { buildDragon, DRAGON_LOOKS } from "/assets/js/world/dragons.js?v=20261030-zfight";
 import { loadRoomContent, buildRooms } from "/assets/js/world/rooms.js?v=20261022-rooms";
@@ -768,13 +768,29 @@ function steerToward(critter, x, z, turn) {
 
 // How fast a cat can turn, in radians per second: quicker on the move.
 function catTurnRate(critter) {
-  return 2 + critter.userData.speed * 2.5;
+  return 2 + (critter.userData.pace ?? critter.userData.speed) * 2.5;
+}
+
+// Dragons are big: they swing round slowly, and can't stop or start on a dime.
+const DRAGON_TURN = 1.3;
+const DRAGON_ACCEL = 3.5;
+const CAT_ACCEL = 2.5;
+// Cats pull up within a stride; dragons glide a while.
+const CAT_BRAKE = 8;
+
+// Eases the speed a critter actually moves at toward the one its mood asks
+// for, so it speeds up and slows down instead of jumping between paces.
+function easePace(data, dt) {
+  // A pounce is a burst.
+  const accel = (data.sky ? DRAGON_ACCEL : data.mood === "pounce" ? 9 : CAT_ACCEL) * dt;
+  const brake = (data.sky ? DRAGON_ACCEL : CAT_BRAKE) * dt;
+  data.pace = (data.pace ?? data.speed) + THREE.MathUtils.clamp(data.speed - (data.pace ?? data.speed), -brake, accel);
 }
 
 // Limits how far a cat's heading moved this frame, so every turn, however
 // it was asked for, plays out smoothly.
-function limitTurn(critter, from, dt) {
-  const max = catTurnRate(critter) * dt;
+function limitTurn(critter, from, dt, rate = null) {
+  const max = (rate ?? catTurnRate(critter)) * dt;
   critter.userData.heading = from + THREE.MathUtils.clamp(wrapAngle(critter.userData.heading - from), -max, max);
 }
 
@@ -783,8 +799,8 @@ function faceToward(critter, x, z) {
 }
 
 function stepToward(critter, x, z, dt, mode) {
-  steerToward(critter, x, z, critter.userData.sky ? 0.08 : catTurnRate(critter) * dt);
-  const step = critter.userData.speed * dt;
+  steerToward(critter, x, z, (critter.userData.sky ? DRAGON_TURN : catTurnRate(critter)) * dt);
+  const step = critter.userData.pace * dt;
   const nx = critter.position.x + Math.sin(critter.userData.heading) * step;
   const nz = critter.position.z + Math.cos(critter.userData.heading) * step;
   const ny = critter.userData.sky ? critter.position.y : null;
@@ -794,7 +810,8 @@ function stepToward(critter, x, z, dt, mode) {
     critter.position.z = nz;
     return true;
   }
-  critter.userData.heading += 0.35;
+  // Blocked: swing round (no faster than it can turn) to find a way.
+  critter.userData.heading += (critter.userData.sky ? DRAGON_TURN : catTurnRate(critter)) * dt;
   return false;
 }
 
@@ -807,12 +824,15 @@ function playPoint(pal, side, gap) {
   };
 }
 
-function bumpApart(a, b, minDist) {
+// Nudges two critters apart, drifting at most a gentle sidestep's speed so
+// it never reads as a shove.
+function bumpApart(a, b, minDist, dt) {
   const dx = a.position.x - b.position.x;
   const dz = a.position.z - b.position.z;
   const d = Math.hypot(dx, dz) || 0.0001;
   if (d >= minDist) return d;
-  const push = (minDist - d) * (a.userData.sky ? 0.45 : 0.2);
+  // Drift apart faster the deeper they overlap, up to a cap.
+  const push = Math.min((minDist - d) * (a.userData.sky ? 0.8 : 1.5), a.userData.sky ? 1.6 : 0.35) * dt;
   const ux = dx / d;
   const uz = dz / d;
   const modeA = a.userData.sky ? "sky" : "walk";
@@ -832,10 +852,46 @@ function bumpApart(a, b, minDist) {
   return d;
 }
 
-function separateGroup(list, minDist) {
+function separateGroup(list, minDist, dt) {
   for (let i = 0; i < list.length; i += 1) {
     for (let j = i + 1; j < list.length; j += 1) {
-      bumpApart(list[i], list[j], minDist);
+      bumpApart(list[i], list[j], minDist, dt);
+    }
+  }
+}
+
+// Dragons drift apart when they crowd each other, picking up and losing that
+// sideways drift gradually, like a flier sliding over in the air.
+function separateFliers(list, minDist, dt) {
+  for (const d of list) d.userData.sepWant = [0, 0];
+  for (let i = 0; i < list.length; i += 1) {
+    for (let j = i + 1; j < list.length; j += 1) {
+      const a = list[i];
+      const b = list[j];
+      const dx = a.position.x - b.position.x;
+      const dz = a.position.z - b.position.z;
+      const d = Math.hypot(dx, dz) || 0.0001;
+      if (d >= minDist) continue;
+      const push = Math.min((minDist - d) * 0.8, 1.6);
+      a.userData.sepWant[0] += (dx / d) * push;
+      a.userData.sepWant[1] += (dz / d) * push;
+      b.userData.sepWant[0] -= (dx / d) * push;
+      b.userData.sepWant[1] -= (dz / d) * push;
+    }
+  }
+  for (const d of list) {
+    const data = d.userData;
+    data.sepV ??= [0, 0];
+    const ax = data.sepWant[0] - data.sepV[0];
+    const az = data.sepWant[1] - data.sepV[1];
+    const k = Math.min(1, (3 * dt) / (Math.hypot(ax, az) || 1));
+    data.sepV[0] += ax * k;
+    data.sepV[1] += az * k;
+    const nx = d.position.x + data.sepV[0] * dt;
+    const nz = d.position.z + data.sepV[1] * dt;
+    if (roamOk(nx, nz, "sky", d.position.y)) {
+      d.position.x = nx;
+      d.position.z = nz;
     }
   }
 }
@@ -849,7 +905,6 @@ function startTag(chaser, pal, now) {
     chaser.userData.playWith = pal;
     chaser.userData.moodT = 3.2;
     chaser.userData.speed = 4.4;
-    chaser.userData.heading += (roll > 0.5 ? 1 : -1) * 1.1;
     pal.userData.mood = "chase";
     pal.userData.playWith = chaser;
     pal.userData.moodT = 3.4;
@@ -868,7 +923,6 @@ function startTag(chaser, pal, now) {
     pal.userData.playWith = chaser;
     pal.userData.moodT = 2.8 / CAT_PACE;
     pal.userData.speed = 2.0 * CAT_PACE;
-    pal.userData.heading += Math.PI * 0.55;
   }
 }
 
@@ -997,6 +1051,7 @@ const DRAGON_TOUR = () => {
 
 function sendToPerch(critter, slot = 0, hold = 10, spot = null) {
   const perch = spot || bannerPerch(slot);
+  critter.userData.perchTrip = 0;
   critter.userData.mood = "perch";
   critter.userData.playWith = null;
   critter.userData.target = perch;
@@ -1253,6 +1308,14 @@ async function startWorld() {
   const kittens = cats.filter((c) => c.userData.kitten);
   const KITTEN_PLAY = ["sit", "swat", "groom", "sit", "pounce", "roll", "loaf"];
   const MOM_MOVING = new Set(["wander", "chase", "yarn", "scratch", "pounce", "circle", "nuzzle"]);
+  const frustum = new THREE.Frustum();
+  const viewProj = new THREE.Matrix4();
+  const probe = new THREE.Sphere(new THREE.Vector3(), 1);
+  function onScreen(obj) {
+    probe.center.copy(obj.position);
+    return frustum.intersectsSphere(probe);
+  }
+
   function updateKitten(kit, now, dt) {
     const data = kit.userData;
     const mom = data.kittenOf;
@@ -1271,12 +1334,13 @@ async function startWorld() {
       const momMoving = MOM_MOVING.has(mom.userData.mood);
       if (dist > 0.6 || (momMoving && dist > 0.3)) data.following = true;
       else if (dist < 0.15 && !momMoving) data.following = false;
-      if (dist > 5) {
+      if (dist > 12 && !onScreen(kit)) {
+        // Hopelessly lost somewhere nobody's looking: back by mom.
         kit.position.x = aim.x;
         kit.position.z = aim.z;
       } else if (data.following) {
         data.mood = dist > 1.4 ? "chase" : "wander";
-        data.speed = Math.min(2.8, 0.25 + dist * 1.4) * CAT_PACE;
+        data.speed = Math.min(dist > 5 ? 3.6 : 2.8, 0.25 + dist * 1.4) * CAT_PACE;
         if (dist > 0.06) stepToward(kit, aim.x, aim.z, dt, "walk");
       } else {
         if (data.timer <= 0 || data.mood === "wander" || data.mood === "chase") {
@@ -2044,7 +2108,19 @@ async function startWorld() {
   const camFrom = new THREE.Vector3();
   const camTo = new THREE.Vector3();
   let camT = 1;
+  let camLift = 0;
   const RIDE_PERCH = 0.86;
+  // Hardest it can brake, and pull up, in m/s².
+  const RIDE_BRAKE = 12;
+  const RIDE_LIFT = 12;
+  const RIDE_MAX_CLIMB = 7;
+
+  // Most height it can gain in t seconds from climbing at vy now.
+  function climbIn(t, vy) {
+    const up = Math.max(0, (RIDE_MAX_CLIMB - vy) / RIDE_LIFT);
+    if (t <= up) return vy * t + 0.5 * RIDE_LIFT * t * t;
+    return vy * up + 0.5 * RIDE_LIFT * up * up + RIDE_MAX_CLIMB * (t - up);
+  }
 
   function titleCase(id) {
     return id.charAt(0).toUpperCase() + id.slice(1);
@@ -2071,10 +2147,9 @@ async function startWorld() {
     data.playWith = null;
     data.target = null;
     data.fireT = 0;
-    ride = { dragon, speed: Math.max(4, data.speed), vy: 0, landing: false };
-    // Face the way it's flying, looking a touch down at it.
-    player.yaw = data.heading + Math.PI;
-    player.pitch = -0.12;
+    // It carries on at the speed and climb it had (from a standstill if
+    // perched) and swings round to wherever the player looks.
+    ride = { dragon, speed: data.pace ?? data.speed, vy: data.vy ?? 0, landing: false };
     player.vx = player.vy = player.vz = 0;
     camFrom.copy(camera.position);
     camT = 0;
@@ -2148,15 +2223,19 @@ async function startWorld() {
     player.z = spot.z;
     player.vx = player.vy = player.vz = 0;
     player.grounded = true;
-    player.yaw = Math.atan2(-(dragon.position.x - spot.x), -(dragon.position.z - spot.z));
-    player.pitch = -0.08;
     camFrom.copy(camera.position);
     camT = 0;
   }
 
-  // Ground under a point, or the sea surface where that's higher.
+  // Ground under a point, or the sea surface where that's higher. The
+  // floating sign counts as solid, so a ridden dragon flies over it.
+  function overSign(x, z) {
+    return Math.abs(x - BANNER.x) < BANNER.w * 0.5 + 1 && Math.abs(z - BANNER.z) < BANNER.d * 0.5 + 1;
+  }
   function floorUnder(x, z) {
-    return Math.max(groundH(Math.floor(x), Math.floor(z)) + 1, SEA_Y);
+    const ground = Math.max(groundH(Math.floor(x), Math.floor(z)) + 1, SEA_Y);
+    // At the height a dragon perched on it sits, so it lifts straight off.
+    return overSign(x, z) ? Math.max(ground, bannerPerch().y - RIDE_PERCH) : ground;
   }
 
   function flyRide(dt) {
@@ -2172,7 +2251,9 @@ async function startWorld() {
     if (keys.has("KeyS")) pace -= 1;
     turn -= touch.jx;
     pace -= touch.jz;
-    player.yaw += turn * 1.5 * dt;
+    // Keys and stick swing the view round at a rate that builds and fades.
+    ride.turn = (ride.turn ?? 0) + (THREE.MathUtils.clamp(turn, -1, 1) * 1.5 - (ride.turn ?? 0)) * Math.min(1, dt * 5);
+    player.yaw += ride.turn * dt;
 
     // Head where the camera looks, turning no faster than a big flier can.
     const want = player.yaw + Math.PI;
@@ -2180,7 +2261,8 @@ async function startWorld() {
     data.heading += THREE.MathUtils.clamp(wrapAngle(want - data.heading), -maxTurn, maxTurn);
 
     const over = floorUnder(pos.x, pos.z);
-    const water = groundH(Math.floor(pos.x), Math.floor(pos.z)) + 1 < SEA_Y;
+    // Nowhere to set down: water, or the top of the sign.
+    const water = groundH(Math.floor(pos.x), Math.floor(pos.z)) + 1 < SEA_Y || overSign(pos.x, pos.z);
     let wantSpeed = 9 + THREE.MathUtils.clamp(pace, -1, 1) * (pace > 0 ? 8 : 5);
     // The camera rides above, so aim a little below the view; small pitches
     // hold level.
@@ -2190,12 +2272,68 @@ async function startWorld() {
     if (keys.has("KeyC")) wantVy -= 6;
     if (ride.landing) {
       // Glide down; over water, skim along until there's land to stand on.
-      wantSpeed = water ? 6 : THREE.MathUtils.clamp(pos.y - over, 2, 8);
+      // Flares as it comes in, so it's nearly stopped at touchdown.
+      wantSpeed = water ? 6 : THREE.MathUtils.clamp((pos.y - over - RIDE_PERCH) * 1.5 + 0.5, 0.5, 8);
       wantVy = water ? (over + 2 - pos.y) * 2 : THREE.MathUtils.clamp((over + RIDE_PERCH - pos.y) * 1.2, -8, -1.2);
     }
-    ride.speed += (wantSpeed - ride.speed) * Math.min(1, dt * 1.6);
-    ride.vy += (wantVy - ride.vy) * Math.min(1, dt * 3);
+    // Read the ground ahead, about two seconds out: climb at whatever rate
+    // clears each rise in time, and brake for any too steep to clear.
+    // Cruise well clear of the ground under its whole body, so a one-block
+    // step in the land below never catches it.
+    const clear = ride.landing && !water ? RIDE_PERCH : 2.6;
+    const under = ride.landing ? over : Math.max(over, floorUnder(pos.x + 1.2, pos.z), floorUnder(pos.x - 1.2, pos.z), floorUnder(pos.x, pos.z + 1.2), floorUnder(pos.x, pos.z - 1.2));
+    let brake = false;
+    // Three lines, down its middle and out under each wing.
+    const reach = 3 + ride.speed * 2;
+    const fx = Math.sin(data.heading);
+    const fz = Math.cos(data.heading);
+    // Highest ground it'll be over in the next second or so.
+    let soon = under;
+    for (let d = 0.5; d <= reach; d += 0.5) {
+      for (const side of [0, -1.2, 1.2]) {
+        const f = floorUnder(pos.x + fx * d + fz * side, pos.z + fz * d - fx * side);
+        if (d <= 2 + ride.speed) soon = Math.max(soon, f);
+        const rise = f + clear - pos.y;
+        if (rise <= 0) continue;
+        const t = d / Math.max(ride.speed, 0.5);
+        // Coming in to land it only brakes for what's ahead; it doesn't
+        // climb back up over it.
+        if (!ride.landing) wantVy = Math.max(wantVy, Math.min(RIDE_MAX_CLIMB, rise / t));
+        // Too close to pull out of the dive and get over it: brake so it
+        // can stop short.
+        if (climbIn(t, ride.vy) < f + RIDE_PERCH + 0.3 - pos.y) {
+          const stopTo = Math.sqrt(2 * RIDE_BRAKE * Math.max(0, d - 1));
+          ride.brakeTo = ride.brakeT > 0 ? Math.min(ride.brakeTo, stopTo) : stopTo;
+          ride.brakeT = 0.5;
+        }
+      }
+    }
+    // Once it's had to brake, it keeps braking a moment rather than
+    // flickering between braking and pressing on.
+    if (ride.brakeT > 0) {
+      ride.brakeT -= dt;
+      wantSpeed = Math.min(wantSpeed, ride.brakeTo);
+      brake = true;
+    } else {
+      ride.brakeTo = null;
+    }
+    if (pos.y < under + clear) wantVy = Math.max(wantVy, Math.min(7, (under + clear - pos.y) * 2.5));
+    // Never dive faster than it could pull out of before the ground.
+    // (Landing, it has braked for anything ahead, so only the ground below counts.)
+    const room = pos.y - (ride.landing ? under + RIDE_PERCH : soon + RIDE_PERCH + 0.5);
+    wantVy = Math.max(wantVy, -Math.sqrt(2 * RIDE_LIFT * 0.6 * Math.max(0, room)));
+    // Near the edge of the world (or looking for land over the sea), swing
+    // back toward the middle.
+    const edge = Math.hypot(pos.x, pos.z - 4);
+    if (edge > 98 || (ride.landing && water && !overSign(pos.x, pos.z))) {
+      const home = Math.atan2(pos.x, pos.z - 4);
+      player.yaw += THREE.MathUtils.clamp(wrapAngle(home - player.yaw), -0.9 * dt, 0.9 * dt);
+    }
+    ride.speed += THREE.MathUtils.clamp(wantSpeed - ride.speed, -(brake ? RIDE_BRAKE : DRAGON_ACCEL * 1.5) * dt, DRAGON_ACCEL * dt);
+    ride.vy += THREE.MathUtils.clamp(wantVy - ride.vy, -9 * dt, RIDE_LIFT * dt);
     data.speed = ride.speed;
+    data.pace = ride.speed;
+    data.vy = ride.vy;
 
     let nx = pos.x + Math.sin(data.heading) * ride.speed * dt;
     let nz = pos.z + Math.cos(data.heading) * ride.speed * dt;
@@ -2206,31 +2344,47 @@ async function startWorld() {
       nx *= 110 / r;
       nz = 4 + (nz - 4) * (110 / r);
     }
-    if (hitsBanner(nx, ny, nz, 1)) {
-      nx = pos.x;
-      nz = pos.z;
-      ride.speed *= 0.5;
+    // Never into the ground: if the next step would hit a rise it couldn't
+    // clear, it pulls up short and climbs.
+    let floorNow = floorUnder(nx, nz);
+    if (ny < floorNow + RIDE_PERCH && floorNow > over + 0.5) {
+      // Into a rise it couldn't clear: slide along it if it can, else stop.
+      const hits = (x, z) => ny < floorUnder(x, z) + RIDE_PERCH;
+      if (!hits(nx, pos.z)) nz = pos.z;
+      else if (!hits(pos.x, nz)) nx = pos.x;
+      else {
+        nx = pos.x;
+        nz = pos.z;
+      }
+      ride.speed *= Math.max(0, 1 - dt * 4);
+      floorNow = floorUnder(nx, nz);
     }
-    // Rise over whatever is below and just ahead instead of flying into it.
-    const ahead = floorUnder(nx + Math.sin(data.heading) * 3, nz + Math.cos(data.heading) * 3);
-    const floorNow = floorUnder(nx, nz);
-    const clear = ride.landing && !water ? RIDE_PERCH : 1.6;
-    const minY = Math.max(floorNow, ahead) + clear;
-    if (ny < minY) ny += (minY - ny) * Math.min(1, dt * 7);
-    ny = Math.max(ny, floorNow + Math.min(clear, RIDE_PERCH));
+    if (ny < floorNow + RIDE_PERCH) {
+      ny = floorNow + RIDE_PERCH;
+      // Resting on the ground: no more sinking.
+      ride.vy = Math.max(ride.vy, (ny - pos.y) / Math.max(dt, 1e-3));
+      data.vy = ride.vy;
+    }
     pos.set(nx, ny, nz);
 
     if (data.fireT > 0) data.fireT -= dt;
     const landY = floorNow + RIDE_PERCH;
     data.rideSit = ride.landing && !water ? THREE.MathUtils.clamp(1 - (ny - landY) / 4, 0, 1) : 0;
-    if (ride.landing && water && promptEl) promptEl.textContent = "Over water · looking for land…";
+    if (ride.landing && water && promptEl) promptEl.textContent = "Looking for somewhere to land…";
 
     // Keep the player with the dragon, for the map, the sun's shadows and
     // the cats noticing it pass.
     player.x = pos.x;
     player.y = pos.y;
     player.z = pos.z;
-    if (ride.landing && !water && ny - landY < 0.08) endRide();
+    if (ride.landing && !water && ny - landY < 0.08) {
+      // Feet down: it runs out its speed on the ground, then stops.
+      ride.vy = Math.max(ride.vy, 0);
+      data.vy = ride.vy;
+      ride.speed = Math.max(0, ride.speed - 8 * dt);
+      data.pace = data.speed = ride.speed;
+      if (ride.speed < 0.3) endRide();
+    }
   }
 
   canvas.addEventListener("click", (e) => {
@@ -2461,15 +2615,20 @@ async function startWorld() {
       const pos = ride.dragon.position;
       const back = Math.cos(player.pitch) * 6.5;
       camTo.set(pos.x + Math.sin(player.yaw) * back, pos.y + 1.7 - Math.sin(player.pitch) * 6.5, pos.z + Math.cos(player.yaw) * back);
-      camTo.y = Math.max(camTo.y, floorUnder(camTo.x, camTo.z) + 0.6);
+      // Lift over the ground below, easing so a step in the terrain under
+      // the camera doesn't jolt the view.
+      const ground = Math.max(groundH(Math.floor(camTo.x), Math.floor(camTo.z)) + 1, SEA_Y) + 0.6;
+      camLift += (Math.max(0, ground - camTo.y) - camLift) * Math.min(1, dt * 6);
+      camTo.y += camLift;
     } else {
       const bob = swimming ? Math.sin(now / 420) * 0.06 : 0;
       camTo.set(player.x, player.y + 1.55 + camLag + bob, player.z);
     }
     if (camT < 1) {
-      // Swoop between the player's eyes and the chase view.
-      camT = Math.min(1, camT + dt / 0.9);
-      camera.position.lerpVectors(camFrom, camTo, camT * camT * (3 - 2 * camT));
+      // Swoop between the player's eyes and the chase view, easing in and
+      // out with no jolt at either end.
+      camT = Math.min(1, camT + dt / 1.3);
+      camera.position.lerpVectors(camFrom, camTo, camT * camT * camT * (camT * (camT * 6 - 15) + 10));
     } else {
       camera.position.copy(camTo);
     }
@@ -2502,6 +2661,8 @@ async function startWorld() {
     }
 
     camera.getWorldDirection(camDir);
+    camera.updateMatrixWorld();
+    frustum.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     for (const critter of critters) {
       const data = critter.userData;
       if (!data.sky) {
@@ -2532,6 +2693,7 @@ async function startWorld() {
         poseCat(critter, now, dt);
         continue;
       }
+      easePace(data, dt);
       if (data.kittenOf) {
         updateKitten(critter, now, dt);
         continue;
@@ -2550,6 +2712,8 @@ async function startWorld() {
       const mode = data.sky ? "sky" : "walk";
       const pal = data.playWith;
       const toy = data.target;
+      const startX = critter.position.x;
+      const startZ = critter.position.z;
       if (data.cool > 0) data.cool -= dt;
       if (data.ridden) {
         // The player flies this one; flyRide has already moved it.
@@ -2598,21 +2762,32 @@ async function startWorld() {
         stepToward(critter, toy.x, toy.z, dt, mode);
         if (Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z) < 6) data.moodT = Math.min(data.moodT, 2.5);
       } else if (data.mood === "perch" && toy) {
-        const dist = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z, toy.y - critter.position.y);
-        const pull = Math.min(1, dt * (dist > 6 ? 1.6 : 3.4));
-        critter.position.x += (toy.x - critter.position.x) * pull;
-        critter.position.z += (toy.z - critter.position.z) * pull;
-        data.speed = 0;
-        if (dist < 1.8) faceToward(critter, player.x, player.z);
-        else steerToward(critter, toy.x, toy.z, 0.16);
+        // Fly in to the perch, slowing as it closes so its turns tighten
+        // enough to arrive, then settle onto the spot.
+        const flat = Math.hypot(toy.x - critter.position.x, toy.z - critter.position.z);
+        const dist = Math.hypot(flat, toy.y - critter.position.y);
+        // Its time on the perch starts once it's down (giving up if it
+        // somehow can't get there).
+        data.perchTrip = (data.perchTrip ?? 0) + dt;
+        if (dist > 0.55 && data.perchTrip < 30) data.moodT += dt;
+        if (flat > 0.8) {
+          data.speed = THREE.MathUtils.clamp(flat * 0.8, 1, 7.2);
+          stepToward(critter, toy.x, toy.z, dt, mode);
+        } else {
+          data.speed = 0;
+          const settle = Math.min(1, dt * 1.5);
+          critter.position.x += (toy.x - critter.position.x) * settle;
+          critter.position.z += (toy.z - critter.position.z) * settle;
+          if (dist < 1.8) faceToward(critter, player.x, player.z);
+        }
       } else if (data.mood === "breath") {
         data.heading += Math.sin(now / 260) * 0.01;
       } else if (data.mood === "pounce") {
         const crouch = data.moodT > 0.7;
         if (!crouch) {
           data.speed = 2.4 * CAT_PACE;
-          const nx = critter.position.x + Math.sin(data.heading) * data.speed * dt;
-          const nz = critter.position.z + Math.cos(data.heading) * data.speed * dt;
+          const nx = critter.position.x + Math.sin(data.heading) * data.pace * dt;
+          const nz = critter.position.z + Math.cos(data.heading) * data.pace * dt;
           if (roamOk(nx, nz, mode)) {
             critter.position.x = nx;
             critter.position.z = nz;
@@ -2637,34 +2812,50 @@ async function startWorld() {
       } else {
         if (data.timer <= 0) {
           const turn = (hash(critter.position.x * 10, critter.position.z * 10) - 0.5) * Math.PI;
-          if (data.sky) data.heading += turn;
-          else data.wantHeading = data.heading + turn;
+          data.wantHeading = data.heading + turn;
           data.timer = data.mood === "zoom" ? 0.6 + hash(critter.position.z, now) * 0.6 : (1.4 + hash(critter.position.z, now) * 2.2) / CAT_PACE;
         }
-        // Cats curve onto their new course rather than pivoting on the spot.
-        if (!data.sky && data.wantHeading != null) {
-          const max = catTurnRate(critter) * dt;
+        // Curve onto the new course rather than pivoting on the spot.
+        if (data.wantHeading != null) {
+          const max = (data.sky ? DRAGON_TURN : catTurnRate(critter)) * dt;
           data.heading += THREE.MathUtils.clamp(wrapAngle(data.wantHeading - data.heading), -max, max);
         }
-        const step = data.speed * dt;
+        const step = data.pace * dt;
         const nx = critter.position.x + Math.sin(data.heading) * step;
         const nz = critter.position.z + Math.cos(data.heading) * step;
+        if (data.sky && Math.hypot(nx, nz - 4) > 96) {
+          // Nearing the edge of the world: bank round toward the middle.
+          data.wantHeading = Math.atan2(-nx, 4 - nz);
+        }
         if (roamOk(nx, nz, mode, data.sky ? critter.position.y : null)) {
           critter.position.x = nx;
           critter.position.z = nz;
-        } else if (data.sky) {
-          data.heading += Math.PI * 0.7;
         } else if (Math.abs(wrapAngle((data.wantHeading ?? data.heading) - data.heading)) < 0.3) {
           data.wantHeading = data.heading + Math.PI * 0.7;
         }
       }
-      if (!data.sky) limitTurn(critter, from, dt);
+      if (!data.ridden) limitTurn(critter, from, dt, data.sky ? DRAGON_TURN : null);
+      // Moods that hold still don't stop a critter dead: it carries its
+      // momentum forward while its pace runs down.
+      if (!data.ridden && !data.demo && data.pace > 0.01 && critter.position.x === startX && critter.position.z === startZ) {
+        const nx = critter.position.x + Math.sin(data.heading) * data.pace * dt;
+        const nz = critter.position.z + Math.cos(data.heading) * data.pace * dt;
+        if (roamOk(nx, nz, mode, data.sky ? critter.position.y : null, data.mood === "perch")) {
+          critter.position.x = nx;
+          critter.position.z = nz;
+        } else {
+          data.pace = 0;
+        }
+      }
       critter.rotation.y = data.heading;
 
       if (data.sky) {
         const perch = data.mood === "perch" && data.target;
         const dist = perch ? Math.hypot(data.target.x - critter.position.x, data.target.z - critter.position.z, data.target.y - critter.position.y) : 99;
-        const sit = data.ridden ? data.rideSit : perch ? THREE.MathUtils.clamp(1 - dist / 5.5, 0, 1) : 0;
+        const sitWant = data.ridden ? data.rideSit : perch ? THREE.MathUtils.clamp(1 - dist / 5.5, 0, 1) : 0;
+        // Legs unfold and tuck, and wings fold and spread, over a second or so.
+        data.sit = (data.sit ?? sitWant) + (sitWant - (data.sit ?? sitWant)) * Math.min(1, dt * 2.2);
+        const sit = data.sit;
         const landed = perch && dist < 0.55;
         const swoop = data.mood === "chase" || data.mood === "circle";
         // Stay well above whatever terrain is underneath (and just ahead).
@@ -2672,21 +2863,25 @@ async function startWorld() {
         const below = groundH(Math.floor(critter.position.x), Math.floor(critter.position.z));
         const clearance = data.demo ? -99 : Math.max(ahead, below) + 7;
         let wantY = Math.max(data.baseY, clearance) + Math.sin(now / 520 + data.heading) * (swoop ? 1.1 : 0.7);
-        if (perch) wantY = THREE.MathUtils.lerp(Math.max(data.target.y + 3.2, clearance), data.target.y, sit);
-        const prevY = data.ridden ? data.rideY0 : critter.position.y;
-        if (!data.ridden) critter.position.y += (wantY - critter.position.y) * Math.min(1, dt * (1.6 + sit * 3));
-        data.climb += ((critter.position.y - prevY) / Math.max(dt, 1e-3) - data.climb) * Math.min(1, dt * 4);
-        if (landed) {
-          critter.position.x += (data.target.x - critter.position.x) * Math.min(1, dt * 8);
-          critter.position.y += (data.target.y - critter.position.y) * Math.min(1, dt * 8);
-          critter.position.z += (data.target.z - critter.position.z) * Math.min(1, dt * 8);
-        } else if (!perch && !data.ridden && hitsBanner(critter.position.x, critter.position.y, critter.position.z)) {
-          critter.position.y = Math.max(critter.position.y, bannerTop() + 1.1);
-          if (Math.abs(critter.position.z - BANNER.z) < BANNER.d * 0.5 + 0.6) {
-            critter.position.z += critter.position.z >= BANNER.z ? 1.6 : -1.6;
-            data.heading += Math.PI * 0.55;
+        if (perch) wantY = THREE.MathUtils.lerp(Math.max(data.target.y + 3.2, clearance), data.target.y, sitWant);
+        // Climbs over the banner rather than through it, starting a few
+        // seconds before it gets there.
+        if (!perch) {
+          const near = (x, z) => Math.abs(x - BANNER.x) < BANNER.w * 0.5 + 3 && Math.abs(z - BANNER.z) < 3;
+          const lead = (data.pace ?? 0) * 3;
+          if (near(critter.position.x, critter.position.z) || near(critter.position.x + Math.sin(data.heading) * lead, critter.position.z + Math.cos(data.heading) * lead)) {
+            wantY = Math.max(wantY, bannerTop() + 2);
           }
         }
+        const prevY = data.ridden ? data.rideY0 : critter.position.y;
+        if (!data.ridden) {
+          // Critically damped spring with capped lift and sink.
+          const w = 1.3 + sitWant * 1.5;
+          const accel = THREE.MathUtils.clamp(w * w * (wantY - critter.position.y) - 2 * w * (data.vy ?? 0), -6, 6);
+          data.vy = THREE.MathUtils.clamp((data.vy ?? 0) + accel * dt, -7, 7);
+          critter.position.y += data.vy * dt;
+        }
+        data.climb += ((critter.position.y - prevY) / Math.max(dt, 1e-3) - data.climb) * Math.min(1, dt * 4);
         // Bank into turns and pitch with the climb.
         if (data.prevHeading == null) data.prevHeading = data.heading;
         let turn = data.heading - data.prevHeading;
@@ -2748,12 +2943,15 @@ async function startWorld() {
       }
     }
 
-    separateGroup(adultCats, 0.82);
-    separateGroup(kittens, 0.34);
+    separateGroup(adultCats, 0.82, dt);
+    separateGroup(kittens, 0.34, dt);
     emotes.update(dt);
     fire.update(dt);
     ambient.update(dt, player, env);
-    separateGroup(dragons.filter((d) => d.userData.mood !== "perch" && !d.userData.ridden), 4.6);
+    // Every dragon keeps its drift state; perched and ridden ones just let
+    // theirs die away.
+    separateFliers(dragons.filter((d) => d.userData.mood !== "perch" && !d.userData.ridden), 4.6, dt);
+    for (const d of dragons) if (d.userData.mood === "perch" || d.userData.ridden) d.userData.sepV = [0, 0];
 
     if (ballLive) {
       ballVel.y -= 14 * dt;
