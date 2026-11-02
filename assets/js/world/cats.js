@@ -246,7 +246,7 @@ export function poseCat(critter, now, dt) {
   // Step rate follows ground speed so planted paws don't skate: each paw
   // sweeps 2 * stride (in cat units) per half cycle.
   const stride = mood === "zoom" ? 0.15 : mood === "chase" || mood === "yarn" ? 0.12 : 0.1;
-  const speed = data.speed || 0;
+  const speed = data.pace ?? data.speed ?? 0;
   const pace = speed > 0.05 ? Math.min(18, (Math.PI * speed) / (2 * stride * (critter.scale.x || 1))) : 7;
   if (moving) data.gait += dt * pace;
   const sway = (amp, period, phase = 0) => Math.sin(now / period + phase) * amp;
